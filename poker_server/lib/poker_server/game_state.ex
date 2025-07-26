@@ -14,4 +14,8 @@ defmodule PokerServer.GameState do
       deck: Deck.create()
     }
   end
+
+  def tournament_complete?(game_state) do
+    length(game_state.players) == 1
+  end
 end
