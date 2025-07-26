@@ -1,0 +1,362 @@
+defmodule PokerServer.GameStateTest do
+  use ExUnit.Case
+  alias PokerServer.{GameState, Player, Card}
+
+  # Helper to create a player
+  defp player(id, chips), do: %Player{id: id, chips: chips}
+
+  describe "new/1" do
+    test "initializes game with 6 players" do
+      players = for i <- 1..6, do: player(i, 1500)
+      
+      game_state = GameState.new(players)
+      
+      assert length(game_state.players) == 6
+      assert game_state.phase == :waiting_for_players
+      assert game_state.hand_number == 0
+      assert game_state.pot == 0
+      assert game_state.community_cards == []
+    end
+
+    test "assigns button position randomly" do
+      players = for i <- 1..6, do: player(i, 1500)
+      
+      game_state = GameState.new(players)
+      
+      assert game_state.button_position in 0..5
+    end
+
+    test "initializes deck" do
+      players = for i <- 1..6, do: player(i, 1500)
+      
+      game_state = GameState.new(players)
+      
+      assert length(game_state.deck) == 36  # Short deck
+    end
+  end
+
+  describe "start_hand/1" do
+    test "transitions to dealing phase and deals hole cards" do
+      players = for i <- 1..6, do: player(i, 1500)
+      game_state = GameState.new(players)
+      
+      updated_state = GameState.start_hand(game_state)
+      
+      assert updated_state.phase == :preflop
+      assert updated_state.hand_number == 1
+      assert length(updated_state.deck) == 24  # 36 - 12 hole cards
+      
+      # Each player should have 2 hole cards
+      for player <- updated_state.players do
+        assert length(player.hole_cards) == 2
+      end
+    end
+
+    test "posts blinds automatically" do
+      players = for i <- 1..6, do: player(i, 1500)
+      game_state = GameState.new(players)
+      |> Map.put(:small_blind, 10)
+      |> Map.put(:big_blind, 20)
+      
+      updated_state = GameState.start_hand(game_state)
+      
+      assert updated_state.pot >= 30  # At least SB + BB
+    end
+
+    test "moves button position for next hand" do
+      players = for i <- 1..6, do: player(i, 1500)
+      game_state = GameState.new(players)
+      |> Map.put(:button_position, 2)
+      
+      updated_state = GameState.start_hand(game_state)
+      
+      assert updated_state.button_position == 3
+    end
+
+    test "wraps button position around table" do
+      players = for i <- 1..6, do: player(i, 1500)
+      game_state = GameState.new(players)
+      |> Map.put(:button_position, 5)  # Last position
+      
+      updated_state = GameState.start_hand(game_state)
+      
+      assert updated_state.button_position == 0  # Wraps to first position
+    end
+  end
+
+  describe "deal_flop/1" do
+    test "deals 3 community cards and transitions to flop" do
+      players = for i <- 1..6, do: player(i, 1500)
+      game_state = GameState.new(players)
+      |> GameState.start_hand()
+      
+      updated_state = GameState.deal_flop(game_state)
+      
+      assert updated_state.phase == :flop
+      assert length(updated_state.community_cards) == 3
+      assert length(updated_state.deck) == 20  # 24 - 1 burn - 3 flop
+    end
+
+    test "burns a card before dealing flop" do
+      players = for i <- 1..6, do: player(i, 1500)
+      game_state = GameState.new(players)
+      |> GameState.start_hand()
+      
+      deck_before = length(game_state.deck)
+      updated_state = GameState.deal_flop(game_state)
+      deck_after = length(updated_state.deck)
+      
+      # Should burn 1 card + deal 3 cards = 4 cards removed
+      assert deck_before - deck_after == 4
+    end
+  end
+
+  describe "deal_turn/1" do
+    test "deals 1 more community card and transitions to turn" do
+      players = for i <- 1..6, do: player(i, 1500)
+      game_state = GameState.new(players)
+      |> GameState.start_hand()
+      |> GameState.deal_flop()
+      
+      updated_state = GameState.deal_turn(game_state)
+      
+      assert updated_state.phase == :turn
+      assert length(updated_state.community_cards) == 4
+      assert length(updated_state.deck) == 18  # 20 - 1 burn - 1 turn
+    end
+  end
+
+  describe "deal_river/1" do
+    test "deals final community card and transitions to river" do
+      players = for i <- 1..6, do: player(i, 1500)
+      game_state = GameState.new(players)
+      |> GameState.start_hand()
+      |> GameState.deal_flop()
+      |> GameState.deal_turn()
+      
+      updated_state = GameState.deal_river(game_state)
+      
+      assert updated_state.phase == :river
+      assert length(updated_state.community_cards) == 5
+      assert length(updated_state.deck) == 16  # 18 - 1 burn - 1 river
+    end
+  end
+
+  describe "showdown/1" do
+    test "determines winners and distributes pot" do
+      # Create players with known hole cards for predictable outcome
+      players = [
+        %Player{id: 1, chips: 1480, hole_cards: [%Card{rank: :ace, suit: :hearts}, %Card{rank: :king, suit: :hearts}]},
+        %Player{id: 2, chips: 1480, hole_cards: [%Card{rank: :seven, suit: :clubs}, %Card{rank: :six, suit: :clubs}]}
+      ]
+      
+      community_cards = [
+        %Card{rank: :ace, suit: :clubs},
+        %Card{rank: :king, suit: :clubs},
+        %Card{rank: :queen, suit: :hearts},
+        %Card{rank: :jack, suit: :diamonds},
+        %Card{rank: :ten, suit: :spades}
+      ]
+      
+      game_state = %GameState{
+        players: players,
+        community_cards: community_cards,
+        pot: 40,
+        phase: :river,
+        hand_number: 1,
+        deck: [],
+        button_position: 0,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      updated_state = GameState.showdown(game_state)
+      
+      assert updated_state.phase == :hand_complete
+      
+      # Player 1 should win with two pair (Aces and Kings)
+      winner = Enum.find(updated_state.players, &(&1.id == 1))
+      loser = Enum.find(updated_state.players, &(&1.id == 2))
+      
+      assert winner.chips > 1480  # Won chips
+      assert loser.chips == 1480   # No change
+    end
+
+    test "handles split pot for tied hands" do
+      # Two players with identical hands
+      players = [
+        %Player{id: 1, chips: 1480, hole_cards: [%Card{rank: :ace, suit: :hearts}, %Card{rank: :king, suit: :hearts}]},
+        %Player{id: 2, chips: 1480, hole_cards: [%Card{rank: :ace, suit: :clubs}, %Card{rank: :king, suit: :clubs}]}
+      ]
+      
+      community_cards = [
+        %Card{rank: :queen, suit: :hearts},
+        %Card{rank: :jack, suit: :diamonds},
+        %Card{rank: :ten, suit: :spades},
+        %Card{rank: :nine, suit: :hearts},
+        %Card{rank: :eight, suit: :clubs}
+      ]
+      
+      game_state = %GameState{
+        players: players,
+        community_cards: community_cards,
+        pot: 40,
+        phase: :river,
+        hand_number: 1,
+        deck: [],
+        button_position: 0,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      updated_state = GameState.showdown(game_state)
+      
+      # Both players should get equal share
+      for player <- updated_state.players do
+        assert player.chips == 1500  # 1480 + 20 (half the pot)
+      end
+    end
+  end
+
+  describe "eliminate_players/1" do
+    test "removes players with zero chips" do
+      players = [
+        player(1, 1500),
+        player(2, 0),     # Should be eliminated
+        player(3, 1000),
+        player(4, 0)      # Should be eliminated
+      ]
+      
+      game_state = %GameState{
+        players: players,
+        phase: :hand_complete,
+        hand_number: 1,
+        deck: [],
+        community_cards: [],
+        pot: 0,
+        button_position: 0,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      updated_state = GameState.eliminate_players(game_state)
+      
+      assert length(updated_state.players) == 2
+      remaining_ids = updated_state.players |> Enum.map(& &1.id)
+      assert 1 in remaining_ids
+      assert 3 in remaining_ids
+      refute 2 in remaining_ids
+      refute 4 in remaining_ids
+    end
+
+    test "adjusts button position when players eliminated" do
+      players = [
+        player(1, 1500),  # Position 0
+        player(2, 0),     # Position 1 - eliminated
+        player(3, 1000),  # Position 2
+        player(4, 0)      # Position 3 - eliminated
+      ]
+      
+      game_state = %GameState{
+        players: players,
+        button_position: 3,  # Button on eliminated player
+        phase: :hand_complete,
+        hand_number: 1,
+        deck: [],
+        community_cards: [],
+        pot: 0,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      updated_state = GameState.eliminate_players(game_state)
+      
+      # Button should move to valid position
+      assert updated_state.button_position in [0, 1]  # Only 2 players left, positions 0 and 1
+    end
+  end
+
+  describe "tournament_complete?/1" do
+    test "returns true when only one player remains" do
+      players = [player(1, 9000)]
+      
+      game_state = %GameState{
+        players: players,
+        phase: :hand_complete,
+        hand_number: 5,
+        deck: [],
+        community_cards: [],
+        pot: 0,
+        button_position: 0,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      assert GameState.tournament_complete?(game_state)
+    end
+
+    test "returns false when multiple players remain" do
+      players = [player(1, 4500), player(2, 4500)]
+      
+      game_state = %GameState{
+        players: players,
+        phase: :hand_complete,
+        hand_number: 5,
+        deck: [],
+        community_cards: [],
+        pot: 0,
+        button_position: 0,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      refute GameState.tournament_complete?(game_state)
+    end
+  end
+
+  describe "reset_for_next_hand/1" do
+    test "resets hand-specific state while preserving tournament state" do
+      players = [
+        %Player{id: 1, chips: 1520, hole_cards: [%Card{rank: :ace, suit: :hearts}, %Card{rank: :king, suit: :hearts}]},
+        %Player{id: 2, chips: 1480, hole_cards: [%Card{rank: :seven, suit: :clubs}, %Card{rank: :six, suit: :clubs}]}
+      ]
+      
+      game_state = %GameState{
+        players: players,
+        community_cards: [%Card{rank: :ace, suit: :clubs}],
+        pot: 0,
+        phase: :hand_complete,
+        hand_number: 3,
+        deck: [],
+        button_position: 1,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      updated_state = GameState.reset_for_next_hand(game_state)
+      
+      # Hand-specific state should be reset
+      assert updated_state.community_cards == []
+      assert updated_state.pot == 0
+      assert updated_state.phase == :waiting_for_players
+      assert length(updated_state.deck) == 36  # New shuffled deck
+      
+      # Players should have no hole cards
+      for player <- updated_state.players do
+        assert player.hole_cards == []
+      end
+      
+      # Tournament state should be preserved
+      assert updated_state.hand_number == 3
+      assert updated_state.button_position == 1
+      assert updated_state.small_blind == 10
+      assert updated_state.big_blind == 20
+      
+      # Chip counts should be preserved
+      player_1 = Enum.find(updated_state.players, &(&1.id == 1))
+      player_2 = Enum.find(updated_state.players, &(&1.id == 2))
+      assert player_1.chips == 1520
+      assert player_2.chips == 1480
+    end
+  end
+end
