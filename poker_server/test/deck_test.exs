@@ -11,14 +11,14 @@ defmodule PokerServer.DeckTest do
     test "contains all expected ranks (A, K, Q, J, 10, 9, 8, 7, 6)" do
       deck = Deck.create()
       ranks = deck |> Enum.map(& &1.rank) |> Enum.uniq() |> Enum.sort()
-      expected_ranks = [:ace, :king, :queen, :jack, :ten, :nine, :eight, :seven, :six]
+      expected_ranks = [:ace, :king, :queen, :jack, :ten, :nine, :eight, :seven, :six] |> Enum.sort()
       assert ranks == expected_ranks
     end
 
     test "contains all four suits" do
       deck = Deck.create()
       suits = deck |> Enum.map(& &1.suit) |> Enum.uniq() |> Enum.sort()
-      expected_suits = [:clubs, :diamonds, :hearts, :spades]
+      expected_suits = [:clubs, :diamonds, :hearts, :spades] |> Enum.sort()
       assert suits == expected_suits
     end
 
