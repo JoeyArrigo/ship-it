@@ -10,4 +10,8 @@ defmodule PokerServer.Deck do
       %Card{rank: String.to_atom(rank), suit: suit}
     end
   end
+
+  def shuffle(deck) do
+    Enum.shuffle(deck)
+  end
 end

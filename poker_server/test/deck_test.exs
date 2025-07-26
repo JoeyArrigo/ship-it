@@ -52,10 +52,10 @@ defmodule PokerServer.DeckTest do
 
     test "produces different order (probabilistic test)" do
       deck = Deck.create()
-      shuffled = Deck.shuffle(deck)
       
-      # Very unlikely that shuffle produces same order
-      assert deck != shuffled
+      # Try multiple shuffles, at least one should be different
+      shuffles = for _ <- 1..10, do: Deck.shuffle(deck)
+      assert Enum.any?(shuffles, &(&1 != deck))
     end
   end
 
