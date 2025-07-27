@@ -120,7 +120,7 @@ defmodule PokerServer.BettingRound do
   end
 
   defp execute_action(betting_round, player_id, {:call}) do
-    player = Enum.find(betting_round.players, &(&1.id == player_id))
+    _player = Enum.find(betting_round.players, &(&1.id == player_id))
     current_bet_amount = betting_round.player_bets[player_id] || 0
     call_amount = betting_round.current_bet - current_bet_amount
     
@@ -140,7 +140,7 @@ defmodule PokerServer.BettingRound do
   end
 
   defp execute_action(betting_round, player_id, {:raise, raise_amount}) do
-    player = Enum.find(betting_round.players, &(&1.id == player_id))
+    _player = Enum.find(betting_round.players, &(&1.id == player_id))
     current_bet_amount = betting_round.player_bets[player_id] || 0
     total_bet_amount = raise_amount - current_bet_amount
     
@@ -161,7 +161,7 @@ defmodule PokerServer.BettingRound do
     {:ok, updated_round}
   end
 
-  defp execute_action(betting_round, player_id, {:check}) do
+  defp execute_action(betting_round, _player_id, {:check}) do
     updated_round = %{betting_round |
       active_player_index: next_active_player_index(betting_round)
     }
@@ -214,6 +214,65 @@ defmodule PokerServer.BettingRound do
       
       # All active players have same bet amount
       length(bet_amounts) == 1
+    end
+  end
+
+  def side_pots(betting_round) do
+    # Get all player bets sorted by amount
+    player_bet_amounts = 
+      betting_round.player_bets
+      |> Enum.reject(fn {player_id, _} -> player_id in betting_round.folded_players end)
+      |> Enum.map(fn {player_id, bet} -> {player_id, bet} end)
+      |> Enum.sort_by(fn {_, bet} -> bet end)
+    
+    # If no all-in players, return main pot
+    if MapSet.size(betting_round.all_in_players) == 0 do
+      eligible_players = player_bet_amounts |> Enum.map(&elem(&1, 0)) |> MapSet.new()
+      [%{amount: betting_round.pot, eligible_players: eligible_players}]
+    else
+      create_side_pots(player_bet_amounts, betting_round.all_in_players)
+    end
+  end
+
+  defp create_side_pots(player_bets, all_in_players) do
+    # Create side pots based on all-in amounts
+    _all_in_amounts = 
+      player_bets
+      |> Enum.filter(fn {player_id, _} -> player_id in all_in_players end)
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.uniq()
+      |> Enum.sort()
+    
+    # Find minimum all-in amount
+    min_all_in = 
+      player_bets
+      |> Enum.filter(fn {player_id, _} -> player_id in all_in_players end)
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.min()
+    
+    # Create main pot up to min all-in amount
+    main_pot_amount = min_all_in * length(player_bets)
+    eligible_players = player_bets |> Enum.map(&elem(&1, 0)) |> MapSet.new()
+    
+    # Create side pot for remaining amount
+    side_pot_players = 
+      player_bets
+      |> Enum.filter(fn {_, bet} -> bet > min_all_in end)
+      |> Enum.map(&elem(&1, 0))
+      |> MapSet.new()
+    
+    side_pot_amount = 
+      player_bets
+      |> Enum.filter(fn {_, bet} -> bet > min_all_in end)
+      |> Enum.map(fn {_, bet} -> bet - min_all_in end)
+      |> Enum.sum()
+    
+    pots = [%{amount: main_pot_amount, eligible_players: eligible_players}]
+    
+    if side_pot_amount > 0 do
+      pots ++ [%{amount: side_pot_amount, eligible_players: side_pot_players}]
+    else
+      pots
     end
   end
 end

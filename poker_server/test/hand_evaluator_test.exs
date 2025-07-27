@@ -72,7 +72,7 @@ defmodule PokerServer.HandEvaluatorTest do
 
     test "identifies high card" do
       hole_cards = [card(:ace, :hearts), card(:king, :diamonds)]
-      community = [card(:queen, :clubs), card(:jack, :spades), card(:ten, :hearts), card(:eight, :spades), card(:six, :clubs)]
+      community = [card(:queen, :clubs), card(:jack, :spades), card(:nine, :hearts), card(:eight, :spades), card(:six, :clubs)]
       
       {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
       assert hand_type == :high_card

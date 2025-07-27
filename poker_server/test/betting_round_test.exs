@@ -159,18 +159,18 @@ defmodule PokerServer.BettingRoundTest do
     end
 
     test "processes all_in action" do
-      players = [player(1, 1000, 0), player(2, 30, 1)]  # Player 2 has only 30 chips
+      players = [player(1, 30, 0), player(2, 1000, 1)]  # Player 1 has only 30 chips
       betting_round = BettingRound.new(players, 10, 20, :preflop)
       |> Map.put(:current_bet, 100)
       
-      {:ok, updated_round} = BettingRound.process_action(betting_round, 2, {:all_in})
+      {:ok, updated_round} = BettingRound.process_action(betting_round, 1, {:all_in})
       
-      # Player 2 should be all-in
-      assert 2 in updated_round.all_in_players
-      assert updated_round.player_bets[2] == 30  # All remaining chips
+      # Player 1 should be all-in
+      assert 1 in updated_round.all_in_players
+      assert updated_round.player_bets[1] == 30  # All remaining chips
       
-      player_2 = Enum.find(updated_round.players, &(&1.id == 2))
-      assert player_2.chips == 0
+      player_1 = Enum.find(updated_round.players, &(&1.id == 1))
+      assert player_1.chips == 0
     end
 
     test "rejects invalid action" do
