@@ -8,8 +8,14 @@ defmodule PokerServer.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: PokerServer.Worker.start_link(arg)
-      # {PokerServer.Worker, arg}
+      # Registry for looking up game processes by ID
+      {Registry, keys: :unique, name: PokerServer.GameRegistry},
+      
+      # Dynamic supervisor for individual game processes  
+      {DynamicSupervisor, name: PokerServer.GameSupervisor, strategy: :one_for_one},
+      
+      # Game manager that coordinates games
+      PokerServer.GameManager
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
