@@ -94,4 +94,10 @@ defmodule PokerServer.HandEvaluator do
       :six -> 6
     end
   end
+
+  # Stub implementation - complex poker logic would go here
+  def evaluate_hand(hole_cards, community_cards) do
+    all_cards = hole_cards ++ community_cards
+    {:high_card, Enum.take(all_cards, 5)}
+  end
 end
