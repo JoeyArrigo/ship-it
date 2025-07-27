@@ -45,15 +45,19 @@ defmodule PokerServer do
   Start a hand in an existing game.
   """
   def start_hand(game_id) do
-    case GameManager.get_game_state(game_id) do
-      {:ok, state} when is_map(state) ->
-        # Get the game process and start hand
-        case Registry.lookup(PokerServer.GameRegistry, game_id) do
-          [{pid, _}] -> PokerServer.GameServer.start_hand(pid)
-          [] -> {:error, :game_not_found}
-        end
-      error -> error
-    end
+    PokerServer.GameRegistry
+    |> Registry.lookup(game_id)
+    |> do_start_hand()
+  end
+
+  # Pattern match on successful Registry lookup
+  defp do_start_hand([{pid, _}]) do
+    PokerServer.GameServer.start_hand(pid)
+  end
+
+  # Pattern match on game not found
+  defp do_start_hand([]) do
+    {:error, :game_not_found}
   end
 
   @doc """
