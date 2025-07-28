@@ -64,7 +64,7 @@ defmodule PokerServer.GameStateTest do
     end
 
     test "handles small blind player with insufficient chips" do
-      # Small blind player has only 5 chips, blind is 10
+      # Small blind player has only 5 chips, blind is 10  
       players = [
         player(1, 5),     # Position 0 - will be small blind after button advance
         player(2, 1500),  # Position 1 - will be big blind
@@ -74,7 +74,7 @@ defmodule PokerServer.GameStateTest do
       game_state = GameState.new(players)
       |> Map.put(:small_blind, 10)
       |> Map.put(:big_blind, 20)
-      |> Map.put(:button_position, 1)  # Button will advance from 1 to 2, making player 1 SB
+      |> Map.put(:button_position, 1)  # Button advances from 1 to 2, making player 1 SB
       
       updated_state = GameState.start_hand(game_state)
       
@@ -93,7 +93,7 @@ defmodule PokerServer.GameStateTest do
     test "handles big blind player with insufficient chips" do
       # Big blind player has only 15 chips, blind is 20
       players = [
-        player(1, 1500),  # Position 0 - will be button
+        player(1, 1500),  # Position 0 - will be button after advance
         player(2, 1500),  # Position 1 - will be small blind  
         player(3, 15)     # Position 2 - will be big blind, insufficient chips
       ]
@@ -101,19 +101,19 @@ defmodule PokerServer.GameStateTest do
       game_state = GameState.new(players)
       |> Map.put(:small_blind, 10)
       |> Map.put(:big_blind, 20)
-      |> Map.put(:button_position, 0)  # Button advances to player 1, making player 2 SB, player 3 BB
+      |> Map.put(:button_position, 2)  # Button advances from 2 to 0, making player 2 SB, player 3 BB
       
       updated_state = GameState.start_hand(game_state)
       
-      # Player 1 (button) should have full chips
+      # Button player should have full chips
       button_player = Enum.find(updated_state.players, &(&1.id == 1))
       assert button_player.chips == 1500  # No blind posted
       
-      # Small blind player (2) should post full amount
+      # Small blind player should post full amount
       sb_player = Enum.find(updated_state.players, &(&1.id == 2))
       assert sb_player.chips == 1490  # 1500 - 10
       
-      # Big blind player (3) should go all-in for 15 chips (not negative)
+      # Big blind player should go all-in for 15 chips (not negative)
       bb_player = Enum.find(updated_state.players, &(&1.id == 3))
       assert bb_player.chips == 0  # All chips posted
       
@@ -124,23 +124,27 @@ defmodule PokerServer.GameStateTest do
     test "handles both blind players with insufficient chips" do
       # Both blind players have insufficient chips
       players = [
-        player(1, 5),     # Position 0 - small blind, needs 10
-        player(2, 12),    # Position 1 - big blind, needs 20  
-        player(3, 1500)   # Position 2 - normal player
+        player(1, 1500),  # Position 0 - will be button
+        player(2, 5),     # Position 1 - will be small blind, insufficient
+        player(3, 12)     # Position 2 - will be big blind, insufficient
       ]
       
       game_state = GameState.new(players)
       |> Map.put(:small_blind, 10)
       |> Map.put(:big_blind, 20)
-      |> Map.put(:button_position, 0)  # Button advances to player 1, making player 2 SB, player 3 BB
+      |> Map.put(:button_position, 2)  # Button advances from 2 to 0, making player 2 SB, player 3 BB
       
       updated_state = GameState.start_hand(game_state)
       
+      # Button player should have full chips
+      button_player = Enum.find(updated_state.players, &(&1.id == 1))
+      assert button_player.chips == 1500  # No blind posted
+      
       # Both blind players should go all-in with what they have
-      sb_player = Enum.find(updated_state.players, &(&1.id == 1))
+      sb_player = Enum.find(updated_state.players, &(&1.id == 2))
       assert sb_player.chips == 0  # Posted 5 chips
       
-      bb_player = Enum.find(updated_state.players, &(&1.id == 2))
+      bb_player = Enum.find(updated_state.players, &(&1.id == 3))
       assert bb_player.chips == 0  # Posted 12 chips
       
       # Pot should have both partial blinds
@@ -150,23 +154,27 @@ defmodule PokerServer.GameStateTest do
     test "handles exact blind amounts (boundary case)" do
       # Players have exactly the blind amounts
       players = [
-        player(1, 10),    # Position 0 - small blind, exactly 10
-        player(2, 20),    # Position 1 - big blind, exactly 20  
-        player(3, 1500)   # Position 2 - normal player
+        player(1, 1500),  # Position 0 - will be button
+        player(2, 10),    # Position 1 - will be small blind, exactly 10
+        player(3, 20)     # Position 2 - will be big blind, exactly 20
       ]
       
       game_state = GameState.new(players)
       |> Map.put(:small_blind, 10)
       |> Map.put(:big_blind, 20)
-      |> Map.put(:button_position, 0)  # Button advances to player 1, making player 2 SB, player 3 BB
+      |> Map.put(:button_position, 2)  # Button advances from 2 to 0, making player 2 SB, player 3 BB
       
       updated_state = GameState.start_hand(game_state)
       
+      # Button player should have full chips
+      button_player = Enum.find(updated_state.players, &(&1.id == 1))
+      assert button_player.chips == 1500  # No blind posted
+      
       # Both players should post exact blind amounts and have 0 chips left
-      sb_player = Enum.find(updated_state.players, &(&1.id == 1))
+      sb_player = Enum.find(updated_state.players, &(&1.id == 2))
       assert sb_player.chips == 0
       
-      bb_player = Enum.find(updated_state.players, &(&1.id == 2))
+      bb_player = Enum.find(updated_state.players, &(&1.id == 3))
       assert bb_player.chips == 0
       
       # Pot should have full blinds
