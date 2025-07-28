@@ -1,6 +1,6 @@
 defmodule PokerServer.GameManager do
   use GenServer
-  alias PokerServer.GameServer
+  alias PokerServer.{GameServer, InputValidator}
 
   # Client API
 
@@ -30,9 +30,14 @@ defmodule PokerServer.GameManager do
   Process a player action in a game
   """
   def player_action(game_id, player_id, action) do
-    case Registry.lookup(PokerServer.GameRegistry, game_id) do
-      [{pid, _}] -> GameServer.player_action(pid, player_id, action)
-      [] -> {:error, :game_not_found}
+    with :ok <- InputValidator.validate_player_id(player_id),
+         :ok <- InputValidator.validate_action(action) do
+      case Registry.lookup(PokerServer.GameRegistry, game_id) do
+        [{pid, _}] -> GameServer.player_action(pid, player_id, action)
+        [] -> {:error, :game_not_found}
+      end
+    else
+      {:error, validation_error} -> {:error, {:invalid_input, validation_error}}
     end
   end
 
@@ -63,18 +68,24 @@ defmodule PokerServer.GameManager do
 
   @impl true
   def handle_call({:create_game, players}, _from, state) do
-    game_id = generate_game_id()
-    
-    case start_game_process(game_id, players) do
-      {:ok, _pid} ->
-        updated_state = Map.put(state, game_id, %{
-          players: players,
-          created_at: DateTime.utc_now()
-        })
-        {:reply, {:ok, game_id}, updated_state}
+    case InputValidator.validate_players(players) do
+      {:ok, validated_players} ->
+        game_id = generate_game_id()
+        
+        case start_game_process(game_id, validated_players) do
+          {:ok, _pid} ->
+            updated_state = Map.put(state, game_id, %{
+              players: validated_players,
+              created_at: DateTime.utc_now()
+            })
+            {:reply, {:ok, game_id}, updated_state}
+          
+          {:error, reason} ->
+            {:reply, {:error, reason}, state}
+        end
       
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
+      {:error, validation_error} ->
+        {:reply, {:error, {:invalid_input, validation_error}}, state}
     end
   end
 

@@ -1,6 +1,6 @@
 defmodule PokerServer.GameServer do
   use GenServer
-  alias PokerServer.{GameState, BettingRound, Player}
+  alias PokerServer.{GameState, BettingRound, Player, InputValidator}
 
   # Client API
 
@@ -84,26 +84,33 @@ defmodule PokerServer.GameServer do
   def handle_call({:player_action, player_id, action}, _from, 
     %{betting_round: betting_round, phase: :preflop_betting} = state) when not is_nil(betting_round) do
     
-    case BettingRound.process_action(betting_round, player_id, action) do
-      {:ok, updated_betting_round} ->
-        new_state = %{state | betting_round: updated_betting_round}
+    # Validate player exists in the game
+    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
+         :ok <- InputValidator.validate_game_state(state.game_state) do
+      case BettingRound.process_action(betting_round, player_id, action) do
+        {:ok, updated_betting_round} ->
+          new_state = %{state | betting_round: updated_betting_round}
+          
+          # Check if betting round is complete
+          if BettingRound.betting_complete?(updated_betting_round) do
+            # Move to next phase (flop)
+            updated_game_state = GameState.deal_flop(state.game_state)
+            final_state = %{new_state | 
+              game_state: updated_game_state, 
+              betting_round: nil,
+              phase: :flop
+            }
+            {:reply, {:ok, :betting_complete, final_state}, final_state}
+          else
+            {:reply, {:ok, :action_processed, new_state}, new_state}
+          end
         
-        # Check if betting round is complete
-        if BettingRound.betting_complete?(updated_betting_round) do
-          # Move to next phase (flop)
-          updated_game_state = GameState.deal_flop(state.game_state)
-          final_state = %{new_state | 
-            game_state: updated_game_state, 
-            betting_round: nil,
-            phase: :flop
-          }
-          {:reply, {:ok, :betting_complete, final_state}, final_state}
-        else
-          {:reply, {:ok, :action_processed, new_state}, new_state}
-        end
-      
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
+        {:error, reason} ->
+          {:reply, {:error, reason}, state}
+      end
+    else
+      {:error, validation_error} -> 
+        {:reply, {:error, {:invalid_input, validation_error}}, state}
     end
   end
 
