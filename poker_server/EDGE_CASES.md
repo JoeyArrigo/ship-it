@@ -3,9 +3,9 @@
 This document tracks identified edge cases and missing test scenarios that need to be addressed for production readiness.
 
 ## Progress Summary
-- **Phase 1 Critical Issues:** 1/4 completed (25%)
-- **Total Issues Resolved:** 1/12 (8.3%)
-- **Last Updated:** Multi-player all-in side pots implemented
+- **Phase 1 Critical Issues:** 3/4 completed (75%)
+- **Total Issues Resolved:** 3/12 (25%)
+- **Last Updated:** Button position tracking and blind posting fixes completed
 
 ## Status Legend
 - 🔥 **Critical** - Could break in production
@@ -38,31 +38,47 @@ This document tracks identified edge cases and missing test scenarios that need 
 
 ---
 
-### 2. Button Position with Multiple Eliminations 🔥
-**Status:** Partially implemented  
-**Risk Level:** Critical - Could crash game  
+### 2. Button Position with Multiple Eliminations ✅
+**Status:** ✅ **COMPLETED** (2024-01-XX)  
+**Risk Level:** ~~Critical~~ → Resolved  
 **Location:** `lib/poker_server/game_state.ex:eliminate_players/1`
 
-**Problem:** If button + consecutive players are eliminated, button position may become invalid.
+**Solution Implemented:**
+- Replaced simple modulo arithmetic with proper player tracking
+- Handles button player survival vs elimination cases separately  
+- Advances button to next surviving player when current button eliminated
+- Works correctly for any number of consecutive eliminations
 
-**Missing Scenarios:**
-- Button player eliminated with next 2+ players
-- All but 2 players eliminated simultaneously
-- Button position >= remaining player count
+**Test Coverage Added:**
+- Button on eliminated player with multiple consecutive eliminations
+- All but one player eliminated (extreme case)
+- Button player survives elimination scenario
+- Position reassignment validation across all scenarios
+- All edge case tests pass including complex elimination patterns
+
+**Commit:** `89693ec` - Fix button position tracking during player elimination
 
 ---
 
-### 3. Blind Posting with Insufficient Chips 🔥
-**Status:** Not handled  
-**Risk Level:** Critical - Game could hang  
+### 3. Blind Posting with Insufficient Chips ✅
+**Status:** ✅ **COMPLETED** (2024-01-XX)  
+**Risk Level:** ~~Critical~~ → Resolved  
 **Location:** `lib/poker_server/game_state.ex:start_hand/1`
 
-**Problem:** No handling for players who can't afford blind amounts.
+**Solution Implemented:**
+- Prevents negative chip counts using `min(player.chips, blind_amount)`
+- Players automatically go all-in when they can't afford full blind
+- Proper pot calculation with partial blind contributions
+- Maintains poker tournament rules for insufficient blind scenarios
 
-**Missing Scenarios:**
-- Small blind player has fewer chips than required
-- Big blind player has fewer chips than required
-- Both blind players have insufficient chips
+**Test Coverage Added:**
+- Small blind player with insufficient chips
+- Big blind player with insufficient chips  
+- Both blind players with insufficient chips
+- Exact blind amounts (boundary case)
+- All 25 game state tests pass with comprehensive edge case coverage
+
+**Commit:** `7849980` - Fix blind posting test button position calculations
 
 ---
 
@@ -178,9 +194,9 @@ This document tracks identified edge cases and missing test scenarios that need 
 
 ### Phase 1: Critical Fixes (Week 1)
 1. ✅ Multi-player all-in side pots (COMPLETED)
-2. 🔄 Button position edge cases (IN PROGRESS)
-3. Blind posting validation
-4. Basic concurrent access
+2. ✅ Button position edge cases (COMPLETED)
+3. ✅ Blind posting validation (COMPLETED)
+4. 🔄 Basic concurrent access (REMAINING)
 
 ### Phase 2: High Priority (Week 2)
 1. Deck exhaustion handling
