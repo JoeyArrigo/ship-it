@@ -159,6 +159,30 @@ defmodule PokerServer.HandEvaluatorTest do
       assert Enum.sort(winners) == [1, 2]
     end
 
+    test "determines winner by kickers" do
+      hands = [
+        {1, {:one_pair, [card(:ace, :hearts), card(:ace, :diamonds), card(:king, :clubs), card(:queen, :spades), card(:jack, :hearts)]}},
+        {2, {:one_pair, [card(:ace, :clubs), card(:ace, :spades), card(:king, :hearts), card(:queen, :diamonds), card(:ten, :clubs)]}},
+        {3, {:one_pair, [card(:ace, :hearts), card(:ace, :clubs), card(:king, :spades), card(:queen, :hearts), card(:nine, :diamonds)]}}
+      ]
+      
+      # All have AA-KQ, but different final kickers: J vs 10 vs 9
+      winners = HandEvaluator.determine_winners(hands)
+      assert winners == [1]  # Player 1 wins with Jack kicker
+    end
+
+    test "determines winner with two pair kickers" do
+      hands = [
+        {1, {:two_pair, [card(:ace, :hearts), card(:ace, :diamonds), card(:king, :clubs), card(:king, :spades), card(:queen, :hearts)]}},
+        {2, {:two_pair, [card(:ace, :clubs), card(:ace, :spades), card(:king, :hearts), card(:king, :diamonds), card(:jack, :clubs)]}},
+        {3, {:two_pair, [card(:ace, :hearts), card(:ace, :clubs), card(:king, :spades), card(:king, :hearts), card(:ten, :diamonds)]}}
+      ]
+      
+      # All have AA-KK, but different kickers: Q vs J vs 10
+      winners = HandEvaluator.determine_winners(hands)
+      assert winners == [1]  # Player 1 wins with Queen kicker
+    end
+
     test "handles empty hands list" do
       assert HandEvaluator.determine_winners([]) == []
     end
@@ -244,6 +268,131 @@ defmodule PokerServer.HandEvaluatorTest do
       {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
       # Available cards: 6, 6, 8, 8, 10, Q, A - has two pair, not straight
       assert hand_type == :two_pair
+    end
+  end
+
+  describe "kicker comparisons" do
+    test "one pair with different kickers" do
+      # Both have pair of Aces, different kickers
+      hand1 = {:one_pair, [card(:ace, :hearts), card(:ace, :diamonds), card(:king, :clubs), card(:queen, :spades), card(:jack, :hearts)]}
+      hand2 = {:one_pair, [card(:ace, :clubs), card(:ace, :spades), card(:king, :hearts), card(:queen, :diamonds), card(:ten, :clubs)]}
+      
+      # First hand has J kicker, second has 10 kicker - first should win
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+      assert HandEvaluator.compare_hands(hand2, hand1) == :less
+    end
+
+    test "one pair with multiple kicker comparisons" do
+      # Both have pair of Kings, need to compare multiple kickers
+      hand1 = {:one_pair, [card(:king, :hearts), card(:king, :diamonds), card(:ace, :clubs), card(:nine, :spades), card(:eight, :hearts)]}
+      hand2 = {:one_pair, [card(:king, :clubs), card(:king, :spades), card(:ace, :hearts), card(:nine, :diamonds), card(:seven, :clubs)]}
+      
+      # Same pair (KK), same first kicker (A), same second kicker (9), third kicker differs (8 vs 7)
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "two pair with different high pairs" do
+      hand1 = {:two_pair, [card(:ace, :hearts), card(:ace, :diamonds), card(:king, :clubs), card(:king, :spades), card(:queen, :hearts)]}
+      hand2 = {:two_pair, [card(:king, :hearts), card(:king, :diamonds), card(:queen, :clubs), card(:queen, :spades), card(:ace, :hearts)]}
+      
+      # AA-KK vs KK-QQ - first hand wins on high pair
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "two pair with same high pair, different low pairs" do
+      hand1 = {:two_pair, [card(:ace, :hearts), card(:ace, :diamonds), card(:king, :clubs), card(:king, :spades), card(:queen, :hearts)]}
+      hand2 = {:two_pair, [card(:ace, :clubs), card(:ace, :spades), card(:queen, :clubs), card(:queen, :spades), card(:king, :hearts)]}
+      
+      # AA-KK vs AA-QQ - first hand wins on low pair
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "two pair with identical pairs, different kickers" do
+      hand1 = {:two_pair, [card(:ace, :hearts), card(:ace, :diamonds), card(:king, :clubs), card(:king, :spades), card(:queen, :hearts)]}
+      hand2 = {:two_pair, [card(:ace, :clubs), card(:ace, :spades), card(:king, :hearts), card(:king, :diamonds), card(:jack, :clubs)]}
+      
+      # AA-KK-Q vs AA-KK-J - first hand wins on kicker
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "three of a kind with different trips" do
+      hand1 = {:three_of_a_kind, [card(:ace, :hearts), card(:ace, :diamonds), card(:ace, :clubs), card(:king, :spades), card(:queen, :hearts)]}
+      hand2 = {:three_of_a_kind, [card(:king, :hearts), card(:king, :diamonds), card(:king, :clubs), card(:ace, :spades), card(:queen, :clubs)]}
+      
+      # AAA vs KKK - first hand wins on trips rank
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "three of a kind with same trips, different kickers" do
+      hand1 = {:three_of_a_kind, [card(:ace, :hearts), card(:ace, :diamonds), card(:ace, :clubs), card(:king, :spades), card(:queen, :hearts)]}
+      hand2 = {:three_of_a_kind, [card(:ace, :clubs), card(:ace, :spades), card(:ace, :hearts), card(:king, :diamonds), card(:jack, :clubs)]}
+      
+      # AAA-K-Q vs AAA-K-J - first hand wins on second kicker
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "full house with different trips" do
+      hand1 = {:full_house, [card(:ace, :hearts), card(:ace, :diamonds), card(:ace, :clubs), card(:king, :spades), card(:king, :hearts)]}
+      hand2 = {:full_house, [card(:king, :hearts), card(:king, :diamonds), card(:king, :clubs), card(:ace, :spades), card(:ace, :clubs)]}
+      
+      # AAA-KK vs KKK-AA - first hand wins on trips rank
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "full house with same trips, different pairs" do
+      hand1 = {:full_house, [card(:ace, :hearts), card(:ace, :diamonds), card(:ace, :clubs), card(:king, :spades), card(:king, :hearts)]}
+      hand2 = {:full_house, [card(:ace, :clubs), card(:ace, :spades), card(:ace, :hearts), card(:queen, :diamonds), card(:queen, :clubs)]}
+      
+      # AAA-KK vs AAA-QQ - first hand wins on pair rank
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "high card with multiple kicker comparisons" do
+      hand1 = {:high_card, [card(:ace, :hearts), card(:king, :diamonds), card(:queen, :clubs), card(:jack, :spades), card(:nine, :hearts)]}
+      hand2 = {:high_card, [card(:ace, :clubs), card(:king, :spades), card(:queen, :hearts), card(:jack, :diamonds), card(:eight, :clubs)]}
+      
+      # A-K-Q-J-9 vs A-K-Q-J-8 - first hand wins on fifth card
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "identical hands return equal" do
+      hand1 = {:one_pair, [card(:ace, :hearts), card(:ace, :diamonds), card(:king, :clubs), card(:queen, :spades), card(:jack, :hearts)]}
+      hand2 = {:one_pair, [card(:ace, :clubs), card(:ace, :spades), card(:king, :hearts), card(:queen, :diamonds), card(:jack, :clubs)]}
+      
+      assert HandEvaluator.compare_hands(hand1, hand2) == :equal
+    end
+
+    test "edge case: one pair with identical first three kickers" do
+      # Test going deep into kicker comparison
+      hand1 = {:one_pair, [card(:nine, :hearts), card(:nine, :diamonds), card(:ace, :clubs), card(:king, :spades), card(:eight, :hearts)]}
+      hand2 = {:one_pair, [card(:nine, :clubs), card(:nine, :spades), card(:ace, :hearts), card(:king, :diamonds), card(:seven, :clubs)]}
+      
+      # 99-A-K-8 vs 99-A-K-7 - first hand wins on fourth kicker
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "edge case: three of a kind with identical first kicker" do
+      hand1 = {:three_of_a_kind, [card(:nine, :hearts), card(:nine, :diamonds), card(:nine, :clubs), card(:ace, :spades), card(:eight, :hearts)]}
+      hand2 = {:three_of_a_kind, [card(:nine, :clubs), card(:nine, :spades), card(:nine, :hearts), card(:ace, :diamonds), card(:seven, :clubs)]}
+      
+      # 999-A-8 vs 999-A-7 - first hand wins on second kicker
+      assert HandEvaluator.compare_hands(hand1, hand2) == :greater
+    end
+
+    test "integration: evaluate_hand with kicker comparison" do
+      # Test that kicker comparison works through the full evaluate_hand pipeline
+      hole_cards1 = [card(:ace, :hearts), card(:king, :diamonds)]
+      community1 = [card(:queen, :clubs), card(:jack, :spades), card(:ten, :hearts), card(:nine, :clubs), card(:eight, :diamonds)]
+      
+      hole_cards2 = [card(:ace, :clubs), card(:king, :spades)]
+      community2 = [card(:queen, :hearts), card(:jack, :diamonds), card(:ten, :clubs), card(:nine, :spades), card(:seven, :hearts)]
+      
+      hand1 = HandEvaluator.evaluate_hand(hole_cards1, community1)
+      hand2 = HandEvaluator.evaluate_hand(hole_cards2, community2)
+      
+      # Both should be straights (A-K-Q-J-10), but first has 8 as extra card vs 7
+      # Since these are straights, the comparison should be equal
+      assert HandEvaluator.compare_hands(hand1, hand2) == :equal
     end
   end
 

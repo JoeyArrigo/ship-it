@@ -52,11 +52,69 @@ defmodule PokerServer.HandEvaluator do
     val1 = card_rank_value(%{rank: pair_rank1})
     val2 = card_rank_value(%{rank: pair_rank2})
     
-    cond do
-      val1 > val2 -> :greater
-      val1 < val2 -> :less
-      true -> :equal  # Same pair rank - could compare kickers but not needed for current test
+    case compare_values(val1, val2) do
+      :equal ->
+        # Same pair rank - compare kickers
+        kickers1 = get_kickers_for_pair(cards1, pair_rank1)
+        kickers2 = get_kickers_for_pair(cards2, pair_rank2)
+        compare_kickers(kickers1, kickers2)
+      result -> result
     end
+  end
+
+  defp compare_same_hand_type(:two_pair, cards1, cards2) do
+    pairs1 = get_two_pair_ranks(cards1)
+    pairs2 = get_two_pair_ranks(cards2)
+    
+    case compare_two_pair_ranks(pairs1, pairs2) do
+      :equal ->
+        # Same two pair ranks - compare kicker
+        kicker1 = get_kickers_for_two_pair(cards1, pairs1)
+        kicker2 = get_kickers_for_two_pair(cards2, pairs2)
+        compare_kickers(kicker1, kicker2)
+      result -> result
+    end
+  end
+
+  defp compare_same_hand_type(:three_of_a_kind, cards1, cards2) do
+    trips_rank1 = find_trips_rank(cards1)
+    trips_rank2 = find_trips_rank(cards2)
+    
+    val1 = card_rank_value(%{rank: trips_rank1})
+    val2 = card_rank_value(%{rank: trips_rank2})
+    
+    case compare_values(val1, val2) do
+      :equal ->
+        # Same trips rank - compare kickers
+        kickers1 = get_kickers_for_trips(cards1, trips_rank1)
+        kickers2 = get_kickers_for_trips(cards2, trips_rank2)
+        compare_kickers(kickers1, kickers2)
+      result -> result
+    end
+  end
+
+  defp compare_same_hand_type(:full_house, cards1, cards2) do
+    {trips_rank1, pair_rank1} = get_full_house_ranks(cards1)
+    {trips_rank2, pair_rank2} = get_full_house_ranks(cards2)
+    
+    trips_val1 = card_rank_value(%{rank: trips_rank1})
+    trips_val2 = card_rank_value(%{rank: trips_rank2})
+    
+    case compare_values(trips_val1, trips_val2) do
+      :equal ->
+        # Same trips rank - compare pair rank
+        pair_val1 = card_rank_value(%{rank: pair_rank1})
+        pair_val2 = card_rank_value(%{rank: pair_rank2})
+        compare_values(pair_val1, pair_val2)
+      result -> result
+    end
+  end
+
+  defp compare_same_hand_type(:high_card, cards1, cards2) do
+    # Compare all cards in descending order
+    sorted1 = cards1 |> Enum.sort_by(&card_rank_value/1, :desc)
+    sorted2 = cards2 |> Enum.sort_by(&card_rank_value/1, :desc)
+    compare_kickers(sorted1, sorted2)
   end
 
   defp compare_same_hand_type(:straight, cards1, cards2) do
@@ -114,6 +172,89 @@ defmodule PokerServer.HandEvaluator do
     |> Enum.group_by(& &1.rank)
     |> Enum.find(fn {_rank, group} -> length(group) == 2 end)
     |> elem(0)
+  end
+
+  # Helper functions for kicker comparisons
+  
+  defp compare_values(val1, val2) do
+    cond do
+      val1 > val2 -> :greater
+      val1 < val2 -> :less
+      true -> :equal
+    end
+  end
+
+  defp compare_kickers([], []), do: :equal
+  defp compare_kickers([card1 | rest1], [card2 | rest2]) do
+    val1 = card_rank_value(card1)
+    val2 = card_rank_value(card2)
+    
+    case compare_values(val1, val2) do
+      :equal -> compare_kickers(rest1, rest2)
+      result -> result
+    end
+  end
+
+  defp get_kickers_for_pair(cards, pair_rank) do
+    cards
+    |> Enum.reject(&(&1.rank == pair_rank))
+    |> Enum.sort_by(&card_rank_value/1, :desc)
+  end
+
+  defp get_two_pair_ranks(cards) do
+    cards
+    |> Enum.group_by(& &1.rank)
+    |> Enum.filter(fn {_rank, group} -> length(group) == 2 end)
+    |> Enum.map(fn {rank, _group} -> rank end)
+    |> Enum.sort_by(&card_rank_value(%{rank: &1}), :desc)
+  end
+
+  defp compare_two_pair_ranks([high1, low1], [high2, low2]) do
+    high_val1 = card_rank_value(%{rank: high1})
+    high_val2 = card_rank_value(%{rank: high2})
+    
+    case compare_values(high_val1, high_val2) do
+      :equal ->
+        low_val1 = card_rank_value(%{rank: low1})
+        low_val2 = card_rank_value(%{rank: low2})
+        compare_values(low_val1, low_val2)
+      result -> result
+    end
+  end
+
+  defp get_kickers_for_two_pair(cards, [high_pair, low_pair]) do
+    cards
+    |> Enum.reject(&(&1.rank == high_pair || &1.rank == low_pair))
+    |> Enum.sort_by(&card_rank_value/1, :desc)
+  end
+
+  defp find_trips_rank(cards) do
+    cards
+    |> Enum.group_by(& &1.rank)
+    |> Enum.find(fn {_rank, group} -> length(group) == 3 end)
+    |> elem(0)
+  end
+
+  defp get_kickers_for_trips(cards, trips_rank) do
+    cards
+    |> Enum.reject(&(&1.rank == trips_rank))
+    |> Enum.sort_by(&card_rank_value/1, :desc)
+  end
+
+  defp get_full_house_ranks(cards) do
+    rank_counts = cards
+    |> Enum.group_by(& &1.rank)
+    |> Enum.map(fn {rank, group} -> {rank, length(group)} end)
+
+    trips_rank = rank_counts
+    |> Enum.find(fn {_rank, count} -> count == 3 end)
+    |> elem(0)
+
+    pair_rank = rank_counts
+    |> Enum.find(fn {_rank, count} -> count == 2 end)
+    |> elem(0)
+
+    {trips_rank, pair_rank}
   end
 
   defp card_rank_value(%{rank: rank}) do
