@@ -35,7 +35,7 @@ defmodule PokerServer.BettingRound do
       pot: small_blind + big_blind,
       current_bet: big_blind,
       player_bets: player_bets,
-      active_player_index: (if length(players) > 2, do: 2, else: 0),  # UTG or small blind in heads-up
+      active_player_index: get_initial_active_player_index(players, round_type),
       folded_players: MapSet.new(),
       all_in_players: MapSet.new(),
       last_raise_size: big_blind
@@ -79,7 +79,30 @@ defmodule PokerServer.BettingRound do
         end
       end
     
+    # Players can always go all-in if they have chips (unless already all-in)
+    actions = 
+      if active_player.chips > 0 && active_player.id not in betting_round.all_in_players do
+        if :all_in not in actions, do: actions ++ [:all_in], else: actions
+      else
+        actions
+      end
+    
     actions
+  end
+
+  defp get_initial_active_player_index(players, round_type) do
+    player_count = length(players)
+    
+    if player_count == 2 do
+      # Heads-up rules
+      case round_type do
+        :preflop -> 0  # Small blind acts first pre-flop
+        _ -> 1         # Big blind acts first post-flop
+      end
+    else
+      # Multi-player: UTG (position after big blind) acts first
+      2
+    end
   end
 
   defp get_active_player(betting_round) do
