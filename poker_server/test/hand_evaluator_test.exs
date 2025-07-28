@@ -48,7 +48,7 @@ defmodule PokerServer.HandEvaluatorTest do
 
     test "identifies three of a kind" do
       hole_cards = [card(:ace, :hearts), card(:ace, :diamonds)]
-      community = [card(:ace, :clubs), card(:king, :spades), card(:queen, :hearts), card(:jack, :spades), card(:ten, :clubs)]
+      community = [card(:ace, :clubs), card(:king, :spades), card(:queen, :hearts), card(:nine, :spades), card(:eight, :clubs)]
       
       {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
       assert hand_type == :three_of_a_kind
@@ -56,7 +56,7 @@ defmodule PokerServer.HandEvaluatorTest do
 
     test "identifies two pair" do
       hole_cards = [card(:ace, :hearts), card(:ace, :diamonds)]
-      community = [card(:king, :clubs), card(:king, :spades), card(:queen, :hearts), card(:jack, :spades), card(:ten, :clubs)]
+      community = [card(:king, :clubs), card(:king, :spades), card(:queen, :hearts), card(:nine, :spades), card(:eight, :clubs)]
       
       {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
       assert hand_type == :two_pair
@@ -64,7 +64,7 @@ defmodule PokerServer.HandEvaluatorTest do
 
     test "identifies one pair" do
       hole_cards = [card(:ace, :hearts), card(:ace, :diamonds)]
-      community = [card(:king, :clubs), card(:queen, :spades), card(:jack, :hearts), card(:ten, :spades), card(:nine, :clubs)]
+      community = [card(:king, :clubs), card(:queen, :spades), card(:jack, :hearts), card(:eight, :spades), card(:six, :clubs)]
       
       {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
       assert hand_type == :one_pair
@@ -161,6 +161,89 @@ defmodule PokerServer.HandEvaluatorTest do
 
     test "handles empty hands list" do
       assert HandEvaluator.determine_winners([]) == []
+    end
+  end
+
+  describe "short deck straight edge cases" do
+    test "identifies A-6-7-8-9 straight (lowest possible in short deck)" do
+      hole_cards = [card(:ace, :hearts), card(:six, :diamonds)]
+      community = [card(:seven, :clubs), card(:eight, :spades), card(:nine, :hearts), card(:king, :clubs), card(:queen, :diamonds)]
+      
+      {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
+      assert hand_type == :straight
+    end
+
+    test "identifies 6-7-8-9-10 straight" do
+      hole_cards = [card(:six, :hearts), card(:seven, :diamonds)]
+      community = [card(:eight, :clubs), card(:nine, :spades), card(:ten, :hearts), card(:king, :clubs), card(:queen, :diamonds)]
+      
+      {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
+      assert hand_type == :straight
+    end
+
+    test "identifies 10-J-Q-K-A straight (highest possible in short deck)" do
+      hole_cards = [card(:ace, :hearts), card(:ten, :diamonds)]
+      community = [card(:jack, :clubs), card(:queen, :spades), card(:king, :hearts), card(:nine, :clubs), card(:eight, :diamonds)]
+      
+      {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
+      assert hand_type == :straight
+    end
+
+    test "A-6-7-8-9 straight beats no straight" do
+      wheel_straight = {:straight, [card(:ace, :hearts), card(:six, :diamonds), card(:seven, :clubs), card(:eight, :spades), card(:nine, :hearts)]}
+      high_card = {:high_card, [card(:ace, :clubs), card(:king, :diamonds), card(:queen, :hearts), card(:jack, :spades), card(:ten, :clubs)]}
+      
+      assert HandEvaluator.compare_hands(wheel_straight, high_card) == :greater
+    end
+
+    test "6-7-8-9-10 straight beats A-6-7-8-9 straight" do
+      regular_straight = {:straight, [card(:six, :hearts), card(:seven, :diamonds), card(:eight, :clubs), card(:nine, :spades), card(:ten, :hearts)]}
+      wheel_straight = {:straight, [card(:ace, :hearts), card(:six, :diamonds), card(:seven, :clubs), card(:eight, :spades), card(:nine, :hearts)]}
+      
+      assert HandEvaluator.compare_hands(regular_straight, wheel_straight) == :greater
+      assert HandEvaluator.compare_hands(wheel_straight, regular_straight) == :less
+    end
+
+    test "10-J-Q-K-A straight beats 6-7-8-9-10 straight" do
+      ace_high_straight = {:straight, [card(:ace, :hearts), card(:ten, :diamonds), card(:jack, :clubs), card(:queen, :spades), card(:king, :hearts)]}
+      six_high_straight = {:straight, [card(:six, :hearts), card(:seven, :diamonds), card(:eight, :clubs), card(:nine, :spades), card(:ten, :hearts)]}
+      
+      assert HandEvaluator.compare_hands(ace_high_straight, six_high_straight) == :greater
+      assert HandEvaluator.compare_hands(six_high_straight, ace_high_straight) == :less
+    end
+
+    test "straight flush with A-6-7-8-9 beats four of a kind" do
+      wheel_straight_flush = {:straight_flush, [card(:ace, :hearts), card(:six, :hearts), card(:seven, :hearts), card(:eight, :hearts), card(:nine, :hearts)]}
+      four_kings = {:four_of_a_kind, [card(:king, :clubs), card(:king, :diamonds), card(:king, :hearts), card(:king, :spades), card(:ace, :clubs)]}
+      
+      assert HandEvaluator.compare_hands(wheel_straight_flush, four_kings) == :greater
+    end
+
+    test "higher straight flush beats lower straight flush" do
+      ace_high_sf = {:straight_flush, [card(:ace, :hearts), card(:ten, :hearts), card(:jack, :hearts), card(:queen, :hearts), card(:king, :hearts)]}
+      wheel_sf = {:straight_flush, [card(:ace, :spades), card(:six, :spades), card(:seven, :spades), card(:eight, :spades), card(:nine, :spades)]}
+      
+      assert HandEvaluator.compare_hands(ace_high_sf, wheel_sf) == :greater
+      assert HandEvaluator.compare_hands(wheel_sf, ace_high_sf) == :less
+    end
+
+    test "does not identify invalid sequences as straights" do
+      # A-7-8-9-10 is not a valid straight (missing 6)
+      hole_cards = [card(:ace, :hearts), card(:seven, :diamonds)]
+      community = [card(:eight, :clubs), card(:nine, :spades), card(:ten, :hearts), card(:king, :clubs), card(:queen, :diamonds)]
+      
+      {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
+      refute hand_type == :straight
+    end
+
+    test "does not identify gap sequences as straights" do
+      # Cards with no possible 5-card straight: 6, 8, 10, Q, A (all scattered)
+      hole_cards = [card(:six, :hearts), card(:eight, :diamonds)]
+      community = [card(:ten, :clubs), card(:queen, :spades), card(:ace, :hearts), card(:six, :clubs), card(:eight, :spades)]
+      
+      {hand_type, _cards} = HandEvaluator.evaluate_hand(hole_cards, community)
+      # Available cards: 6, 6, 8, 8, 10, Q, A - has two pair, not straight
+      assert hand_type == :two_pair
     end
   end
 

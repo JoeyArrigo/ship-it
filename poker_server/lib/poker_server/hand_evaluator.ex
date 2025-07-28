@@ -59,6 +59,22 @@ defmodule PokerServer.HandEvaluator do
     end
   end
 
+  defp compare_same_hand_type(:straight, cards1, cards2) do
+    straight_value1 = get_straight_value(cards1)
+    straight_value2 = get_straight_value(cards2)
+    
+    cond do
+      straight_value1 > straight_value2 -> :greater
+      straight_value1 < straight_value2 -> :less
+      true -> :equal
+    end
+  end
+
+  defp compare_same_hand_type(:straight_flush, cards1, cards2) do
+    # Same logic as straight for straight flush
+    compare_same_hand_type(:straight, cards1, cards2)
+  end
+
   defp compare_same_hand_type(_hand_type, cards1, cards2) do
     # Simple high card comparison for other hand types
     high_card1 = cards1 |> Enum.max_by(&card_rank_value/1)
@@ -71,6 +87,25 @@ defmodule PokerServer.HandEvaluator do
       val1 > val2 -> :greater
       val1 < val2 -> :less
       true -> :equal
+    end
+  end
+
+  defp get_straight_value(cards) do
+    sorted_ranks = cards
+    |> Enum.map(&card_rank_value/1)
+    |> Enum.uniq()
+    |> Enum.sort()
+    
+    case sorted_ranks do
+      # A-6-7-8-9 straight is the lowest (value 1)
+      [6, 7, 8, 9, 14] -> 1
+      # Regular straights ranked by high card
+      [6, 7, 8, 9, 10] -> 10
+      [7, 8, 9, 10, 11] -> 11
+      [8, 9, 10, 11, 12] -> 12
+      [9, 10, 11, 12, 13] -> 13
+      [10, 11, 12, 13, 14] -> 14
+      _ -> 0  # Not a straight
     end
   end
 
@@ -97,26 +132,40 @@ defmodule PokerServer.HandEvaluator do
 
   def evaluate_hand(hole_cards, community_cards) do
     all_cards = hole_cards ++ community_cards
-    best_five = get_best_five_cards(all_cards)
     
+    # Check all possible 5-card combinations for the best hand
+    best_hand = if length(all_cards) <= 5 do
+      evaluate_five_cards(all_cards)
+    else
+      all_cards
+      |> combinations(5)
+      |> Enum.map(&evaluate_five_cards/1)
+      |> Enum.max_by(fn {hand_type, _cards} -> 
+        hand_rankings() |> Enum.find_index(&(&1 == hand_type)) |> then(&(100 - &1))
+      end)
+    end
+    
+    best_hand
+  end
+
+  defp evaluate_five_cards(cards) do
     cond do
-      is_straight_flush?(best_five) -> {:straight_flush, best_five}
-      is_four_of_a_kind?(best_five) -> {:four_of_a_kind, best_five}
-      is_flush?(best_five) -> {:flush, best_five}
-      is_full_house?(best_five) -> {:full_house, best_five}
-      is_straight?(best_five) -> {:straight, best_five}
-      is_three_of_a_kind?(best_five) -> {:three_of_a_kind, best_five}
-      is_two_pair?(best_five) -> {:two_pair, best_five}
-      is_one_pair?(best_five) -> {:one_pair, best_five}
-      true -> {:high_card, best_five}
+      is_straight_flush?(cards) -> {:straight_flush, cards}
+      is_four_of_a_kind?(cards) -> {:four_of_a_kind, cards}
+      is_flush?(cards) -> {:flush, cards}
+      is_full_house?(cards) -> {:full_house, cards}
+      is_straight?(cards) -> {:straight, cards}
+      is_three_of_a_kind?(cards) -> {:three_of_a_kind, cards}
+      is_two_pair?(cards) -> {:two_pair, cards}
+      is_one_pair?(cards) -> {:one_pair, cards}
+      true -> {:high_card, cards}
     end
   end
 
-  defp get_best_five_cards(cards) when length(cards) <= 5, do: cards
-  defp get_best_five_cards(cards) do
-    cards
-    |> Enum.sort_by(&card_rank_value/1, :desc)
-    |> Enum.take(5)
+  defp combinations([], _), do: [[]]
+  defp combinations(_, 0), do: [[]]
+  defp combinations([h | t], n) when n > 0 do
+    (for(l <- combinations(t, n - 1), do: [h | l])) ++ combinations(t, n)
   end
 
   defp is_straight_flush?(cards) do
@@ -154,12 +203,14 @@ defmodule PokerServer.HandEvaluator do
     |> Enum.sort()
     
     case sorted_ranks do
+      # Regular straights in short deck
       [6, 7, 8, 9, 10] -> true
       [7, 8, 9, 10, 11] -> true
       [8, 9, 10, 11, 12] -> true
       [9, 10, 11, 12, 13] -> true
       [10, 11, 12, 13, 14] -> true
-      [6, 10, 11, 12, 13, 14] -> true  # A-6 straight in short deck
+      # A-6-7-8-9 straight (lowest possible straight in short deck)
+      [6, 7, 8, 9, 14] -> true
       _ -> false
     end
   end
