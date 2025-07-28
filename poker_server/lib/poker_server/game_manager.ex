@@ -1,6 +1,6 @@
 defmodule PokerServer.GameManager do
   use GenServer
-  alias PokerServer.{GameServer, Player}
+  alias PokerServer.GameServer
 
   # Client API
 

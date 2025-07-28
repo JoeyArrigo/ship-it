@@ -4,13 +4,19 @@ defmodule PokerServer.GameState do
   defstruct [:players, :community_cards, :pot, :phase, :hand_number, :deck, :button_position, :small_blind, :big_blind]
 
   def new(players) do
+    # Assign positions to players
+    players_with_positions = 
+      players
+      |> Enum.with_index()
+      |> Enum.map(fn {player, index} -> %{player | position: index} end)
+    
     %__MODULE__{
-      players: players,
+      players: players_with_positions,
       phase: :waiting_for_players,
       hand_number: 0,
       pot: 0,
       community_cards: [],
-      button_position: Enum.random(0..5),
+      button_position: Enum.random(0..(length(players) - 1)),
       deck: Deck.create()
     }
   end
@@ -21,7 +27,25 @@ defmodule PokerServer.GameState do
 
   def eliminate_players(game_state) do
     remaining_players = Enum.filter(game_state.players, &(&1.chips > 0))
-    %{game_state | players: remaining_players}
+    
+    # Reassign positions to remaining players
+    players_with_new_positions = 
+      remaining_players
+      |> Enum.with_index()
+      |> Enum.map(fn {player, index} -> %{player | position: index} end)
+    
+    # Adjust button position if it's out of bounds
+    new_button_position = 
+      if game_state.button_position >= length(players_with_new_positions) do
+        rem(game_state.button_position, length(players_with_new_positions))
+      else
+        game_state.button_position
+      end
+    
+    %{game_state | 
+      players: players_with_new_positions,
+      button_position: new_button_position
+    }
   end
 
   def reset_for_next_hand(game_state) do
@@ -39,22 +63,42 @@ defmodule PokerServer.GameState do
     }
   end
 
-  # Stub implementation for start_hand - deal 2 hole cards to each player
   def start_hand(game_state) do
-    # Deal 2 cards to each player
-    {updated_players, remaining_deck} = 
-      Enum.reduce(game_state.players, {[], game_state.deck}, fn player, {acc_players, deck} ->
+    # Move button position
+    player_count = length(game_state.players)
+    new_button_position = rem(game_state.button_position + 1, player_count)
+    
+    # Determine blind positions
+    small_blind_position = rem(new_button_position + 1, player_count)
+    big_blind_position = rem(new_button_position + 2, player_count)
+    
+    # Deal 2 cards to each player and post blinds
+    {updated_players, remaining_deck, pot} = 
+      Enum.reduce(game_state.players, {[], game_state.deck, 0}, fn player, {acc_players, deck, pot_acc} ->
         {card1, deck1} = Deck.deal_card(deck)
         {card2, deck2} = Deck.deal_card(deck1)
-        updated_player = %{player | hole_cards: [card1, card2]}
-        {[updated_player | acc_players], deck2}
+        
+        # Post blinds based on position
+        {chips_after_blinds, pot_contribution} = cond do
+          player.position == small_blind_position && game_state.small_blind ->
+            {player.chips - game_state.small_blind, game_state.small_blind}
+          player.position == big_blind_position && game_state.big_blind ->
+            {player.chips - game_state.big_blind, game_state.big_blind}
+          true -> 
+            {player.chips, 0}
+        end
+        
+        updated_player = %{player | hole_cards: [card1, card2], chips: chips_after_blinds}
+        {[updated_player | acc_players], deck2, pot_acc + pot_contribution}
       end)
     
     %{game_state |
       players: Enum.reverse(updated_players),
       deck: remaining_deck,
       phase: :preflop,
-      hand_number: game_state.hand_number + 1
+      hand_number: game_state.hand_number + 1,
+      button_position: new_button_position,
+      pot: pot
     }
   end
 
@@ -94,6 +138,40 @@ defmodule PokerServer.GameState do
       community_cards: game_state.community_cards ++ [river_card],
       deck: remaining_deck,
       phase: :river
+    }
+  end
+
+  def showdown(game_state) do
+    alias PokerServer.HandEvaluator
+    
+    # Evaluate each player's hand
+    player_hands = 
+      game_state.players
+      |> Enum.map(fn player ->
+        hand = HandEvaluator.evaluate_hand(player.hole_cards, game_state.community_cards)
+        {player.id, hand}
+      end)
+    
+    # Determine winners
+    winners = HandEvaluator.determine_winners(player_hands)
+    
+    # Distribute pot among winners
+    pot_per_winner = div(game_state.pot, length(winners))
+    
+    updated_players = 
+      game_state.players
+      |> Enum.map(fn player ->
+        if player.id in winners do
+          %{player | chips: player.chips + pot_per_winner}
+        else
+          player
+        end
+      end)
+    
+    %{game_state |
+      players: updated_players,
+      pot: 0,
+      phase: :hand_complete
     }
   end
 end
