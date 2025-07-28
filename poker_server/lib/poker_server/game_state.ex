@@ -111,6 +111,9 @@ defmodule PokerServer.GameState do
   end
 
   def start_hand(game_state) do
+    # Create fresh shuffled deck for new hand (as per poker rules)
+    fresh_deck = Deck.create() |> Deck.shuffle()
+    
     # Move button position
     player_count = length(game_state.players)
     new_button_position = rem(game_state.button_position + 1, player_count)
@@ -121,7 +124,7 @@ defmodule PokerServer.GameState do
     
     # Deal 2 cards to each player and post blinds
     {updated_players, remaining_deck, pot} = 
-      Enum.reduce(game_state.players, {[], game_state.deck, 0}, fn player, {acc_players, deck, pot_acc} ->
+      Enum.reduce(game_state.players, {[], fresh_deck, 0}, fn player, {acc_players, deck, pot_acc} ->
         {card1, deck1} = Deck.deal_card(deck)
         {card2, deck2} = Deck.deal_card(deck1)
         
