@@ -62,11 +62,10 @@ defmodule PokerServer.TournamentTest do
     end
 
     test "time_to_advance? returns true after time elapses" do
-      # Create tournament with very short level duration
-      tournament = Tournament.new("t1", "Test", level_duration_minutes: 0.001)
-      
-      # Wait a bit to ensure time passes
-      :timer.sleep(100)
+      # Create tournament with past start time
+      past_time = DateTime.add(DateTime.utc_now(), -15, :minute)
+      tournament = Tournament.new("t1", "Test", level_duration_minutes: 10)
+      tournament = %{tournament | level_start_time: past_time}
       
       assert Tournament.time_to_advance?(tournament)
     end
@@ -102,8 +101,10 @@ defmodule PokerServer.TournamentTest do
     end
 
     test "tick returns :level_up when time elapsed" do
-      tournament = Tournament.new("t1", "Test", level_duration_minutes: 0.001)
-      :timer.sleep(100)  # Ensure time passes
+      # Create tournament with past start time
+      past_time = DateTime.add(DateTime.utc_now(), -15, :minute)
+      tournament = Tournament.new("t1", "Test", level_duration_minutes: 10)
+      tournament = %{tournament | level_start_time: past_time}
       
       {result, updated_tournament} = Tournament.tick(tournament)
       assert result == :level_up
@@ -118,8 +119,10 @@ defmodule PokerServer.TournamentTest do
     end
 
     test "time_remaining returns 0 when time expired" do
-      tournament = Tournament.new("t1", "Test", level_duration_minutes: 0.001)
-      :timer.sleep(100)
+      # Create tournament with past start time
+      past_time = DateTime.add(DateTime.utc_now(), -15, :minute)
+      tournament = Tournament.new("t1", "Test", level_duration_minutes: 10)
+      tournament = %{tournament | level_start_time: past_time}
       
       remaining = Tournament.time_remaining(tournament)
       assert remaining == 0
