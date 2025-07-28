@@ -143,50 +143,60 @@ defmodule PokerServer.BettingRound do
   end
 
   defp execute_action(betting_round, player_id, {:call}) do
-    _player = Enum.find(betting_round.players, &(&1.id == player_id))
+    player = Enum.find(betting_round.players, &(&1.id == player_id))
     current_bet_amount = betting_round.player_bets[player_id] || 0
     call_amount = betting_round.current_bet - current_bet_amount
     
-    # Update player chips
-    updated_players = Enum.map(betting_round.players, fn p ->
-      if p.id == player_id, do: %{p | chips: p.chips - call_amount}, else: p
-    end)
-    
-    # Update betting round
-    updated_round = %{betting_round |
-      players: updated_players,
-      player_bets: Map.put(betting_round.player_bets, player_id, betting_round.current_bet),
-      pot: betting_round.pot + call_amount,
-      active_player_index: next_active_player_index(betting_round)
-    }
-    {:ok, updated_round}
-  end
-
-  defp execute_action(betting_round, player_id, {:raise, raise_amount}) do
-    # Validate raise amount meets minimum requirement
-    min_raise = minimum_raise(betting_round)
-    if raise_amount < min_raise do
-      {:error, "raise amount #{raise_amount} is below minimum raise of #{min_raise}"}
+    # Validate player has enough chips to call
+    if call_amount > player.chips do
+      {:error, "insufficient chips to call: need #{call_amount}, have #{player.chips}"}
     else
-      _player = Enum.find(betting_round.players, &(&1.id == player_id))
-      current_bet_amount = betting_round.player_bets[player_id] || 0
-      total_bet_amount = raise_amount - current_bet_amount
-      
       # Update player chips
       updated_players = Enum.map(betting_round.players, fn p ->
-        if p.id == player_id, do: %{p | chips: p.chips - total_bet_amount}, else: p
+        if p.id == player_id, do: %{p | chips: p.chips - call_amount}, else: p
       end)
       
       # Update betting round
       updated_round = %{betting_round |
         players: updated_players,
-        current_bet: raise_amount,
-        player_bets: Map.put(betting_round.player_bets, player_id, raise_amount),
-        pot: betting_round.pot + total_bet_amount,
-        last_raise_size: raise_amount - betting_round.current_bet,
+        player_bets: Map.put(betting_round.player_bets, player_id, betting_round.current_bet),
+        pot: betting_round.pot + call_amount,
         active_player_index: next_active_player_index(betting_round)
       }
       {:ok, updated_round}
+    end
+  end
+
+  defp execute_action(betting_round, player_id, {:raise, raise_amount}) do
+    player = Enum.find(betting_round.players, &(&1.id == player_id))
+    current_bet_amount = betting_round.player_bets[player_id] || 0
+    total_bet_amount = raise_amount - current_bet_amount
+    
+    # Validate raise amount meets minimum requirement
+    min_raise = minimum_raise(betting_round)
+    cond do
+      raise_amount < min_raise ->
+        {:error, "raise amount #{raise_amount} is below minimum raise of #{min_raise}"}
+      
+      total_bet_amount > player.chips ->
+        {:error, "insufficient chips: need #{total_bet_amount}, have #{player.chips}"}
+      
+      true ->
+        # Update player chips
+        updated_players = Enum.map(betting_round.players, fn p ->
+          if p.id == player_id, do: %{p | chips: p.chips - total_bet_amount}, else: p
+        end)
+        
+        # Update betting round
+        updated_round = %{betting_round |
+          players: updated_players,
+          current_bet: raise_amount,
+          player_bets: Map.put(betting_round.player_bets, player_id, raise_amount),
+          pot: betting_round.pot + total_bet_amount,
+          last_raise_size: raise_amount - betting_round.current_bet,
+          active_player_index: next_active_player_index(betting_round)
+        }
+        {:ok, updated_round}
     end
   end
 
