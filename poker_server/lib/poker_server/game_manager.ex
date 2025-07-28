@@ -37,6 +37,17 @@ defmodule PokerServer.GameManager do
   end
 
   @doc """
+  Lookup a game process by game ID
+  Returns {:ok, pid} or {:error, :game_not_found}
+  """
+  def lookup_game(game_id) do
+    case Registry.lookup(PokerServer.GameRegistry, game_id) do
+      [{pid, _}] -> {:ok, pid}
+      [] -> {:error, :game_not_found}
+    end
+  end
+
+  @doc """
   List all active games
   """
   def list_games do
