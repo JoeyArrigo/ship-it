@@ -63,6 +63,116 @@ defmodule PokerServer.GameStateTest do
       assert updated_state.pot >= 30  # At least SB + BB
     end
 
+    test "handles small blind player with insufficient chips" do
+      # Small blind player has only 5 chips, blind is 10
+      players = [
+        player(1, 5),     # Position 0 - will be small blind after button advance
+        player(2, 1500),  # Position 1 - will be big blind
+        player(3, 1500)   # Position 2 - will be button
+      ]
+      
+      game_state = GameState.new(players)
+      |> Map.put(:small_blind, 10)
+      |> Map.put(:big_blind, 20)
+      |> Map.put(:button_position, 1)  # Button will advance from 1 to 2, making player 1 SB
+      
+      updated_state = GameState.start_hand(game_state)
+      
+      # Small blind player should go all-in for 5 chips (not negative)
+      sb_player = Enum.find(updated_state.players, &(&1.id == 1))
+      assert sb_player.chips == 0  # All chips posted
+      
+      # Big blind should post full amount
+      bb_player = Enum.find(updated_state.players, &(&1.id == 2))
+      assert bb_player.chips == 1480  # 1500 - 20
+      
+      # Pot should have partial small blind + full big blind
+      assert updated_state.pot == 25  # 5 + 20
+    end
+
+    test "handles big blind player with insufficient chips" do
+      # Big blind player has only 15 chips, blind is 20
+      players = [
+        player(1, 1500),  # Position 0 - will be button
+        player(2, 1500),  # Position 1 - will be small blind  
+        player(3, 15)     # Position 2 - will be big blind, insufficient chips
+      ]
+      
+      game_state = GameState.new(players)
+      |> Map.put(:small_blind, 10)
+      |> Map.put(:big_blind, 20)
+      |> Map.put(:button_position, 0)  # Button advances to player 1, making player 2 SB, player 3 BB
+      
+      updated_state = GameState.start_hand(game_state)
+      
+      # Player 1 (button) should have full chips
+      button_player = Enum.find(updated_state.players, &(&1.id == 1))
+      assert button_player.chips == 1500  # No blind posted
+      
+      # Small blind player (2) should post full amount
+      sb_player = Enum.find(updated_state.players, &(&1.id == 2))
+      assert sb_player.chips == 1490  # 1500 - 10
+      
+      # Big blind player (3) should go all-in for 15 chips (not negative)
+      bb_player = Enum.find(updated_state.players, &(&1.id == 3))
+      assert bb_player.chips == 0  # All chips posted
+      
+      # Pot should have full small blind + partial big blind
+      assert updated_state.pot == 25  # 10 + 15
+    end
+
+    test "handles both blind players with insufficient chips" do
+      # Both blind players have insufficient chips
+      players = [
+        player(1, 5),     # Position 0 - small blind, needs 10
+        player(2, 12),    # Position 1 - big blind, needs 20  
+        player(3, 1500)   # Position 2 - normal player
+      ]
+      
+      game_state = GameState.new(players)
+      |> Map.put(:small_blind, 10)
+      |> Map.put(:big_blind, 20)
+      |> Map.put(:button_position, 0)  # Button advances to player 1, making player 2 SB, player 3 BB
+      
+      updated_state = GameState.start_hand(game_state)
+      
+      # Both blind players should go all-in with what they have
+      sb_player = Enum.find(updated_state.players, &(&1.id == 1))
+      assert sb_player.chips == 0  # Posted 5 chips
+      
+      bb_player = Enum.find(updated_state.players, &(&1.id == 2))
+      assert bb_player.chips == 0  # Posted 12 chips
+      
+      # Pot should have both partial blinds
+      assert updated_state.pot == 17  # 5 + 12
+    end
+
+    test "handles exact blind amounts (boundary case)" do
+      # Players have exactly the blind amounts
+      players = [
+        player(1, 10),    # Position 0 - small blind, exactly 10
+        player(2, 20),    # Position 1 - big blind, exactly 20  
+        player(3, 1500)   # Position 2 - normal player
+      ]
+      
+      game_state = GameState.new(players)
+      |> Map.put(:small_blind, 10)
+      |> Map.put(:big_blind, 20)
+      |> Map.put(:button_position, 0)  # Button advances to player 1, making player 2 SB, player 3 BB
+      
+      updated_state = GameState.start_hand(game_state)
+      
+      # Both players should post exact blind amounts and have 0 chips left
+      sb_player = Enum.find(updated_state.players, &(&1.id == 1))
+      assert sb_player.chips == 0
+      
+      bb_player = Enum.find(updated_state.players, &(&1.id == 2))
+      assert bb_player.chips == 0
+      
+      # Pot should have full blinds
+      assert updated_state.pot == 30  # 10 + 20
+    end
+
     test "moves button position for next hand" do
       players = for i <- 1..6, do: player(i, 1500)
       game_state = GameState.new(players)

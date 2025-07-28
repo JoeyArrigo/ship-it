@@ -127,10 +127,12 @@ defmodule PokerServer.GameState do
         
         # Post blinds based on position
         {chips_after_blinds, pot_contribution} = cond do
-          player.position == small_blind_position && game_state.small_blind ->
-            {player.chips - game_state.small_blind, game_state.small_blind}
-          player.position == big_blind_position && game_state.big_blind ->
-            {player.chips - game_state.big_blind, game_state.big_blind}
+          player.position == small_blind_position && game_state.small_blind && game_state.small_blind > 0 ->
+            actual_blind = min(player.chips, game_state.small_blind)
+            {player.chips - actual_blind, actual_blind}
+          player.position == big_blind_position && game_state.big_blind && game_state.big_blind > 0 ->
+            actual_blind = min(player.chips, game_state.big_blind)
+            {player.chips - actual_blind, actual_blind}
           true -> 
             {player.chips, 0}
         end
