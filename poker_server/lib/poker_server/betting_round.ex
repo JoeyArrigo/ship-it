@@ -105,7 +105,7 @@ defmodule PokerServer.BettingRound do
     end
   end
 
-  defp get_active_player(betting_round) do
+  def get_active_player(betting_round) do
     # Handle case where active_player_index might be out of bounds
     player_count = length(betting_round.players)
     safe_index = rem(betting_round.active_player_index, player_count)
