@@ -28,24 +28,71 @@ defmodule PokerServer.GameState do
   def eliminate_players(game_state) do
     remaining_players = Enum.filter(game_state.players, &(&1.chips > 0))
     
+    # Find the current button player (if they survive)
+    current_button_player = 
+      game_state.players
+      |> Enum.find(&(&1.position == game_state.button_position))
+    
     # Reassign positions to remaining players
     players_with_new_positions = 
       remaining_players
       |> Enum.with_index()
       |> Enum.map(fn {player, index} -> %{player | position: index} end)
     
-    # Adjust button position if it's out of bounds
-    new_button_position = 
-      if game_state.button_position >= length(players_with_new_positions) do
-        rem(game_state.button_position, length(players_with_new_positions))
-      else
-        game_state.button_position
-      end
+    # Calculate new button position
+    new_button_position = calculate_new_button_position(
+      current_button_player,
+      players_with_new_positions,
+      game_state.button_position,
+      game_state.players
+    )
     
     %{game_state | 
       players: players_with_new_positions,
       button_position: new_button_position
     }
+  end
+
+  defp calculate_new_button_position(current_button_player, new_players, old_button_position, old_players) do
+    cond do
+      # Case 1: Button player survived - follow them to their new position
+      current_button_player != nil && current_button_player.chips > 0 ->
+        surviving_button_player = Enum.find(new_players, &(&1.id == current_button_player.id))
+        surviving_button_player.position
+      
+      # Case 2: Button player eliminated - advance to next surviving player
+      true ->
+        advance_button_to_next_survivor(old_button_position, old_players, new_players)
+    end
+  end
+
+  defp advance_button_to_next_survivor(old_button_position, old_players, new_players) do
+    # Find the next surviving player after the old button position
+    old_player_count = length(old_players)
+    
+    # Check each position after the button until we find a survivor
+    next_survivor_old_position = 
+      1..old_player_count
+      |> Enum.reduce_while(nil, fn offset, _acc ->
+        check_position = rem(old_button_position + offset, old_player_count)
+        check_player = Enum.find(old_players, &(&1.position == check_position))
+        
+        if check_player && check_player.chips > 0 do
+          {:halt, check_position}
+        else
+          {:cont, nil}
+        end
+      end)
+    
+    # Find where that surviving player ended up in the new positions
+    if next_survivor_old_position do
+      survivor_player = Enum.find(old_players, &(&1.position == next_survivor_old_position))
+      new_survivor = Enum.find(new_players, &(&1.id == survivor_player.id))
+      new_survivor.position
+    else
+      # Fallback: if something goes wrong, button goes to position 0
+      0
+    end
   end
 
   def reset_for_next_hand(game_state) do

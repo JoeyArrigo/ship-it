@@ -278,6 +278,107 @@ defmodule PokerServer.GameStateTest do
       # Button should move to valid position
       assert updated_state.button_position in [0, 1]  # Only 2 players left, positions 0 and 1
     end
+
+    test "handles button on eliminated player with multiple consecutive eliminations" do
+      # More complex scenario: button player + next 2 players eliminated
+      players = [
+        player(1, 1500),  # Position 0 - survives
+        player(2, 0),     # Position 1 - eliminated  
+        player(3, 0),     # Position 2 - eliminated (button)
+        player(4, 0),     # Position 3 - eliminated
+        player(5, 1000),  # Position 4 - survives
+        player(6, 800)    # Position 5 - survives
+      ]
+      
+      game_state = %GameState{
+        players: players,
+        button_position: 2,  # Button on eliminated player 3
+        phase: :hand_complete,
+        hand_number: 1,
+        deck: [],
+        community_cards: [],
+        pot: 0,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      updated_state = GameState.eliminate_players(game_state)
+      
+      # Button should advance to next surviving player after elimination
+      # Original positions: 0(survives), 1(elim), 2(elim,button), 3(elim), 4(survives), 5(survives)
+      # New positions: 0, 1, 2 (for players 1, 5, 6)
+      # Button should advance from original position 2 to next surviving player
+      assert updated_state.button_position in [0, 1, 2]  # 3 players left
+      assert length(updated_state.players) == 3
+    end
+
+    test "handles all but one player eliminated" do
+      # Extreme case: only 1 player survives
+      players = [
+        player(1, 1500),  # Position 0 - only survivor
+        player(2, 0),     # Position 1 - eliminated  
+        player(3, 0),     # Position 2 - eliminated
+        player(4, 0),     # Position 3 - eliminated (button)
+        player(5, 0),     # Position 4 - eliminated
+        player(6, 0)      # Position 5 - eliminated
+      ]
+      
+      game_state = %GameState{
+        players: players,
+        button_position: 3,  # Button on eliminated player
+        phase: :hand_complete,
+        hand_number: 1,
+        deck: [],
+        community_cards: [],
+        pot: 0,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      updated_state = GameState.eliminate_players(game_state)
+      
+      # Only 1 player left, button must be on them (position 0)
+      assert updated_state.button_position == 0
+      assert length(updated_state.players) == 1
+      assert hd(updated_state.players).id == 1
+    end
+
+    test "preserves button position when button player survives elimination" do
+      # Button player survives, but others are eliminated
+      players = [
+        player(1, 0),     # Position 0 - eliminated
+        player(2, 1500),  # Position 1 - survives (button)
+        player(3, 0),     # Position 2 - eliminated
+        player(4, 1000),  # Position 3 - survives
+        player(5, 0)      # Position 4 - eliminated
+      ]
+      
+      game_state = %GameState{
+        players: players,
+        button_position: 1,  # Button on surviving player 2
+        phase: :hand_complete,
+        hand_number: 1,
+        deck: [],
+        community_cards: [],
+        pot: 0,
+        small_blind: 10,
+        big_blind: 20
+      }
+      
+      updated_state = GameState.eliminate_players(game_state)
+      
+      # Button player survives and should be repositioned correctly
+      # Original: player 2 at position 1, player 4 at position 3
+      # New: player 2 at position 0, player 4 at position 1
+      # Button should move from original position 1 to new position of same player
+      assert length(updated_state.players) == 2
+      
+      # Find where player 2 (original button holder) ended up
+      button_player = Enum.find(updated_state.players, &(&1.id == 2))
+      assert button_player != nil
+      # Button should be on the same player (now at their new position)
+      assert updated_state.button_position == button_player.position
+    end
   end
 
   describe "tournament_complete?/1" do
