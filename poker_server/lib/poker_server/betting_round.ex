@@ -234,45 +234,41 @@ defmodule PokerServer.BettingRound do
     end
   end
 
-  defp create_side_pots(player_bets, all_in_players) do
-    # Create side pots based on all-in amounts
-    _all_in_amounts = 
+  defp create_side_pots(player_bets, _all_in_players) do
+    # Get all unique bet amounts in ascending order (including all-in and non-all-in)
+    bet_levels = 
       player_bets
-      |> Enum.filter(fn {player_id, _} -> player_id in all_in_players end)
       |> Enum.map(&elem(&1, 1))
       |> Enum.uniq()
       |> Enum.sort()
     
-    # Find minimum all-in amount
-    min_all_in = 
-      player_bets
-      |> Enum.filter(fn {player_id, _} -> player_id in all_in_players end)
-      |> Enum.map(&elem(&1, 1))
-      |> Enum.min()
+    # Create side pots layer by layer
+    create_pot_layers(player_bets, bet_levels, 0, [])
+  end
+
+  defp create_pot_layers(_player_bets, [], _prev_level, pots), do: Enum.reverse(pots)
+  
+  defp create_pot_layers(player_bets, [current_level | remaining_levels], prev_level, pots) do
+    # Calculate the pot amount for this layer
+    layer_amount = current_level - prev_level
     
-    # Create main pot up to min all-in amount
-    main_pot_amount = min_all_in * length(player_bets)
-    eligible_players = player_bets |> Enum.map(&elem(&1, 0)) |> MapSet.new()
-    
-    # Create side pot for remaining amount
-    side_pot_players = 
+    # Find all players who can participate in this layer (bet >= current_level)
+    eligible_players = 
       player_bets
-      |> Enum.filter(fn {_, bet} -> bet > min_all_in end)
+      |> Enum.filter(fn {_, bet} -> bet >= current_level end)
       |> Enum.map(&elem(&1, 0))
       |> MapSet.new()
     
-    side_pot_amount = 
-      player_bets
-      |> Enum.filter(fn {_, bet} -> bet > min_all_in end)
-      |> Enum.map(fn {_, bet} -> bet - min_all_in end)
-      |> Enum.sum()
+    # Calculate the total pot for this layer
+    pot_amount = layer_amount * MapSet.size(eligible_players)
     
-    pots = [%{amount: main_pot_amount, eligible_players: eligible_players}]
-    
-    if side_pot_amount > 0 do
-      pots ++ [%{amount: side_pot_amount, eligible_players: side_pot_players}]
+    # Create a pot if there are eligible players (even if amount is 0)
+    new_pot = if MapSet.size(eligible_players) > 0 do
+      [%{amount: pot_amount, eligible_players: eligible_players}]
     else
-      pots
+      []
     end
+    
+    create_pot_layers(player_bets, remaining_levels, current_level, new_pot ++ pots)
   end
 end

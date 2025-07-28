@@ -271,5 +271,97 @@ defmodule PokerServer.BettingRoundTest do
       assert side_pot.amount == 200  # (200-100) * 2
       assert side_pot.eligible_players == MapSet.new([2, 3])
     end
+
+    test "creates multiple side pots for complex all-in scenario" do
+      # Complex scenario: 4 players with different all-in amounts
+      # Player 1: 50 chips all-in
+      # Player 2: 150 chips all-in  
+      # Player 3: 300 chips all-in
+      # Player 4: 400 chips (calls 300)
+      players = [
+        player(1, 0, 0),    # All-in with 50
+        player(2, 0, 1),    # All-in with 150
+        player(3, 0, 2),    # All-in with 300
+        player(4, 100, 3)   # Called 300, has 100 left
+      ]
+      
+      betting_round = %BettingRound{
+        players: players,
+        player_bets: %{1 => 50, 2 => 150, 3 => 300, 4 => 300},
+        all_in_players: MapSet.new([1, 2, 3]),
+        folded_players: MapSet.new(),
+        pot: 800,  # 50 + 150 + 300 + 300
+        small_blind: 10,
+        big_blind: 20,
+        round_type: :flop,
+        current_bet: 300,
+        active_player_index: 0
+      }
+      
+      side_pots = BettingRound.side_pots(betting_round)
+      
+      # Should create 4 pots:
+      # Main pot: 50 * 4 = 200 (all 4 players eligible)
+      # Side pot 1: (150-50) * 3 = 300 (players 2,3,4 eligible) 
+      # Side pot 2: (300-150) * 2 = 300 (players 3,4 eligible)
+      # Side pot 3: 0 (no additional chips from player 4)
+      assert length(side_pots) == 3
+      
+      [main_pot, side_pot_1, side_pot_2] = side_pots
+      
+      # Main pot: Everyone can win up to smallest all-in
+      assert main_pot.amount == 200
+      assert main_pot.eligible_players == MapSet.new([1, 2, 3, 4])
+      
+      # Side pot 1: Players 2,3,4 can win the next layer
+      assert side_pot_1.amount == 300
+      assert side_pot_1.eligible_players == MapSet.new([2, 3, 4])
+      
+      # Side pot 2: Players 3,4 can win the top layer
+      assert side_pot_2.amount == 300
+      assert side_pot_2.eligible_players == MapSet.new([3, 4])
+    end
+
+
+    test "handles all players all-in with different amounts" do
+      # Everyone all-in scenario
+      players = [
+        player(1, 0, 0),    # All-in with 75
+        player(2, 0, 1),    # All-in with 125
+        player(3, 0, 2)     # All-in with 200
+      ]
+      
+      betting_round = %BettingRound{
+        players: players,
+        player_bets: %{1 => 75, 2 => 125, 3 => 200},
+        all_in_players: MapSet.new([1, 2, 3]),
+        folded_players: MapSet.new(),
+        pot: 400,
+        small_blind: 10,
+        big_blind: 20,
+        round_type: :river,
+        current_bet: 200,
+        active_player_index: 0
+      }
+      
+      side_pots = BettingRound.side_pots(betting_round)
+      
+      # Should create 3 pots:
+      # Main pot: 75 * 3 = 225 (all eligible)
+      # Side pot 1: (125-75) * 2 = 100 (players 2,3)
+      # Side pot 2: (200-125) * 1 = 75 (player 3 only)
+      assert length(side_pots) == 3
+      
+      [main_pot, side_pot_1, side_pot_2] = side_pots
+      
+      assert main_pot.amount == 225
+      assert main_pot.eligible_players == MapSet.new([1, 2, 3])
+      
+      assert side_pot_1.amount == 100
+      assert side_pot_1.eligible_players == MapSet.new([2, 3])
+      
+      assert side_pot_2.amount == 75
+      assert side_pot_2.eligible_players == MapSet.new([3])
+    end
   end
 end
