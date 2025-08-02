@@ -50,9 +50,11 @@ defmodule PokerServerWeb.GameLive.Show do
           |> assign(:current_player, current_player)
           |> assign(:player_view, player_view)
           
-        {:error, _reason} ->
+        {:error, reason} ->
+          # Log the error for debugging
+          IO.inspect(reason, label: "UIAdapter error")
           socket
-          |> put_flash(:error, "You are not a player in this game")
+          |> put_flash(:error, "Error loading game: #{inspect(reason)}")
           |> push_navigate(to: ~p"/")
       end
     end

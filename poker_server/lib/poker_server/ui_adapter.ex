@@ -62,6 +62,16 @@ defmodule PokerServer.UIAdapter do
       and not is_nil(betting_round) ->
         active_player = BettingRound.get_active_player(betting_round)
         active_player && active_player.id == player_id
+      
+      # Handle other known phases explicitly
+      %{phase: :waiting_to_start} ->
+        false
+      %{phase: :hand_complete} ->
+        false
+      %{phase: :showdown} ->
+        false
+      
+      # Fallback for any unknown phases
       _ ->
         false
     end
