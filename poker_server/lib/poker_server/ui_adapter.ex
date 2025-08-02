@@ -57,18 +57,19 @@ defmodule PokerServer.UIAdapter do
   """
   def can_player_act?(game_server_state, player_id) do
     case game_server_state do
-      %{phase: phase, betting_round: betting_round} 
-      when phase in [:preflop_betting, :flop_betting, :turn_betting, :river_betting] 
-      and not is_nil(betting_round) ->
+      # Betting phases from GameServer
+      %{phase: :preflop_betting, betting_round: betting_round} when not is_nil(betting_round) ->
         active_player = BettingRound.get_active_player(betting_round)
         active_player && active_player.id == player_id
       
-      # Handle other known phases explicitly
+      # Non-betting phases from GameServer (actual tested phases)
       %{phase: :waiting_to_start} ->
         false
-      %{phase: :hand_complete} ->
+      %{phase: :flop} ->
         false
-      %{phase: :showdown} ->
+      %{phase: :turn} ->
+        false  
+      %{phase: :river} ->
         false
       
       # Fallback for any unknown phases

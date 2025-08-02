@@ -21,7 +21,7 @@ defmodule PokerServer.GameManager do
   """
   def get_game_state(game_id) do
     case Registry.lookup(PokerServer.GameRegistry, game_id) do
-      [{pid, _}] -> GameServer.get_state(pid)
+      [{pid, _}] -> {:ok, GameServer.get_state(pid)}
       [] -> {:error, :game_not_found}
     end
   end
