@@ -26,6 +26,7 @@ defmodule PokerServer.GameManager do
     end
   end
 
+
   @doc """
   Process a player action in a game
   """
