@@ -61,7 +61,9 @@ defmodule PokerServer.GameServer do
 
   @impl true
   def handle_call(:start_hand, _from, %{game_state: game_state} = state) do
-    updated_game_state = GameState.start_hand(game_state)
+    # Set blind amounts in game state before starting hand
+    game_state_with_blinds = %{game_state | small_blind: 10, big_blind: 20}
+    updated_game_state = GameState.start_hand(game_state_with_blinds)
     
     # Create betting round for preflop
     betting_round = BettingRound.new(
