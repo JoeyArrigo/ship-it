@@ -60,22 +60,6 @@ defmodule PokerServerWeb.GameLive.Show do
     end
   end
 
-  @impl true
-  def handle_event("start_hand", _params, socket) do
-    case GameManager.lookup_game(socket.assigns.game_id) do
-      {:ok, pid} ->
-        case PokerServer.GameServer.start_hand(pid) do
-          {:ok, _new_state} ->
-            {:noreply, socket}
-
-          {:error, reason} ->
-            {:noreply, put_flash(socket, :error, "Failed to start hand: #{reason}")}
-        end
-
-      {:error, :game_not_found} ->
-        {:noreply, put_flash(socket, :error, "Game not found")}
-    end
-  end
 
   @impl true
   def handle_event("player_action", %{"action" => "fold"}, socket) do
@@ -201,12 +185,6 @@ defmodule PokerServerWeb.GameLive.Show do
 
         <!-- Action Buttons -->
         <div class="text-center">
-          <div :if={@player_view.can_start_hand}>
-            <p class="mb-4">Game is ready. You can start a hand.</p>
-            <.button phx-click="start_hand" class="bg-green-600 hover:bg-green-700">
-              Start Hand
-            </.button>
-          </div>
 
           <div :if={@player_view.can_act}>
             <p class="mb-4">Your turn to act</p>

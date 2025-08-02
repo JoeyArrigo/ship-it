@@ -107,6 +107,15 @@ defmodule PokerServer.GameQueue do
       # Create the game
       case GameManager.create_game(player_list) do
         {:ok, game_id} ->
+          # Auto-start the first hand immediately
+          case GameManager.lookup_game(game_id) do
+            {:ok, game_pid} ->
+              PokerServer.GameServer.start_hand(game_pid)
+              IO.puts("🚀 Auto-started hand for game #{game_id}")
+            {:error, _reason} ->
+              IO.puts("⚠️ Could not auto-start hand for game #{game_id}")
+          end
+          
           # Notify players they're in a game
           Enum.each(game_players, fn player ->
             IO.puts("🎮 Notifying player #{player.name} about game #{game_id}")
