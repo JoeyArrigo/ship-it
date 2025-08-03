@@ -1,6 +1,7 @@
 defmodule PokerServer.GameServer do
   use GenServer
   alias PokerServer.{GameState, BettingRound, Player, InputValidator}
+  alias Phoenix.PubSub
 
   # Client API
 
@@ -79,6 +80,7 @@ defmodule PokerServer.GameServer do
       phase: :preflop_betting
     }
     
+    broadcast_state_change(state.game_id, new_state)
     {:reply, {:ok, new_state}, new_state}
   end
 
@@ -102,8 +104,10 @@ defmodule PokerServer.GameServer do
               betting_round: nil,
               phase: :flop
             }
+            broadcast_state_change(state.game_id, final_state)
             {:reply, {:ok, :betting_complete, final_state}, final_state}
           else
+            broadcast_state_change(state.game_id, new_state)
             {:reply, {:ok, :action_processed, new_state}, new_state}
           end
         
@@ -119,5 +123,11 @@ defmodule PokerServer.GameServer do
   @impl true
   def handle_call({:player_action, _player_id, _action}, _from, state) do
     {:reply, {:error, :no_active_betting_round}, state}
+  end
+
+  # Private Functions
+
+  defp broadcast_state_change(game_id, new_state) do
+    PubSub.broadcast(PokerServer.PubSub, "game:#{game_id}", {:game_updated, new_state})
   end
 end
