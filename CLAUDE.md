@@ -163,8 +163,9 @@ mix test
 # Check server startup
 iex -S mix phx.server
 
-# Access game interface
-http://localhost:4000/game/test-game?player=Player1
+```bash
+# Access game interface at http://localhost:4000/
+mix phx.server
 
 # Run specific test modules
 mix test test/game_state_test.exs
