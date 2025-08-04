@@ -11,8 +11,8 @@ defmodule PokerServer.GameServerPubSubTest do
     {:ok, game_id} = GameManager.create_game(players)
     {:ok, game_pid} = GameManager.lookup_game(game_id)
     
-    # Subscribe to game events
-    PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}")
+    # Subscribe to game events for player1 (default test player)
+    PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}:player1")
     
     %{game_id: game_id, game_pid: game_pid, players: players}
   end
@@ -91,7 +91,7 @@ defmodule PokerServer.GameServerPubSubTest do
     test_pid = self()
     
     _subscriber_pid = spawn_link(fn ->
-      PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}")
+      PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}:player1")
       send(test_pid, :subscribed)
       
       receive do
@@ -111,9 +111,19 @@ defmodule PokerServer.GameServerPubSubTest do
     assert_receive {:game_updated, main_received_state}, 1000
     assert_receive {:subscriber_received, subscriber_received_state}, 1000
     
-    # Verify both received the same state
+    # Verify both received the same filtered state
     assert main_received_state == subscriber_received_state
-    assert main_received_state == new_state
+    
+    # Verify the filtered state has correct structure but hides other players' cards
+    assert main_received_state.game_id == new_state.game_id
+    assert main_received_state.phase == new_state.phase
+    
+    # Player1 should see their own cards but not player2's cards
+    player1_in_broadcast = Enum.find(main_received_state.game_state.players, &(&1.id == "player1"))
+    player2_in_broadcast = Enum.find(main_received_state.game_state.players, &(&1.id == "player2"))
+    
+    assert length(player1_in_broadcast.hole_cards) == 2  # Can see own cards
+    assert length(player2_in_broadcast.hole_cards) == 0  # Cannot see other's cards
   end
 
   test "broadcast message format matches expected structure", %{game_pid: game_pid, game_id: _game_id} do
@@ -123,12 +133,22 @@ defmodule PokerServer.GameServerPubSubTest do
     # Assert: Receive and verify message format
     assert_receive {:game_updated, broadcasted_state}, 1000
     
-    # Verify complete state structure is broadcasted
-    assert broadcasted_state == expected_state
+    # Verify complete state structure is broadcasted (but filtered for security)
     assert Map.has_key?(broadcasted_state, :game_id)
     assert Map.has_key?(broadcasted_state, :game_state)
     assert Map.has_key?(broadcasted_state, :betting_round)
     assert Map.has_key?(broadcasted_state, :phase)
+    
+    # Verify the basic game data matches
+    assert broadcasted_state.game_id == expected_state.game_id
+    assert broadcasted_state.phase == expected_state.phase
+    
+    # Verify security filtering: player1 sees own cards, but not player2's
+    player1_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player1"))
+    player2_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player2"))
+    
+    assert length(player1_in_broadcast.hole_cards) == 2  # Can see own cards
+    assert length(player2_in_broadcast.hole_cards) == 0  # Cannot see other's cards
   end
 
   test "failed actions do not broadcast state changes", %{game_pid: game_pid} do
@@ -147,13 +167,22 @@ defmodule PokerServer.GameServerPubSubTest do
     # Act: Start hand
     {:ok, returned_state} = GameServer.start_hand(game_pid)
     
-    # Assert: Broadcasted state matches returned state
+    # Assert: Broadcasted state is filtered but based on returned state
     assert_receive {:game_updated, broadcasted_state}, 1000
-    assert broadcasted_state == returned_state
     
-    # Verify current server state matches both
+    # The broadcasted state should be a filtered version of the returned state
+    assert broadcasted_state.game_id == returned_state.game_id
+    assert broadcasted_state.phase == returned_state.phase
+    
+    # Verify current server state matches the unfiltered returned state
     current_state = GameServer.get_state(game_pid)
-    assert current_state == broadcasted_state
     assert current_state == returned_state
+    
+    # Verify the broadcast filtering worked correctly
+    player1_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player1"))
+    player2_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player2"))
+    
+    assert length(player1_in_broadcast.hole_cards) == 2  # Can see own cards
+    assert length(player2_in_broadcast.hole_cards) == 0  # Cannot see other's cards
   end
 end

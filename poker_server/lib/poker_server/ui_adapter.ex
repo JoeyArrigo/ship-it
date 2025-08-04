@@ -23,6 +23,32 @@ defmodule PokerServer.UIAdapter do
   end
 
   @doc """
+  Get filtered game state for a specific player from existing state.
+  This version accepts the game_server_state directly to avoid circular dependencies.
+  Returns only the data this player should see.
+  """
+  def get_player_view_from_state(game_server_state, player_id) do
+    # Filter the game_state.players to hide other players' hole cards
+    filtered_players = Enum.map(game_server_state.game_state.players, fn player ->
+      if player.id == player_id do
+        # Current player can see their own cards
+        player
+      else
+        # Other players' hole cards are hidden
+        %{player | hole_cards: []}
+      end
+    end)
+    
+    # Create filtered game state
+    filtered_game_state = %{game_server_state.game_state | players: filtered_players}
+    
+    # Return the same structure as GameServer state, but with filtered players
+    filtered_state = %{game_server_state | game_state: filtered_game_state}
+    
+    {:ok, filtered_state}
+  end
+
+  @doc """
   Format a card for display
   """
   def format_card(%{rank: rank, suit: suit}) do
@@ -96,7 +122,7 @@ defmodule PokerServer.UIAdapter do
 
   # Private Functions
 
-  defp build_player_view(game_server_state, player_id) do
+  defp build_player_view(game_server_state, player_id, _game_id \\ nil) do
     game_state = game_server_state.game_state
     
     # Filter players to hide other players' hole cards

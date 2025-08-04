@@ -1,6 +1,6 @@
 defmodule PokerServer.GameServer do
   use GenServer
-  alias PokerServer.{GameState, BettingRound, Player, InputValidator}
+  alias PokerServer.{GameState, BettingRound, Player, InputValidator, UIAdapter}
   alias Phoenix.PubSub
 
   # Client API
@@ -127,7 +127,15 @@ defmodule PokerServer.GameServer do
 
   # Private Functions
 
+  # TODO: Architectural smell - GameServer should not depend on UIAdapter (presentation layer)
+  # This creates proper per-player filtering to prevent hole card leakage but violates separation of concerns
+  # Future refactor: Move to dedicated GameBroadcaster service or event-based approach
   defp broadcast_state_change(game_id, new_state) do
-    PubSub.broadcast(PokerServer.PubSub, "game:#{game_id}", {:game_updated, new_state})
+    new_state.game_state.players
+    |> Enum.each(fn player ->
+      {:ok, filtered_view} = UIAdapter.get_player_view_from_state(new_state, player.id)
+      PubSub.broadcast(PokerServer.PubSub, "game:#{game_id}:#{player.id}", 
+                       {:game_updated, filtered_view})
+    end)
   end
 end
