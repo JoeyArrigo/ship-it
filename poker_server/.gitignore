@@ -21,3 +21,6 @@ poker_server-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Ignore compiled assets
+/priv/static/assets/
