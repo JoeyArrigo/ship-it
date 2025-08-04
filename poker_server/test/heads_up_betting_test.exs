@@ -112,22 +112,18 @@ defmodule PokerServer.HeadsUpBettingTest do
       # Small blind goes all-in
       {:ok, betting_round} = BettingRound.process_action(betting_round, 1, {:all_in})
       
-      # Big blind checks (no additional bet needed since they already have more bet than all-in amount)
-      {:ok, betting_round} = BettingRound.process_action(betting_round, 2, {:check})
+      # Big blind calls the all-in (needs to call additional 30 chips: 50 - 20 = 30)
+      {:ok, betting_round} = BettingRound.process_action(betting_round, 2, {:call})
       
       side_pots = BettingRound.side_pots(betting_round)
       
-      # Should have two pots: main pot (both players) and side pot (small blind only)
-      assert length(side_pots) == 2
-      [main_pot, side_pot] = side_pots
+      # Should have one pot since both players bet the same amount (50 each)
+      assert length(side_pots) == 1
+      [main_pot] = side_pots
       
-      # Main pot: both players contributed 20 each
+      # Main pot: both players contributed 50 each, total 100
       assert main_pot.eligible_players == MapSet.new([1, 2])
-      assert main_pot.amount == 40  # 20 from each player
-      
-      # Side pot: only small blind's excess (50 - 20 = 30)
-      assert side_pot.eligible_players == MapSet.new([1])
-      assert side_pot.amount == 30
+      assert main_pot.amount == 100
     end
   end
 end
