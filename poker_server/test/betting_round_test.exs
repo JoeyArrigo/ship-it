@@ -205,6 +205,7 @@ defmodule PokerServer.BettingRoundTest do
       betting_round = BettingRound.new(players, 10, 20, :preflop)
       |> Map.put(:player_bets, %{1 => 20, 2 => 20, 3 => 20})  # All called
       |> Map.put(:pot, 60)
+      |> Map.put(:players_who_can_act, MapSet.new())  # No one left to act
       
       assert BettingRound.betting_complete?(betting_round)
     end
@@ -215,6 +216,55 @@ defmodule PokerServer.BettingRoundTest do
       |> Map.put(:folded_players, MapSet.new([1, 3]))  # Two players folded
       
       assert BettingRound.betting_complete?(betting_round)
+    end
+
+    test "heads up preflop: small blind calls, big blind should still get option" do
+      players = [player(1, 1000, 0), player(2, 1000, 1)]  # SB=1, BB=2
+      betting_round = BettingRound.new(players, 10, 20, :preflop)
+      
+      # Small blind calls
+      {:ok, updated_round} = BettingRound.process_action(betting_round, 1, {:call})
+      
+      # Betting should NOT be complete - big blind should get option
+      refute BettingRound.betting_complete?(updated_round)
+      
+      # Big blind should be able to check or raise
+      actions = BettingRound.valid_actions(updated_round)
+      assert :check in actions
+      assert :raise in actions
+    end
+
+    test "heads up preflop: small blind calls, big blind checks, betting complete" do
+      players = [player(1, 1000, 0), player(2, 1000, 1)]  # SB=1, BB=2
+      betting_round = BettingRound.new(players, 10, 20, :preflop)
+      
+      # Small blind calls
+      {:ok, after_call} = BettingRound.process_action(betting_round, 1, {:call})
+      
+      # Big blind checks
+      {:ok, after_check} = BettingRound.process_action(after_call, 2, {:check})
+      
+      # Now betting should be complete
+      assert BettingRound.betting_complete?(after_check)
+    end
+
+    test "multi-player preflop: all call, betting complete" do
+      players = [player(1, 1000, 0), player(2, 1000, 1), player(3, 1000, 2)]
+      betting_round = BettingRound.new(players, 10, 20, :preflop)
+      
+      # UTG calls
+      {:ok, after_utg_call} = BettingRound.process_action(betting_round, 3, {:call})
+      refute BettingRound.betting_complete?(after_utg_call)
+      
+      # Small blind calls
+      {:ok, after_sb_call} = BettingRound.process_action(after_utg_call, 1, {:call})
+      refute BettingRound.betting_complete?(after_sb_call)
+      
+      # Big blind checks (everyone matched)
+      {:ok, after_bb_check} = BettingRound.process_action(after_sb_call, 2, {:check})
+      
+      # Now betting should be complete
+      assert BettingRound.betting_complete?(after_bb_check)
     end
   end
 

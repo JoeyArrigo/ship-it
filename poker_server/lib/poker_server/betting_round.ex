@@ -1,5 +1,5 @@
 defmodule PokerServer.BettingRound do
-  defstruct [:players, :small_blind, :big_blind, :round_type, :pot, :current_bet, :player_bets, :active_player_index, :folded_players, :all_in_players, :last_raise_size]
+  defstruct [:players, :small_blind, :big_blind, :round_type, :pot, :current_bet, :player_bets, :active_player_index, :folded_players, :all_in_players, :last_raise_size, :players_who_can_act, :last_raiser]
 
   def new(players, small_blind, big_blind, round_type) do
     # Post blinds - small blind is position 0, big blind is position 1
@@ -27,6 +27,16 @@ defmodule PokerServer.BettingRound do
       end)
       |> Enum.into(%{})
     
+    # Initialize players who can act - all active players except those who posted blinds have full option
+    active_player_ids = Enum.map(players, & &1.id) |> MapSet.new()
+    players_who_can_act = if round_type == :preflop do
+      # In preflop, the big blind gets an option even after small blind calls
+      active_player_ids
+    else
+      # Post-flop, all active players need to act
+      active_player_ids
+    end
+    
     %__MODULE__{
       players: updated_players,
       small_blind: small_blind,
@@ -38,7 +48,9 @@ defmodule PokerServer.BettingRound do
       active_player_index: get_initial_active_player_index(players, round_type),
       folded_players: MapSet.new(),
       all_in_players: MapSet.new(),
-      last_raise_size: big_blind
+      last_raise_size: big_blind,
+      players_who_can_act: players_who_can_act,
+      last_raiser: nil  # Initially no raiser beyond the big blind
     }
   end
 
@@ -135,8 +147,12 @@ defmodule PokerServer.BettingRound do
   end
 
   defp execute_action(betting_round, player_id, {:fold}) do
+    # Ensure players_who_can_act is initialized as MapSet
+    players_who_can_act = betting_round.players_who_can_act || MapSet.new()
+    
     updated_round = %{betting_round | 
       folded_players: MapSet.put(betting_round.folded_players, player_id),
+      players_who_can_act: MapSet.delete(players_who_can_act, player_id),
       active_player_index: next_active_player_index(betting_round)
     }
     {:ok, updated_round}
@@ -156,11 +172,15 @@ defmodule PokerServer.BettingRound do
         if p.id == player_id, do: %{p | chips: p.chips - call_amount}, else: p
       end)
       
+      # Ensure players_who_can_act is initialized as MapSet
+      players_who_can_act = betting_round.players_who_can_act || MapSet.new()
+      
       # Update betting round
       updated_round = %{betting_round |
         players: updated_players,
         player_bets: Map.put(betting_round.player_bets, player_id, betting_round.current_bet),
         pot: betting_round.pot + call_amount,
+        players_who_can_act: MapSet.delete(players_who_can_act, player_id),
         active_player_index: next_active_player_index(betting_round)
       }
       {:ok, updated_round}
@@ -187,6 +207,15 @@ defmodule PokerServer.BettingRound do
           if p.id == player_id, do: %{p | chips: p.chips - total_bet_amount}, else: p
         end)
         
+        # When someone raises, all other active players get a chance to act again
+        active_player_ids = betting_round.players
+          |> Enum.map(& &1.id)
+          |> Enum.reject(&(&1 in betting_round.folded_players))
+          |> Enum.reject(&(&1 in betting_round.all_in_players))
+          |> MapSet.new()
+        
+        new_players_who_can_act = MapSet.delete(active_player_ids, player_id)
+        
         # Update betting round
         updated_round = %{betting_round |
           players: updated_players,
@@ -194,14 +223,20 @@ defmodule PokerServer.BettingRound do
           player_bets: Map.put(betting_round.player_bets, player_id, raise_amount),
           pot: betting_round.pot + total_bet_amount,
           last_raise_size: raise_amount - betting_round.current_bet,
+          players_who_can_act: new_players_who_can_act,
+          last_raiser: player_id,
           active_player_index: next_active_player_index(betting_round)
         }
         {:ok, updated_round}
     end
   end
 
-  defp execute_action(betting_round, _player_id, {:check}) do
+  defp execute_action(betting_round, player_id, {:check}) do
+    # Ensure players_who_can_act is initialized as MapSet
+    players_who_can_act = betting_round.players_who_can_act || MapSet.new()
+    
     updated_round = %{betting_round |
+      players_who_can_act: MapSet.delete(players_who_can_act, player_id),
       active_player_index: next_active_player_index(betting_round)
     }
     {:ok, updated_round}
@@ -217,12 +252,30 @@ defmodule PokerServer.BettingRound do
       if p.id == player_id, do: %{p | chips: 0}, else: p
     end)
     
+    # Check if this all-in is also a raise (above current bet)
+    is_raise = all_in_amount > betting_round.current_bet
+    
+    # If it's a raise, other players get a chance to act again
+    new_players_who_can_act = if is_raise do
+      active_player_ids = betting_round.players
+        |> Enum.map(& &1.id)
+        |> Enum.reject(&(&1 in betting_round.folded_players))
+        |> Enum.reject(&(&1 in betting_round.all_in_players))
+        |> MapSet.new()
+      MapSet.delete(active_player_ids, player_id)
+    else
+      MapSet.delete(betting_round.players_who_can_act, player_id)
+    end
+    
     # Update betting round
     updated_round = %{betting_round |
       players: updated_players,
+      current_bet: if(is_raise, do: all_in_amount, else: betting_round.current_bet),
       player_bets: Map.put(betting_round.player_bets, player_id, all_in_amount),
       pot: betting_round.pot + player.chips,
       all_in_players: MapSet.put(betting_round.all_in_players, player_id),
+      players_who_can_act: new_players_who_can_act,
+      last_raiser: if(is_raise, do: player_id, else: betting_round.last_raiser),
       active_player_index: next_active_player_index(betting_round)
     }
     {:ok, updated_round}
@@ -240,19 +293,8 @@ defmodule PokerServer.BettingRound do
     if active_players <= 1 do
       true
     else
-      # Check if all active players have the same bet amount
-      active_player_ids = 
-        betting_round.players
-        |> Enum.map(& &1.id)
-        |> Enum.reject(&(&1 in betting_round.folded_players))
-      
-      bet_amounts = 
-        active_player_ids
-        |> Enum.map(&(betting_round.player_bets[&1] || 0))
-        |> Enum.uniq()
-      
-      # All active players have same bet amount
-      length(bet_amounts) == 1
+      # Betting is complete when no players need to act
+      MapSet.size(betting_round.players_who_can_act) == 0
     end
   end
 
