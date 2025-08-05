@@ -133,7 +133,7 @@ defmodule PokerServer.GameServer do
   defp broadcast_state_change(game_id, new_state) do
     new_state.game_state.players
     |> Enum.each(fn player ->
-      {:ok, filtered_view} = UIAdapter.get_player_view_from_state(new_state, player.id)
+      filtered_view = UIAdapter.get_broadcast_player_view(new_state, player.id)
       PubSub.broadcast(PokerServer.PubSub, "game:#{game_id}:#{player.id}", 
                        {:game_updated, filtered_view})
     end)

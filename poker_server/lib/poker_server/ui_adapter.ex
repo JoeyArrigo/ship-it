@@ -49,6 +49,33 @@ defmodule PokerServer.UIAdapter do
   end
 
   @doc """
+  Get UI-optimized player view from existing state for broadcasts.
+  Returns flattened structure suitable for LiveView consumption while maintaining
+  backward compatibility with existing broadcast expectations.
+  """
+  def get_broadcast_player_view(game_server_state, player_id) do
+    # Build the UI-optimized view
+    ui_view = build_player_view(game_server_state, player_id)
+    
+    # Add fields that broadcasts/tests expect for backward compatibility
+    # Override phase with game_server_state.phase (includes betting state)
+    enhanced_view = Map.merge(ui_view, %{
+      game_id: game_server_state.game_id,
+      phase: game_server_state.phase,  # Use server phase (e.g., :preflop_betting)
+      betting_round: game_server_state.betting_round,
+      game_state: %{
+        players: ui_view.players,
+        hand_number: ui_view.hand_number,
+        community_cards: ui_view.community_cards,
+        pot: ui_view.pot,
+        phase: game_server_state.game_state.phase  # Use game phase (e.g., :preflop)
+      }
+    })
+    
+    enhanced_view
+  end
+
+  @doc """
   Format a card for display
   """
   def format_card(%{rank: rank, suit: suit}) do
@@ -122,7 +149,7 @@ defmodule PokerServer.UIAdapter do
 
   # Private Functions
 
-  defp build_player_view(game_server_state, player_id, _game_id \\ nil) do
+  def build_player_view(game_server_state, player_id, _game_id \\ nil) do
     game_state = game_server_state.game_state
     
     # Filter players to hide other players' hole cards
