@@ -1,6 +1,6 @@
 defmodule PokerServer.GameServer do
   use GenServer
-  alias PokerServer.{GameState, BettingRound, Player, InputValidator}
+  alias PokerServer.{GameState, BettingRound, Player, InputValidator, UIAdapter}
   alias Phoenix.PubSub
 
   # Client API
@@ -80,9 +80,7 @@ defmodule PokerServer.GameServer do
       phase: :preflop_betting
     }
     
-    # Broadcast state change to UI
-    broadcast_state_change(new_state)
-    
+    broadcast_state_change(state.game_id, new_state)
     {:reply, {:ok, new_state}, new_state}
   end
 
@@ -106,15 +104,10 @@ defmodule PokerServer.GameServer do
               betting_round: nil,
               phase: :flop
             }
-            
-            # Broadcast state change
-            broadcast_state_change(final_state)
-            
+            broadcast_state_change(state.game_id, final_state)
             {:reply, {:ok, :betting_complete, final_state}, final_state}
           else
-            # Broadcast state change
-            broadcast_state_change(new_state)
-            
+            broadcast_state_change(state.game_id, new_state)
             {:reply, {:ok, :action_processed, new_state}, new_state}
           end
         
@@ -132,9 +125,17 @@ defmodule PokerServer.GameServer do
     {:reply, {:error, :no_active_betting_round}, state}
   end
 
-  # Private helper functions
+  # Private Functions
 
-  defp broadcast_state_change(state) do
-    PubSub.broadcast(PokerServer.PubSub, "game:#{state.game_id}", {:game_updated, state})
+  # TODO: Architectural smell - GameServer should not depend on UIAdapter (presentation layer)
+  # This creates proper per-player filtering to prevent hole card leakage but violates separation of concerns
+  # Future refactor: Move to dedicated GameBroadcaster service or event-based approach
+  defp broadcast_state_change(game_id, new_state) do
+    new_state.game_state.players
+    |> Enum.each(fn player ->
+      filtered_view = UIAdapter.get_broadcast_player_view(new_state, player.id)
+      PubSub.broadcast(PokerServer.PubSub, "game:#{game_id}:#{player.id}", 
+                       {:game_updated, filtered_view})
+    end)
   end
 end

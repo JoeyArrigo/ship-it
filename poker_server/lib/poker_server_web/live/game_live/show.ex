@@ -6,9 +6,7 @@ defmodule PokerServerWeb.GameLive.Show do
 
   @impl true
   def mount(%{"game_id" => game_id}, _session, socket) do
-    if connected?(socket) do
-      PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}")
-    end
+    # Note: PubSub subscription moved to apply_action when current_player is known
 
     # Just verify game exists, actual state loaded in handle_params
     case GameManager.get_game_state(game_id) do
@@ -42,6 +40,11 @@ defmodule PokerServerWeb.GameLive.Show do
       |> put_flash(:error, "Please join through the lobby")
       |> push_navigate(to: ~p"/")
     else
+      # Subscribe to player-specific channel for filtered updates
+      if connected?(socket) do
+        PubSub.subscribe(PokerServer.PubSub, "game:#{socket.assigns.game_id}:#{current_player}")
+      end
+      
       # Get player view and validate player is in game
       case UIAdapter.get_player_view(socket.assigns.game_id, current_player) do
         {:ok, player_view} ->
@@ -93,14 +96,9 @@ defmodule PokerServerWeb.GameLive.Show do
   end
 
   @impl true
-  def handle_info({:game_updated, _game_server_state}, socket) do
-    # Get fresh UI state when game updates
-    case UIAdapter.get_player_view(socket.assigns.game_id, socket.assigns.current_player) do
-      {:ok, player_view} ->
-        {:noreply, assign(socket, :player_view, player_view)}
-      {:error, _reason} ->
-        {:noreply, socket}
-    end
+  def handle_info({:game_updated, filtered_player_view}, socket) do
+    # Receive pre-filtered player view from GameServer (no need to re-filter)
+    {:noreply, assign(socket, :player_view, filtered_player_view)}
   end
 
   # Helper function to make player actions via the service
