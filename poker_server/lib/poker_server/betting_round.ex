@@ -1,7 +1,28 @@
 defmodule PokerServer.BettingRound do
+  alias PokerServer.{Player, Types}
+  
+  @type t :: %__MODULE__{
+    players: [Player.t()],
+    small_blind: number(),
+    big_blind: number(),
+    round_type: Types.betting_round_type(),
+    pot: number(),
+    current_bet: number(),
+    player_bets: map(),
+    active_player_index: 0 | 1 | 2,
+    folded_players: MapSet.t(),
+    all_in_players: MapSet.t(),
+    last_raise_size: number() | nil,
+    players_who_can_act: MapSet.t(),
+    last_raiser: String.t() | nil
+  }
+  
   defstruct [:players, :small_blind, :big_blind, :round_type, :pot, :current_bet, :player_bets, :active_player_index, :folded_players, :all_in_players, :last_raise_size, :players_who_can_act, :last_raiser]
 
   def new(players, small_blind, big_blind, round_type) do
+    # Validate betting round type
+    Types.validate_betting_round_type!(round_type)
+    
     # Post blinds - small blind is position 0, big blind is position 1
     
     # Update player chips after posting blinds
@@ -132,7 +153,7 @@ defmodule PokerServer.BettingRound do
     # Validate it's the correct player's turn
     active_player = get_active_player(betting_round)
     if active_player.id != player_id do
-      {:error, "not your turn"}
+      {:error, Types.error_not_your_turn()}
     else
       # Validate the action is allowed
       valid_actions = valid_actions(betting_round)
@@ -141,7 +162,7 @@ defmodule PokerServer.BettingRound do
       if action_type in valid_actions do
         execute_action(betting_round, player_id, action)
       else
-        {:error, "invalid action"}
+        {:error, Types.error_invalid_action()}
       end
     end
   end
@@ -165,7 +186,7 @@ defmodule PokerServer.BettingRound do
     
     # Validate player has enough chips to call
     if call_amount > player.chips do
-      {:error, "insufficient chips to call: need #{call_amount}, have #{player.chips}"}
+      {:error, Types.error_insufficient_chips(call_amount, player.chips)}
     else
       # Update player chips
       updated_players = Enum.map(betting_round.players, fn p ->
@@ -196,10 +217,10 @@ defmodule PokerServer.BettingRound do
     min_raise = minimum_raise(betting_round)
     cond do
       raise_amount < min_raise ->
-        {:error, "raise amount #{raise_amount} is below minimum raise of #{min_raise}"}
+        {:error, Types.error_below_minimum_raise(raise_amount, min_raise)}
       
       total_bet_amount > player.chips ->
-        {:error, "insufficient chips: need #{total_bet_amount}, have #{player.chips}"}
+        {:error, Types.error_insufficient_chips_for_raise(total_bet_amount, player.chips)}
       
       true ->
         # Update player chips

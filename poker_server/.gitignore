@@ -24,3 +24,6 @@ poker_server-*.tar
 
 # Ignore compiled assets
 /priv/static/assets/
+
+# Session exports and development history
+/session_history/

@@ -183,25 +183,20 @@ defmodule PokerServer.GameLobby do
   def handle_call(:get_state, _from, state) do
     # If game is running, get the actual game state
     if state.game_pid do
-      case PokerServer.GameServer.get_state(state.game_pid) do
-        {:ok, game_server_state} ->
-          # Merge lobby info with game state  
-          combined_state = %{
-            id: state.id,
-            name: state.name,
-            status: :playing,
-            players: game_server_state.game_state.players,
-            pot: game_server_state.game_state.pot,
-            community_cards: game_server_state.game_state.community_cards,
-            current_player_index: game_server_state.game_state.current_player_index,
-            current_bet: game_server_state.game_state.current_bet,
-            winner: game_server_state.game_state.winner
-          }
-          {:reply, {:ok, combined_state}, state}
-        
-        {:error, reason} ->
-          {:reply, {:error, reason}, state}
-      end
+      game_server_state = PokerServer.GameServer.get_state(state.game_pid)
+      # Merge lobby info with game state  
+      combined_state = %{
+        id: state.id,
+        name: state.name,
+        status: :playing,
+        players: game_server_state.game_state.players,
+        pot: game_server_state.game_state.pot,
+        community_cards: game_server_state.game_state.community_cards,
+        current_player_index: game_server_state.game_state.current_player_index,
+        current_bet: game_server_state.game_state.current_bet,
+        winner: game_server_state.game_state.winner
+      }
+      {:reply, {:ok, combined_state}, state}
     else
       # Return lobby state
       lobby_state = %{
@@ -226,7 +221,7 @@ defmodule PokerServer.GameLobby do
     if state.game_pid do
       # Forward to the actual game
       case PokerServer.GameServer.player_action(state.game_pid, player_name, action) do
-        {:ok, updated_game_state} ->
+        {:ok, _action_result, updated_game_state} ->
           # Broadcast the updated game state
           broadcast_game_update(state.id, updated_game_state)
           {:reply, :ok, state}
