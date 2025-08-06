@@ -1,5 +1,7 @@
 defmodule PokerServer.Deck do
   alias PokerServer.Card
+  
+  @type t :: [Card.t()]
 
   def create do
     # Use strings that sort correctly alphabetically

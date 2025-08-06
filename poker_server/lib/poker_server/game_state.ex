@@ -1,5 +1,17 @@
 defmodule PokerServer.GameState do
-  alias PokerServer.Deck
+  alias PokerServer.{Deck, Player, Card, Types}
+  
+  @type t :: %__MODULE__{
+    players: [Player.t()],
+    community_cards: [Card.t()],
+    pot: non_neg_integer(),
+    phase: Types.game_state_phase(),
+    hand_number: non_neg_integer(),
+    deck: Deck.t(),
+    button_position: non_neg_integer(),
+    small_blind: non_neg_integer(),
+    big_blind: non_neg_integer()
+  }
   
   defstruct [:players, :community_cards, :pot, :phase, :hand_number, :deck, :button_position, :small_blind, :big_blind]
 

@@ -3,23 +3,22 @@ defmodule PokerServer.BettingRound do
   
   @type t :: %__MODULE__{
     players: [Player.t()],
-    small_blind: non_neg_integer(),
-    big_blind: non_neg_integer(),
+    small_blind: number(),
+    big_blind: number(),
     round_type: Types.betting_round_type(),
-    pot: non_neg_integer(),
-    current_bet: non_neg_integer(),
-    player_bets: %{String.t() => non_neg_integer()},
-    active_player_index: non_neg_integer(),
-    folded_players: MapSet.t(String.t()),
-    all_in_players: MapSet.t(String.t()),
-    last_raise_size: non_neg_integer() | nil,
-    players_who_can_act: MapSet.t(String.t()),
+    pot: number(),
+    current_bet: number(),
+    player_bets: map(),
+    active_player_index: 0 | 1 | 2,
+    folded_players: MapSet.t(),
+    all_in_players: MapSet.t(),
+    last_raise_size: number() | nil,
+    players_who_can_act: MapSet.t(),
     last_raiser: String.t() | nil
   }
   
   defstruct [:players, :small_blind, :big_blind, :round_type, :pot, :current_bet, :player_bets, :active_player_index, :folded_players, :all_in_players, :last_raise_size, :players_who_can_act, :last_raiser]
 
-  @spec new([Player.t()], non_neg_integer(), non_neg_integer(), Types.betting_round_type()) :: t()
   def new(players, small_blind, big_blind, round_type) do
     # Validate betting round type
     Types.validate_betting_round_type!(round_type)
