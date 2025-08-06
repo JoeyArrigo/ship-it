@@ -1,7 +1,14 @@
 defmodule PokerServer.GameServer do
   use GenServer
-  alias PokerServer.{GameState, BettingRound, Player, InputValidator, UIAdapter}
+  alias PokerServer.{GameState, BettingRound, Player, InputValidator, UIAdapter, Types}
   alias Phoenix.PubSub
+  
+  @type state :: %{
+    game_id: String.t(),
+    game_state: GameState.t(),
+    betting_round: BettingRound.t() | nil,
+    phase: Types.server_phase()
+  }
 
   # Client API
 
@@ -13,6 +20,7 @@ defmodule PokerServer.GameServer do
   @doc """
   Get the current game state
   """
+  @spec get_state(GenServer.server()) :: state()
   def get_state(pid) do
     GenServer.call(pid, :get_state)
   end
@@ -20,6 +28,8 @@ defmodule PokerServer.GameServer do
   @doc """
   Process a player action (fold, call, raise, etc.)
   """
+  @spec player_action(GenServer.server(), String.t(), Types.player_action()) :: 
+    {:ok, :action_processed | :betting_complete, state()} | {:error, term()}
   def player_action(pid, player_id, action) do
     GenServer.call(pid, {:player_action, player_id, action})
   end
@@ -27,6 +37,7 @@ defmodule PokerServer.GameServer do
   @doc """
   Start the next hand
   """
+  @spec start_hand(GenServer.server()) :: {:ok, state()} | {:error, term()}
   def start_hand(pid) do
     GenServer.call(pid, :start_hand)
   end
@@ -122,7 +133,7 @@ defmodule PokerServer.GameServer do
 
   @impl true
   def handle_call({:player_action, _player_id, _action}, _from, state) do
-    {:reply, {:error, :no_active_betting_round}, state}
+    {:reply, {:error, Types.error_no_active_betting_round()}, state}
   end
 
   # Private Functions
