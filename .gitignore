@@ -27,3 +27,9 @@ poker_server-*.tar
 
 # Session exports and development history
 /session_history/
+
+# Elixir language server cache
+/.elixir_ls/
+
+# Dialyzer PLT cache files
+/priv/plts/
