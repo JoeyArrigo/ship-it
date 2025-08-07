@@ -11,8 +11,8 @@ defmodule PokerServerWeb.GameLive.Index do
     end
 
     queue_status = GameQueue.get_status()
-    
-    socket = 
+
+    socket =
       socket
       |> assign(:queue_status, queue_status)
       |> assign(:player_name, "")
@@ -33,16 +33,17 @@ defmodule PokerServerWeb.GameLive.Index do
   end
 
   @impl true
-  def handle_event("join_queue", %{"player_name" => player_name}, socket) when byte_size(player_name) > 0 do
+  def handle_event("join_queue", %{"player_name" => player_name}, socket)
+      when byte_size(player_name) > 0 do
     # Subscribe to personal notifications BEFORE joining queue
     if connected?(socket) do
       IO.puts("📢 Player #{player_name} subscribing to channel player:#{player_name}")
       PubSub.subscribe(PokerServer.PubSub, "player:#{player_name}")
     end
-    
+
     case GameQueue.join_queue(player_name) do
       :ok ->
-        {:noreply, 
+        {:noreply,
          socket
          |> assign(:current_player, player_name)
          |> assign(:in_queue, true)
@@ -64,8 +65,8 @@ defmodule PokerServerWeb.GameLive.Index do
     if socket.assigns.current_player do
       GameQueue.leave_queue(socket.assigns.current_player)
     end
-    
-    {:noreply, 
+
+    {:noreply,
      socket
      |> assign(:current_player, nil)
      |> assign(:in_queue, false)

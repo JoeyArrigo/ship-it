@@ -3,7 +3,8 @@ defmodule PokerServer.HandEvaluator do
     [
       :straight_flush,
       :four_of_a_kind,
-      :flush,           # Higher than full house in short deck
+      # Higher than full house in short deck
+      :flush,
       :full_house,
       :straight,
       :three_of_a_kind,
@@ -14,13 +15,14 @@ defmodule PokerServer.HandEvaluator do
   end
 
   def determine_winners([]), do: []
-  
+
   def determine_winners(hands) do
     hands
     |> Enum.reduce([], fn {player_id, hand}, acc ->
       case acc do
-        [] -> 
+        [] ->
           [{player_id, hand}]
+
         [{_, best_hand} | _] = current_winners ->
           case compare_hands(hand, best_hand) do
             :greater -> [{player_id, hand}]
@@ -36,9 +38,10 @@ defmodule PokerServer.HandEvaluator do
     rankings = hand_rankings()
     rank1 = Enum.find_index(rankings, &(&1 == hand_type1))
     rank2 = Enum.find_index(rankings, &(&1 == hand_type2))
-    
+
     cond do
-      rank1 < rank2 -> :greater  # Lower index = higher rank
+      # Lower index = higher rank
+      rank1 < rank2 -> :greater
       rank1 > rank2 -> :less
       true -> compare_same_hand_type(hand_type1, cards1, cards2)
     end
@@ -48,65 +51,73 @@ defmodule PokerServer.HandEvaluator do
     # For one pair, compare the pair rank first
     pair_rank1 = find_pair_rank(cards1)
     pair_rank2 = find_pair_rank(cards2)
-    
+
     val1 = card_rank_value(%{rank: pair_rank1})
     val2 = card_rank_value(%{rank: pair_rank2})
-    
+
     case compare_values(val1, val2) do
       :equal ->
         # Same pair rank - compare kickers
         kickers1 = get_kickers_for_pair(cards1, pair_rank1)
         kickers2 = get_kickers_for_pair(cards2, pair_rank2)
         compare_kickers(kickers1, kickers2)
-      result -> result
+
+      result ->
+        result
     end
   end
 
   defp compare_same_hand_type(:two_pair, cards1, cards2) do
     pairs1 = get_two_pair_ranks(cards1)
     pairs2 = get_two_pair_ranks(cards2)
-    
+
     case compare_two_pair_ranks(pairs1, pairs2) do
       :equal ->
         # Same two pair ranks - compare kicker
         kicker1 = get_kickers_for_two_pair(cards1, pairs1)
         kicker2 = get_kickers_for_two_pair(cards2, pairs2)
         compare_kickers(kicker1, kicker2)
-      result -> result
+
+      result ->
+        result
     end
   end
 
   defp compare_same_hand_type(:three_of_a_kind, cards1, cards2) do
     trips_rank1 = find_trips_rank(cards1)
     trips_rank2 = find_trips_rank(cards2)
-    
+
     val1 = card_rank_value(%{rank: trips_rank1})
     val2 = card_rank_value(%{rank: trips_rank2})
-    
+
     case compare_values(val1, val2) do
       :equal ->
         # Same trips rank - compare kickers
         kickers1 = get_kickers_for_trips(cards1, trips_rank1)
         kickers2 = get_kickers_for_trips(cards2, trips_rank2)
         compare_kickers(kickers1, kickers2)
-      result -> result
+
+      result ->
+        result
     end
   end
 
   defp compare_same_hand_type(:full_house, cards1, cards2) do
     {trips_rank1, pair_rank1} = get_full_house_ranks(cards1)
     {trips_rank2, pair_rank2} = get_full_house_ranks(cards2)
-    
+
     trips_val1 = card_rank_value(%{rank: trips_rank1})
     trips_val2 = card_rank_value(%{rank: trips_rank2})
-    
+
     case compare_values(trips_val1, trips_val2) do
       :equal ->
         # Same trips rank - compare pair rank
         pair_val1 = card_rank_value(%{rank: pair_rank1})
         pair_val2 = card_rank_value(%{rank: pair_rank2})
         compare_values(pair_val1, pair_val2)
-      result -> result
+
+      result ->
+        result
     end
   end
 
@@ -120,7 +131,7 @@ defmodule PokerServer.HandEvaluator do
   defp compare_same_hand_type(:straight, cards1, cards2) do
     straight_value1 = get_straight_value(cards1)
     straight_value2 = get_straight_value(cards2)
-    
+
     cond do
       straight_value1 > straight_value2 -> :greater
       straight_value1 < straight_value2 -> :less
@@ -137,10 +148,10 @@ defmodule PokerServer.HandEvaluator do
     # Simple high card comparison for other hand types
     high_card1 = cards1 |> Enum.max_by(&card_rank_value/1)
     high_card2 = cards2 |> Enum.max_by(&card_rank_value/1)
-    
+
     val1 = card_rank_value(high_card1)
     val2 = card_rank_value(high_card2)
-    
+
     cond do
       val1 > val2 -> :greater
       val1 < val2 -> :less
@@ -149,11 +160,12 @@ defmodule PokerServer.HandEvaluator do
   end
 
   defp get_straight_value(cards) do
-    sorted_ranks = cards
-    |> Enum.map(&card_rank_value/1)
-    |> Enum.uniq()
-    |> Enum.sort()
-    
+    sorted_ranks =
+      cards
+      |> Enum.map(&card_rank_value/1)
+      |> Enum.uniq()
+      |> Enum.sort()
+
     case sorted_ranks do
       # A-6-7-8-9 straight is the lowest (value 1)
       [6, 7, 8, 9, 14] -> 1
@@ -163,7 +175,8 @@ defmodule PokerServer.HandEvaluator do
       [8, 9, 10, 11, 12] -> 12
       [9, 10, 11, 12, 13] -> 13
       [10, 11, 12, 13, 14] -> 14
-      _ -> 0  # Not a straight
+      # Not a straight
+      _ -> 0
     end
   end
 
@@ -175,7 +188,7 @@ defmodule PokerServer.HandEvaluator do
   end
 
   # Helper functions for kicker comparisons
-  
+
   defp compare_values(val1, val2) do
     cond do
       val1 > val2 -> :greater
@@ -185,10 +198,11 @@ defmodule PokerServer.HandEvaluator do
   end
 
   defp compare_kickers([], []), do: :equal
+
   defp compare_kickers([card1 | rest1], [card2 | rest2]) do
     val1 = card_rank_value(card1)
     val2 = card_rank_value(card2)
-    
+
     case compare_values(val1, val2) do
       :equal -> compare_kickers(rest1, rest2)
       result -> result
@@ -212,13 +226,15 @@ defmodule PokerServer.HandEvaluator do
   defp compare_two_pair_ranks([high1, low1], [high2, low2]) do
     high_val1 = card_rank_value(%{rank: high1})
     high_val2 = card_rank_value(%{rank: high2})
-    
+
     case compare_values(high_val1, high_val2) do
       :equal ->
         low_val1 = card_rank_value(%{rank: low1})
         low_val2 = card_rank_value(%{rank: low2})
         compare_values(low_val1, low_val2)
-      result -> result
+
+      result ->
+        result
     end
   end
 
@@ -242,17 +258,20 @@ defmodule PokerServer.HandEvaluator do
   end
 
   defp get_full_house_ranks(cards) do
-    rank_counts = cards
-    |> Enum.group_by(& &1.rank)
-    |> Enum.map(fn {rank, group} -> {rank, length(group)} end)
+    rank_counts =
+      cards
+      |> Enum.group_by(& &1.rank)
+      |> Enum.map(fn {rank, group} -> {rank, length(group)} end)
 
-    trips_rank = rank_counts
-    |> Enum.find(fn {_rank, count} -> count == 3 end)
-    |> elem(0)
+    trips_rank =
+      rank_counts
+      |> Enum.find(fn {_rank, count} -> count == 3 end)
+      |> elem(0)
 
-    pair_rank = rank_counts
-    |> Enum.find(fn {_rank, count} -> count == 2 end)
-    |> elem(0)
+    pair_rank =
+      rank_counts
+      |> Enum.find(fn {_rank, count} -> count == 2 end)
+      |> elem(0)
 
     {trips_rank, pair_rank}
   end
@@ -273,19 +292,20 @@ defmodule PokerServer.HandEvaluator do
 
   def evaluate_hand(hole_cards, community_cards) do
     all_cards = hole_cards ++ community_cards
-    
+
     # Check all possible 5-card combinations for the best hand
-    best_hand = if length(all_cards) <= 5 do
-      evaluate_five_cards(all_cards)
-    else
-      all_cards
-      |> combinations(5)
-      |> Enum.map(&evaluate_five_cards/1)
-      |> Enum.max_by(fn {hand_type, _cards} -> 
-        hand_rankings() |> Enum.find_index(&(&1 == hand_type)) |> then(&(100 - &1))
-      end)
-    end
-    
+    best_hand =
+      if length(all_cards) <= 5 do
+        evaluate_five_cards(all_cards)
+      else
+        all_cards
+        |> combinations(5)
+        |> Enum.map(&evaluate_five_cards/1)
+        |> Enum.max_by(fn {hand_type, _cards} ->
+          hand_rankings() |> Enum.find_index(&(&1 == hand_type)) |> then(&(100 - &1))
+        end)
+      end
+
     best_hand
   end
 
@@ -305,8 +325,9 @@ defmodule PokerServer.HandEvaluator do
 
   defp combinations([], _), do: [[]]
   defp combinations(_, 0), do: [[]]
+
   defp combinations([h | t], n) when n > 0 do
-    (for(l <- combinations(t, n - 1), do: [h | l])) ++ combinations(t, n)
+    for(l <- combinations(t, n - 1), do: [h | l]) ++ combinations(t, n)
   end
 
   defp is_straight_flush?(cards) do
@@ -328,21 +349,23 @@ defmodule PokerServer.HandEvaluator do
   end
 
   defp is_full_house?(cards) do
-    rank_counts = cards
-    |> Enum.group_by(& &1.rank)
-    |> Map.values()
-    |> Enum.map(&length/1)
-    |> Enum.sort(:desc)
-    
+    rank_counts =
+      cards
+      |> Enum.group_by(& &1.rank)
+      |> Map.values()
+      |> Enum.map(&length/1)
+      |> Enum.sort(:desc)
+
     rank_counts == [3, 2] || rank_counts == [3, 2, 1, 1] || rank_counts == [3, 3]
   end
 
   defp is_straight?(cards) do
-    sorted_ranks = cards
-    |> Enum.map(&card_rank_value/1)
-    |> Enum.uniq()
-    |> Enum.sort()
-    
+    sorted_ranks =
+      cards
+      |> Enum.map(&card_rank_value/1)
+      |> Enum.uniq()
+      |> Enum.sort()
+
     case sorted_ranks do
       # Regular straights in short deck
       [6, 7, 8, 9, 10] -> true
@@ -364,11 +387,12 @@ defmodule PokerServer.HandEvaluator do
   end
 
   defp is_two_pair?(cards) do
-    pair_count = cards
-    |> Enum.group_by(& &1.rank)
-    |> Map.values()
-    |> Enum.count(&(length(&1) == 2))
-    
+    pair_count =
+      cards
+      |> Enum.group_by(& &1.rank)
+      |> Map.values()
+      |> Enum.count(&(length(&1) == 2))
+
     pair_count >= 2
   end
 

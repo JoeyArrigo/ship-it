@@ -14,8 +14,10 @@ defmodule PokerServerWeb.GameLive.Show do
         socket =
           socket
           |> assign(:game_id, game_id)
-          |> assign(:current_player, nil)  # Will be set in handle_params
-          |> assign(:player_view, nil)     # Will be set in handle_params
+          # Will be set in handle_params
+          |> assign(:current_player, nil)
+          # Will be set in handle_params
+          |> assign(:player_view, nil)
 
         {:ok, socket}
 
@@ -34,7 +36,7 @@ defmodule PokerServerWeb.GameLive.Show do
 
   defp apply_action(socket, :show, params) do
     current_player = Map.get(params, "player")
-    
+
     if is_nil(current_player) do
       socket
       |> put_flash(:error, "Please join through the lobby")
@@ -44,7 +46,7 @@ defmodule PokerServerWeb.GameLive.Show do
       if connected?(socket) do
         PubSub.subscribe(PokerServer.PubSub, "game:#{socket.assigns.game_id}:#{current_player}")
       end
-      
+
       # Get player view and validate player is in game
       case UIAdapter.get_player_view(socket.assigns.game_id, current_player) do
         {:ok, player_view} ->
@@ -52,17 +54,17 @@ defmodule PokerServerWeb.GameLive.Show do
           |> assign(:page_title, "Poker Game")
           |> assign(:current_player, current_player)
           |> assign(:player_view, player_view)
-          
+
         {:error, reason} ->
           # Log the error for debugging
           IO.inspect(reason, label: "UIAdapter error")
+
           socket
           |> put_flash(:error, "Error loading game: #{inspect(reason)}")
           |> push_navigate(to: ~p"/")
       end
     end
   end
-
 
   @impl true
   def handle_event("player_action", %{"action" => "fold"}, socket) do
@@ -104,13 +106,14 @@ defmodule PokerServerWeb.GameLive.Show do
   # Helper function to make player actions via the service
   defp make_player_action(socket, action) do
     current_player = socket.assigns.current_player
-    
+
     if is_nil(current_player) do
       {:noreply, put_flash(socket, :error, "Player not identified")}
     else
       case GameManager.player_action(socket.assigns.game_id, current_player, action) do
         {:ok, _result, _state} ->
           {:noreply, socket}
+
         {:error, reason} ->
           {:noreply, put_flash(socket, :error, "Action failed: #{inspect(reason)}")}
       end

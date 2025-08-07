@@ -26,7 +26,6 @@ defmodule PokerServer.GameManager do
     end
   end
 
-
   @doc """
   Process a player action in a game
   """
@@ -72,19 +71,21 @@ defmodule PokerServer.GameManager do
     case InputValidator.validate_players(players) do
       {:ok, validated_players} ->
         game_id = generate_game_id()
-        
+
         case start_game_process(game_id, validated_players) do
           {:ok, _pid} ->
-            updated_state = Map.put(state, game_id, %{
-              players: validated_players,
-              created_at: DateTime.utc_now()
-            })
+            updated_state =
+              Map.put(state, game_id, %{
+                players: validated_players,
+                created_at: DateTime.utc_now()
+              })
+
             {:reply, {:ok, game_id}, updated_state}
-          
+
           {:error, reason} ->
             {:reply, {:error, reason}, state}
         end
-      
+
       {:error, validation_error} ->
         {:reply, {:error, {:invalid_input, validation_error}}, state}
     end
