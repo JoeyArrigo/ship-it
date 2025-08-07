@@ -1,11 +1,11 @@
 defmodule PokerServer.UIAdapter do
   @moduledoc """
   Thin presentation layer between the poker service and UI frontends.
-  
+
   Provides UI-ready data while keeping game logic in the service layer.
   Handles data filtering for anti-cheat and formats data for display.
   """
-  
+
   alias PokerServer.{GameManager, BettingRound}
 
   @doc """
@@ -17,8 +17,9 @@ defmodule PokerServer.UIAdapter do
       {:ok, game_server_state} ->
         player_view = build_player_view(game_server_state, player_id)
         {:ok, player_view}
-      
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -29,22 +30,23 @@ defmodule PokerServer.UIAdapter do
   """
   def get_player_view_from_state(game_server_state, player_id) do
     # Filter the game_state.players to hide other players' hole cards
-    filtered_players = Enum.map(game_server_state.game_state.players, fn player ->
-      if player.id == player_id do
-        # Current player can see their own cards
-        player
-      else
-        # Other players' hole cards are hidden
-        %{player | hole_cards: []}
-      end
-    end)
-    
+    filtered_players =
+      Enum.map(game_server_state.game_state.players, fn player ->
+        if player.id == player_id do
+          # Current player can see their own cards
+          player
+        else
+          # Other players' hole cards are hidden
+          %{player | hole_cards: []}
+        end
+      end)
+
     # Create filtered game state
     filtered_game_state = %{game_server_state.game_state | players: filtered_players}
-    
+
     # Return the same structure as GameServer state, but with filtered players
     filtered_state = %{game_server_state | game_state: filtered_game_state}
-    
+
     {:ok, filtered_state}
   end
 
@@ -56,22 +58,25 @@ defmodule PokerServer.UIAdapter do
   def get_broadcast_player_view(game_server_state, player_id) do
     # Build the UI-optimized view
     ui_view = build_player_view(game_server_state, player_id)
-    
+
     # Add fields that broadcasts/tests expect for backward compatibility
     # Override phase with game_server_state.phase (includes betting state)
-    enhanced_view = Map.merge(ui_view, %{
-      game_id: game_server_state.game_id,
-      phase: game_server_state.phase,  # Use server phase (e.g., :preflop_betting)
-      betting_round: game_server_state.betting_round,
-      game_state: %{
-        players: ui_view.players,
-        hand_number: ui_view.hand_number,
-        community_cards: ui_view.community_cards,
-        pot: ui_view.pot,
-        phase: game_server_state.game_state.phase  # Use game phase (e.g., :preflop)
-      }
-    })
-    
+    enhanced_view =
+      Map.merge(ui_view, %{
+        game_id: game_server_state.game_id,
+        # Use server phase (e.g., :preflop_betting)
+        phase: game_server_state.phase,
+        betting_round: game_server_state.betting_round,
+        game_state: %{
+          players: ui_view.players,
+          hand_number: ui_view.hand_number,
+          community_cards: ui_view.community_cards,
+          pot: ui_view.pot,
+          # Use game phase (e.g., :preflop)
+          phase: game_server_state.game_state.phase
+        }
+      })
+
     enhanced_view
   end
 
@@ -79,25 +84,27 @@ defmodule PokerServer.UIAdapter do
   Format a card for display
   """
   def format_card(%{rank: rank, suit: suit}) do
-    rank_str = case rank do
-      :ace -> "A"
-      :king -> "K" 
-      :queen -> "Q"
-      :jack -> "J"
-      :ten -> "10"
-      :nine -> "9"
-      :eight -> "8"
-      :seven -> "7"
-      :six -> "6"
-      n when is_integer(n) -> to_string(n)
-    end
+    rank_str =
+      case rank do
+        :ace -> "A"
+        :king -> "K"
+        :queen -> "Q"
+        :jack -> "J"
+        :ten -> "10"
+        :nine -> "9"
+        :eight -> "8"
+        :seven -> "7"
+        :six -> "6"
+        n when is_integer(n) -> to_string(n)
+      end
 
-    suit_symbol = case suit do
-      :hearts -> "♥"
-      :diamonds -> "♦"
-      :clubs -> "♣"
-      :spades -> "♠"
-    end
+    suit_symbol =
+      case suit do
+        :hearts -> "♥"
+        :diamonds -> "♦"
+        :clubs -> "♣"
+        :spades -> "♠"
+      end
 
     %{
       display: "#{rank_str}#{suit_symbol}",
@@ -114,17 +121,20 @@ defmodule PokerServer.UIAdapter do
       %{phase: :preflop_betting, betting_round: betting_round} when not is_nil(betting_round) ->
         active_player = BettingRound.get_active_player(betting_round)
         active_player && active_player.id == player_id
-      
+
       # Non-betting phases from GameServer (actual tested phases)
       %{phase: :waiting_to_start} ->
         false
+
       %{phase: :flop} ->
         false
+
       %{phase: :turn} ->
-        false  
+        false
+
       %{phase: :river} ->
         false
-      
+
       # Fallback for any unknown phases
       _ ->
         false
@@ -142,6 +152,7 @@ defmodule PokerServer.UIAdapter do
         else
           []
         end
+
       _ ->
         []
     end
@@ -151,32 +162,33 @@ defmodule PokerServer.UIAdapter do
 
   def build_player_view(game_server_state, player_id, _game_id \\ nil) do
     game_state = game_server_state.game_state
-    
+
     # Filter players to hide other players' hole cards
-    filtered_players = Enum.map(game_state.players, fn player ->
-      if player.id == player_id do
-        # Current player can see their own cards
-        %{
-          id: player.id,
-          chips: player.chips,
-          position: player.position,
-          hole_cards: format_cards(player.hole_cards),
-          is_current_player: true
-        }
-      else
-        # Other players' hole cards are hidden
-        %{
-          id: player.id,
-          chips: player.chips,
-          position: player.position,
-          hole_cards: [],
-          is_current_player: false
-        }
-      end
-    end)
+    filtered_players =
+      Enum.map(game_state.players, fn player ->
+        if player.id == player_id do
+          # Current player can see their own cards
+          %{
+            id: player.id,
+            chips: player.chips,
+            position: player.position,
+            hole_cards: format_cards(player.hole_cards),
+            is_current_player: true
+          }
+        else
+          # Other players' hole cards are hidden
+          %{
+            id: player.id,
+            chips: player.chips,
+            position: player.position,
+            hole_cards: [],
+            is_current_player: false
+          }
+        end
+      end)
 
     # Get current player data
-    current_player_data = Enum.find(filtered_players, &(&1.is_current_player))
+    current_player_data = Enum.find(filtered_players, & &1.is_current_player)
 
     # Build betting info using existing service logic
     betting_info = get_betting_info(game_server_state, player_id)
@@ -188,20 +200,20 @@ defmodule PokerServer.UIAdapter do
       # Game info
       phase: game_state.phase,
       hand_number: game_state.hand_number,
-      
+
       # Players
       players: filtered_players,
       current_player: current_player_data,
-      
+
       # Cards and pot
       community_cards: format_cards(game_state.community_cards),
       pot: game_state.pot,
-      
+
       # Betting
       betting_info: betting_info,
       can_act: can_act,
       valid_actions: if(can_act, do: get_valid_actions(game_server_state, player_id), else: []),
-      
+
       # UI helpers
       can_start_hand: can_start_hand?(game_state),
       is_waiting_for_players: game_state.phase == :waiting_for_players
@@ -218,13 +230,14 @@ defmodule PokerServer.UIAdapter do
       %{betting_round: betting_round} when not is_nil(betting_round) ->
         player_current_bet = betting_round.player_bets[player_id] || 0
         call_amount = max(0, betting_round.current_bet - player_current_bet)
-        
+
         %{
           current_bet: betting_round.current_bet,
           pot: betting_round.pot,
           call_amount: call_amount,
           min_raise: BettingRound.minimum_raise(betting_round)
         }
+
       _ ->
         %{
           current_bet: 0,

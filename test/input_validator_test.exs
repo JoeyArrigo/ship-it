@@ -34,7 +34,9 @@ defmodule PokerServer.InputValidatorTest do
 
     test "rejects invalid player tuples" do
       players = [{"player1", 1500}, :invalid_tuple, {"player3", 2000}]
-      assert {:error, {:invalid_player, :invalid_tuple}} = InputValidator.validate_players(players)
+
+      assert {:error, {:invalid_player, :invalid_tuple}} =
+               InputValidator.validate_players(players)
     end
   end
 
@@ -143,6 +145,7 @@ defmodule PokerServer.InputValidatorTest do
         %Player{id: "player2", chips: 1000, position: 1},
         %Player{id: :player3, chips: 2000, position: 2}
       ]
+
       {:ok, players: players}
     end
 
@@ -153,13 +156,18 @@ defmodule PokerServer.InputValidatorTest do
     end
 
     test "rejects non-existent player IDs", %{players: players} do
-      assert {:error, :player_not_found} = InputValidator.validate_player_exists("nonexistent", players)
+      assert {:error, :player_not_found} =
+               InputValidator.validate_player_exists("nonexistent", players)
+
       assert {:error, :player_not_found} = InputValidator.validate_player_exists(999, players)
     end
 
     test "rejects invalid players list" do
-      assert {:error, :invalid_players_list} = InputValidator.validate_player_exists("player1", "not a list")
-      assert {:error, :invalid_players_list} = InputValidator.validate_player_exists("player1", nil)
+      assert {:error, :invalid_players_list} =
+               InputValidator.validate_player_exists("player1", "not a list")
+
+      assert {:error, :invalid_players_list} =
+               InputValidator.validate_player_exists("player1", nil)
     end
   end
 

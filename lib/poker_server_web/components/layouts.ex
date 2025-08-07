@@ -10,5 +10,5 @@ defmodule PokerServerWeb.Layouts do
   """
   use PokerServerWeb, :html
 
-  embed_templates "layouts/*"
+  embed_templates("layouts/*")
 end

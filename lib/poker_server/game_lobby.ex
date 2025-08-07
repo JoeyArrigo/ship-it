@@ -20,8 +20,9 @@ defmodule PokerServer.GameLobby do
   # Client API
 
   def start_link({lobby_id, lobby_name}) do
-    GenServer.start_link(__MODULE__, {lobby_id, lobby_name}, 
-      name: {:via, Registry, {PokerServer.GameRegistry, lobby_id}})
+    GenServer.start_link(__MODULE__, {lobby_id, lobby_name},
+      name: {:via, Registry, {PokerServer.GameRegistry, lobby_id}}
+    )
   end
 
   @doc """
@@ -88,7 +89,7 @@ defmodule PokerServer.GameLobby do
       players: [],
       game_pid: nil
     }
-    
+
     {:ok, state}
   end
 
@@ -97,25 +98,25 @@ defmodule PokerServer.GameLobby do
     cond do
       state.status != :waiting_for_players ->
         {:reply, {:error, :game_already_started}, state}
-      
+
       length(state.players) >= state.max_players ->
         {:reply, {:error, :lobby_full}, state}
-      
+
       Enum.any?(state.players, fn player -> player.name == player_name end) ->
         {:reply, {:error, :player_already_exists}, state}
-      
+
       true ->
         new_player = %{
           name: player_name,
           chips: chips,
           position: length(state.players)
         }
-        
+
         updated_state = %{state | players: state.players ++ [new_player]}
-        
+
         # Broadcast the updated state
         broadcast_lobby_update(updated_state)
-        
+
         {:reply, :ok, updated_state}
     end
   end
@@ -126,53 +127,50 @@ defmodule PokerServer.GameLobby do
       {:reply, {:error, :game_already_started}, state}
     else
       updated_players = Enum.reject(state.players, fn player -> player.name == player_name end)
-      
+
       # Reassign positions
-      updated_players_with_positions = 
+      updated_players_with_positions =
         updated_players
         |> Enum.with_index()
         |> Enum.map(fn {player, index} -> %{player | position: index} end)
-      
+
       updated_state = %{state | players: updated_players_with_positions}
-      
+
       # Broadcast the updated state
       broadcast_lobby_update(updated_state)
-      
+
       {:reply, :ok, updated_state}
     end
   end
 
-  @impl true  
+  @impl true
   def handle_call(:start_game, _from, state) do
     cond do
       state.status != :waiting_for_players ->
         {:reply, {:error, :game_already_started}, state}
-      
+
       length(state.players) < state.min_players ->
         {:reply, {:error, :not_enough_players}, state}
-      
+
       true ->
         # Convert lobby players to the format expected by GameServer
-        game_players = 
+        game_players =
           state.players
           |> Enum.map(fn player -> {player.name, player.chips} end)
-        
+
         # Start the actual poker game
         case DynamicSupervisor.start_child(
-          PokerServer.GameSupervisor,
-          {PokerServer.GameServer, {state.id, game_players}}
-        ) do
+               PokerServer.GameSupervisor,
+               {PokerServer.GameServer, {state.id, game_players}}
+             ) do
           {:ok, game_pid} ->
-            updated_state = %{state | 
-              status: :playing,
-              game_pid: game_pid
-            }
-            
+            updated_state = %{state | status: :playing, game_pid: game_pid}
+
             # Broadcast the game start
             broadcast_lobby_update(updated_state)
-            
+
             {:reply, :ok, updated_state}
-          
+
           {:error, reason} ->
             {:reply, {:error, reason}, state}
         end
@@ -196,6 +194,7 @@ defmodule PokerServer.GameLobby do
         current_bet: game_server_state.game_state.current_bet,
         winner: game_server_state.game_state.winner
       }
+
       {:reply, {:ok, combined_state}, state}
     else
       # Return lobby state
@@ -212,6 +211,7 @@ defmodule PokerServer.GameLobby do
         current_bet: 0,
         winner: nil
       }
+
       {:reply, {:ok, lobby_state}, state}
     end
   end
@@ -225,7 +225,7 @@ defmodule PokerServer.GameLobby do
           # Broadcast the updated game state
           broadcast_game_update(state.id, updated_game_state)
           {:reply, :ok, state}
-        
+
         {:error, reason} ->
           {:reply, {:error, reason}, state}
       end

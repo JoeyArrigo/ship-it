@@ -12,7 +12,7 @@ defmodule PokerServerTest do
   test "can start a hand" do
     players = [{1, 1500}, {2, 1500}, {3, 1500}]
     {:ok, game_id} = PokerServer.create_game(players)
-    
+
     assert {:ok, state} = PokerServer.start_hand(game_id)
     assert state.phase == :preflop_betting
     assert is_map(state.betting_round)

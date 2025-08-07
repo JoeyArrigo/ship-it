@@ -19,7 +19,7 @@ defmodule PokerServer.Tournament do
   def new(id, name, options \\ []) do
     level_duration = Keyword.get(options, :level_duration_minutes, 10)
     blind_levels = Keyword.get(options, :blind_levels, default_blind_levels())
-    
+
     %__MODULE__{
       id: id,
       name: name,
@@ -36,18 +36,30 @@ defmodule PokerServer.Tournament do
   """
   def default_blind_levels do
     [
-      {1, 10, 20},     # Level 1: 10/20
-      {2, 15, 30},     # Level 2: 15/30
-      {3, 25, 50},     # Level 3: 25/50
-      {4, 50, 100},    # Level 4: 50/100
-      {5, 75, 150},    # Level 5: 75/150
-      {6, 100, 200},   # Level 6: 100/200
-      {7, 150, 300},   # Level 7: 150/300
-      {8, 200, 400},   # Level 8: 200/400
-      {9, 300, 600},   # Level 9: 300/600
-      {10, 500, 1000}, # Level 10: 500/1000
-      {11, 750, 1500}, # Level 11: 750/1500
-      {12, 1000, 2000} # Level 12: 1000/2000
+      # Level 1: 10/20
+      {1, 10, 20},
+      # Level 2: 15/30
+      {2, 15, 30},
+      # Level 3: 25/50
+      {3, 25, 50},
+      # Level 4: 50/100
+      {4, 50, 100},
+      # Level 5: 75/150
+      {5, 75, 150},
+      # Level 6: 100/200
+      {6, 100, 200},
+      # Level 7: 150/300
+      {7, 150, 300},
+      # Level 8: 200/400
+      {8, 200, 400},
+      # Level 9: 300/600
+      {9, 300, 600},
+      # Level 10: 500/1000
+      {10, 500, 1000},
+      # Level 11: 750/1500
+      {11, 750, 1500},
+      # Level 12: 1000/2000
+      {12, 1000, 2000}
     ]
   end
 
@@ -55,11 +67,12 @@ defmodule PokerServer.Tournament do
   Get current blind levels for the tournament.
   """
   def current_blinds(tournament) do
-    case Enum.find(tournament.blind_levels, fn {level, _sb, _bb} -> 
-      level == tournament.current_level 
-    end) do
+    case Enum.find(tournament.blind_levels, fn {level, _sb, _bb} ->
+           level == tournament.current_level
+         end) do
       {_level, small_blind, big_blind} -> {small_blind, big_blind}
-      nil -> {10, 20}  # Fallback to minimum blinds
+      # Fallback to minimum blinds
+      nil -> {10, 20}
     end
   end
 
@@ -78,12 +91,9 @@ defmodule PokerServer.Tournament do
   def advance_level(tournament) do
     next_level = tournament.current_level + 1
     max_level = tournament.blind_levels |> Enum.map(&elem(&1, 0)) |> Enum.max()
-    
+
     if next_level <= max_level do
-      %{tournament |
-        current_level: next_level,
-        level_start_time: DateTime.utc_now()
-      }
+      %{tournament | current_level: next_level, level_start_time: DateTime.utc_now()}
     else
       # Tournament has reached maximum blind level
       tournament
@@ -115,7 +125,7 @@ defmodule PokerServer.Tournament do
   """
   def status(tournament) do
     {small_blind, big_blind} = current_blinds(tournament)
-    
+
     %{
       id: tournament.id,
       name: tournament.name,

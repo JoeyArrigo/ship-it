@@ -54,8 +54,11 @@ defmodule PokerServer.TypesTest do
     end
 
     test "error message functions work" do
-      assert Types.error_insufficient_chips(100, 50) == "insufficient chips to call: need 100, have 50"
-      assert Types.error_below_minimum_raise(50, 100) == "raise amount 50 is below minimum raise of 100"
+      assert Types.error_insufficient_chips(100, 50) ==
+               "insufficient chips to call: need 100, have 50"
+
+      assert Types.error_below_minimum_raise(50, 100) ==
+               "raise amount 50 is below minimum raise of 100"
     end
   end
 

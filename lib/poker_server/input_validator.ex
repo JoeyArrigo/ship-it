@@ -1,14 +1,14 @@
 defmodule PokerServer.InputValidator do
   @moduledoc """
   Comprehensive input validation for the PokerServer application.
-  
+
   Provides validation functions to ensure data integrity, prevent crashes,
   and protect against malicious input across all poker server operations.
   """
 
   @doc """
   Validates a list of players for game creation.
-  
+
   Ensures:
   - Player list is not empty
   - No duplicate player IDs
@@ -19,25 +19,25 @@ defmodule PokerServer.InputValidator do
     cond do
       length(players) == 0 ->
         {:error, :empty_player_list}
-      
+
       length(players) > 10 ->
         {:error, :too_many_players}
-      
+
       length(players) < 2 ->
         {:error, :insufficient_players}
-      
+
       true ->
         players
         |> validate_player_list()
         |> validate_unique_player_ids()
     end
   end
-  
+
   def validate_players(_), do: {:error, :invalid_player_list_format}
 
   @doc """
   Validates an individual player tuple format.
-  
+
   Expects {player_id, chips} where:
   - player_id is not nil, empty string, or invalid type
   - chips is positive integer
@@ -48,12 +48,12 @@ defmodule PokerServer.InputValidator do
       :ok
     end
   end
-  
+
   def validate_player_tuple(_), do: {:error, :invalid_player_tuple_format}
 
   @doc """
   Validates a player ID for existence and format.
-  
+
   Player IDs must be:
   - Not nil
   - Not empty string
@@ -66,21 +66,25 @@ defmodule PokerServer.InputValidator do
 
   @doc """
   Validates chip amounts for non-negative values.
-  
+
   Chip amounts must be:
   - Positive integers
   - Not nil, floats, or strings
   - Within reasonable limits to prevent overflow
   """
-  def validate_chip_amount(chips) when is_integer(chips) and chips > 0 and chips <= 1_000_000, do: :ok
-  def validate_chip_amount(chips) when is_integer(chips) and chips <= 0, do: {:error, :non_positive_chips}
+  def validate_chip_amount(chips) when is_integer(chips) and chips > 0 and chips <= 1_000_000,
+    do: :ok
+
+  def validate_chip_amount(chips) when is_integer(chips) and chips <= 0,
+    do: {:error, :non_positive_chips}
+
   def validate_chip_amount(chips) when is_integer(chips), do: {:error, :chips_too_large}
   def validate_chip_amount(nil), do: {:error, :nil_chip_amount}
   def validate_chip_amount(_), do: {:error, :invalid_chip_type}
 
   @doc """
   Validates betting actions for proper format and values.
-  
+
   Actions must be valid tuples like:
   - {:fold}
   - {:call}  
@@ -93,7 +97,10 @@ defmodule PokerServer.InputValidator do
   def validate_action({:check}), do: :ok
   def validate_action({:all_in}), do: :ok
   def validate_action({:raise, amount}) when is_integer(amount) and amount > 0, do: :ok
-  def validate_action({:raise, amount}) when is_integer(amount), do: {:error, :invalid_raise_amount}
+
+  def validate_action({:raise, amount}) when is_integer(amount),
+    do: {:error, :invalid_raise_amount}
+
   def validate_action({:raise, _}), do: {:error, :invalid_raise_type}
   def validate_action(action) when is_tuple(action), do: {:error, :unknown_action}
   def validate_action(_), do: {:error, :invalid_action_format}
@@ -108,33 +115,40 @@ defmodule PokerServer.InputValidator do
       {:error, :player_not_found}
     end
   end
-  
+
   def validate_player_exists(_, _), do: {:error, :invalid_players_list}
 
   @doc """
   Validates position/index values are within bounds.
   """
-  def validate_position(position, max_position) when is_integer(position) and position >= 0 and position < max_position do
+  def validate_position(position, max_position)
+      when is_integer(position) and position >= 0 and position < max_position do
     :ok
   end
-  
-  def validate_position(position, _) when is_integer(position), do: {:error, :position_out_of_bounds}
+
+  def validate_position(position, _) when is_integer(position),
+    do: {:error, :position_out_of_bounds}
+
   def validate_position(_, _), do: {:error, :invalid_position_type}
 
   @doc """
   Validates game state is suitable for operations.
-  
+
   Checks:
   - Game has players
   - Game state is valid
   - No corrupted data
   """
-  def validate_game_state(%{players: players} = _game_state) when is_list(players) and length(players) > 0 do
+  def validate_game_state(%{players: players} = _game_state)
+      when is_list(players) and length(players) > 0 do
     :ok
   end
-  
+
   def validate_game_state(%{players: []}), do: {:error, :no_players_in_game}
-  def validate_game_state(%{players: players}) when not is_list(players), do: {:error, :corrupted_players_list}
+
+  def validate_game_state(%{players: players}) when not is_list(players),
+    do: {:error, :corrupted_players_list}
+
   def validate_game_state(_), do: {:error, :invalid_game_state}
 
   # Private helper functions
@@ -149,14 +163,14 @@ defmodule PokerServer.InputValidator do
   defp validate_unique_player_ids({:ok, players}) do
     player_ids = Enum.map(players, &elem(&1, 0))
     unique_ids = Enum.uniq(player_ids)
-    
+
     if length(player_ids) == length(unique_ids) do
       {:ok, players}
     else
       {:error, :duplicate_player_ids}
     end
   end
-  
+
   defp validate_unique_player_ids(error), do: error
 
   @doc """

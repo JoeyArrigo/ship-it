@@ -1,7 +1,7 @@
 defmodule PokerServer do
   @moduledoc """
   Main API for the PokerServer application.
-  
+
   Provides functions to create games, manage players, and process actions
   in real-time multiplayer poker games.
   """
@@ -10,10 +10,10 @@ defmodule PokerServer do
 
   @doc """
   Create a new poker game with the given players.
-  
+
   ## Parameters
   - players: List of {player_id, starting_chips} tuples
-  
+
   Returns {:ok, game_id} where game_id is a unique identifier for the game.
   """
   def create_game(players) when is_list(players) do
@@ -22,7 +22,7 @@ defmodule PokerServer do
 
   @doc """
   Get the current state of a game.
-  
+
   Returns the current game state and phase information.
   """
   def get_game_state(game_id) do
@@ -31,7 +31,7 @@ defmodule PokerServer do
 
   @doc """
   Process a player action in a game.
-  
+
   ## Parameters
   - game_id: The game identifier
   - player_id: The player making the action  
@@ -62,11 +62,10 @@ defmodule PokerServer do
 
   @doc """
   List all active games.
-  
+
   Returns a list of game IDs for all currently active games.
   """
   def list_games do
     GameManager.list_games()
   end
-
 end
