@@ -3,7 +3,7 @@ defmodule PokerServer.BettingRoundTest do
   alias PokerServer.{BettingRound, Player}
 
   # Helper to create a player
-  defp player(id, chips, position \\ nil), do: %Player{id: id, chips: chips, position: position}
+  defp player(id, chips, position), do: %Player{id: id, chips: chips, position: position}
 
   describe "new/4" do
     test "creates betting round with correct initial state" do
@@ -366,7 +366,7 @@ defmodule PokerServer.BettingRoundTest do
     test "creates multiple side pots for complex all-in scenario" do
       # Complex scenario: 4 players with different all-in amounts
       # Player 1: 50 chips all-in
-      # Player 2: 150 chips all-in  
+      # Player 2: 150 chips all-in
       # Player 3: 300 chips all-in
       # Player 4: 400 chips (calls 300)
       players = [
@@ -398,7 +398,7 @@ defmodule PokerServer.BettingRoundTest do
 
       # Should create 4 pots:
       # Main pot: 50 * 4 = 200 (all 4 players eligible)
-      # Side pot 1: (150-50) * 3 = 300 (players 2,3,4 eligible) 
+      # Side pot 1: (150-50) * 3 = 300 (players 2,3,4 eligible)
       # Side pot 2: (300-150) * 2 = 300 (players 3,4 eligible)
       # Side pot 3: 0 (no additional chips from player 4)
       assert length(side_pots) == 3
