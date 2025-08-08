@@ -69,7 +69,7 @@ defmodule PokerServer.GameStateTest do
     end
 
     test "handles small blind player with insufficient chips" do
-      # Small blind player has only 5 chips, blind is 10  
+      # Small blind player has only 5 chips, blind is 10
       players = [
         # Position 0 - will be small blind after button advance
         player(1, 5),
@@ -108,7 +108,7 @@ defmodule PokerServer.GameStateTest do
       players = [
         # Position 0 - will be button after advance
         player(1, 1500),
-        # Position 1 - will be small blind  
+        # Position 1 - will be small blind
         player(2, 1500),
         # Position 2 - will be big blind, insufficient chips
         player(3, 15)
@@ -363,8 +363,9 @@ defmodule PokerServer.GameStateTest do
       player1 = Enum.find(updated_state.players, &(&1.id == 1))
       player2 = Enum.find(updated_state.players, &(&1.id == 2))
 
-      # Split pot - both players gain chips
-      assert player1.chips >= 1480
+      # Split pot - both players gain pot/2 chips
+      assert player1.chips == 1500
+      assert player2.chips == 1500
       # Pot fully distributed
       assert updated_state.pot == 0
     end
@@ -484,7 +485,7 @@ defmodule PokerServer.GameStateTest do
       players = [
         # Position 0 - survives
         player(1, 1500),
-        # Position 1 - eliminated  
+        # Position 1 - eliminated
         player(2, 0),
         # Position 2 - eliminated (button)
         player(3, 0),
@@ -525,7 +526,7 @@ defmodule PokerServer.GameStateTest do
       players = [
         # Position 0 - only survivor
         player(1, 1500),
-        # Position 1 - eliminated  
+        # Position 1 - eliminated
         player(2, 0),
         # Position 2 - eliminated
         player(3, 0),
