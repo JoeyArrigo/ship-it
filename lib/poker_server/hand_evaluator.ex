@@ -1,4 +1,25 @@
 defmodule PokerServer.HandEvaluator do
+  @moduledoc """
+  Evaluates poker hands using short deck (6+ hold'em) rules.
+  
+  Key differences from standard poker:
+  - Flush beats full house (fewer flush combinations in 36-card deck)  
+  - A-6-7-8-9 is the lowest straight (no A-2-3-4-5 wheel)
+  - Only cards 6 through Ace are used
+
+  Main functions:
+  - evaluate_hand/2: Determine best 5-card hand from 7 available cards
+  - determine_winners/1: Compare multiple hands to find winner(s)
+  - compare_hands/2: Compare two specific hands
+  """
+
+  @doc """
+  Get the hand rankings for short deck poker.
+
+  Returns hand types in order from strongest to weakest.
+  Note: Flush beats full house in short deck rules.
+  """
+  @spec hand_rankings() :: [atom()]
   def hand_rankings do
     [
       :straight_flush,
@@ -14,6 +35,22 @@ defmodule PokerServer.HandEvaluator do
     ]
   end
 
+  @doc """
+  Find the winning player(s) from a list of evaluated hands.
+
+  ## Parameters
+  - hands: List of {player_id, hand} tuples where hand is {hand_type, cards}
+
+  ## Returns  
+  - List of {player_id, hand} tuples for the winning hand(s)
+  - Multiple winners in case of ties (split pot scenario)
+  - Empty list if no hands provided
+
+  ## Examples
+      iex> HandEvaluator.determine_winners([{"player1", {:flush, [cards]}}, {"player2", {:pair, [cards]}}])
+      [{"player1", {:flush, [cards]}}]
+  """
+  @spec determine_winners([{String.t(), {atom(), list()}}]) :: [{String.t(), {atom(), list()}}]
   def determine_winners([]), do: []
 
   def determine_winners(hands) do
@@ -290,6 +327,30 @@ defmodule PokerServer.HandEvaluator do
     end
   end
 
+  @doc """
+  Evaluate the best possible poker hand from available cards.
+
+  Takes a player's 2 hole cards plus up to 5 community cards and finds
+  the best 5-card poker hand using short deck rules.
+
+  ## Parameters
+  - hole_cards: List of 2 Card structs (player's private cards)
+  - community_cards: List of 0-5 Card structs (shared board cards)
+
+  ## Returns
+  Tuple of {hand_type, cards} where:
+  - hand_type: Atom like :flush, :straight, :pair, etc.
+  - cards: List of 5 Card structs representing the best hand
+
+  ## Examples
+      iex> HandEvaluator.evaluate_hand([card1, card2], [flop1, flop2, flop3])  
+      {:pair, [ace_hearts, ace_spades, king_hearts, queen_hearts, jack_hearts]}
+
+  ## Notes
+  Uses combinatorics to check all possible 5-card combinations when 7+ cards available.
+  Returns the highest-ranking hand according to short deck poker rules.
+  """
+  @spec evaluate_hand([PokerServer.Card.t()], [PokerServer.Card.t()]) :: {atom(), [PokerServer.Card.t()]}
   def evaluate_hand(hole_cards, community_cards) do
     all_cards = hole_cards ++ community_cards
 
