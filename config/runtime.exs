@@ -7,6 +7,17 @@ import Config
 # any compile-time configuration in here, as it won't be applied.
 # The block below contains prod specific runtime configuration.
 
+# General endpoint configuration
+config :poker_server, PokerServerWeb.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [html: PokerServerWeb.ErrorHTML, json: PokerServerWeb.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: PokerServer.PubSub,
+  live_view: [signing_salt: "poker_secret_salt"]
+
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
@@ -66,4 +77,9 @@ if config_env() == :prod do
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
+end
+
+# Configure the port for all environments
+if System.get_env("PORT") do
+  config :poker_server, PokerServerWeb.Endpoint, http: [port: String.to_integer(System.get_env("PORT"))]
 end

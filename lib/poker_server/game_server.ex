@@ -2,6 +2,7 @@ defmodule PokerServer.GameServer do
   use GenServer
   alias PokerServer.{GameState, BettingRound, Player, InputValidator, UIAdapter, Types}
   alias Phoenix.PubSub
+  require Logger
 
   @type state :: %{
           game_id: String.t(),
@@ -145,6 +146,12 @@ defmodule PokerServer.GameServer do
   @impl true
   def handle_call({:player_action, _player_id, _action}, _from, state) do
     {:reply, {:error, Types.error_no_active_betting_round()}, state}
+  end
+
+  @impl true
+  def handle_info(message, state) do
+    Logger.error("PokerServer.GameServer received unexpected message: #{inspect(message)}")
+    {:noreply, state}
   end
 
   # Private Functions

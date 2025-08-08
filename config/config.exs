@@ -1,17 +1,6 @@
 # This file is responsible for configuring your application
 import Config
 
-# Configures the endpoint
-config :poker_server, PokerServerWeb.Endpoint,
-  url: [host: "localhost"],
-  adapter: Bandit.PhoenixAdapter,
-  render_errors: [
-    formats: [html: PokerServerWeb.ErrorHTML, json: PokerServerWeb.ErrorJSON],
-    layout: false
-  ],
-  pubsub_server: PokerServer.PubSub,
-  live_view: [signing_salt: "poker_secret_salt"]
-
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.17.11",
