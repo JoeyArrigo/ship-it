@@ -204,6 +204,99 @@ defmodule PokerServer.GameServer do
   end
 
   @impl true
+  def handle_call(
+        {:player_action, player_id, action},
+        _from,
+        %{betting_round: betting_round, phase: :turn_betting} = state
+      )
+      when not is_nil(betting_round) do
+    # Validate player exists in the game
+    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
+         :ok <- InputValidator.validate_game_state(state.game_state) do
+      case BettingRound.process_action(betting_round, player_id, action) do
+        {:ok, updated_betting_round} ->
+          new_state = %{state | betting_round: updated_betting_round}
+
+          # Check if betting round is complete
+          if BettingRound.betting_complete?(updated_betting_round) do
+            # Move to next phase (river betting)
+            updated_game_state = GameState.deal_river(state.game_state)
+
+            # Create betting round for river
+            river_betting_round =
+              BettingRound.new(
+                updated_game_state.players,
+                0,
+                0,
+                :river
+              )
+
+            final_state = %{
+              new_state
+              | game_state: updated_game_state,
+                betting_round: river_betting_round,
+                phase: :river_betting
+            }
+
+            broadcast_state_change(state.game_id, final_state)
+            {:reply, {:ok, :betting_complete, final_state}, final_state}
+          else
+            broadcast_state_change(state.game_id, new_state)
+            {:reply, {:ok, :action_processed, new_state}, new_state}
+          end
+
+        {:error, reason} ->
+          {:reply, {:error, reason}, state}
+      end
+    else
+      {:error, validation_error} ->
+        {:reply, {:error, {:invalid_input, validation_error}}, state}
+    end
+  end
+
+  @impl true
+  def handle_call(
+        {:player_action, player_id, action},
+        _from,
+        %{betting_round: betting_round, phase: :river_betting} = state
+      )
+      when not is_nil(betting_round) do
+    # Validate player exists in the game
+    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
+         :ok <- InputValidator.validate_game_state(state.game_state) do
+      case BettingRound.process_action(betting_round, player_id, action) do
+        {:ok, updated_betting_round} ->
+          new_state = %{state | betting_round: updated_betting_round}
+
+          # Check if betting round is complete
+          if BettingRound.betting_complete?(updated_betting_round) do
+            # Move to showdown
+            updated_game_state = GameState.showdown(state.game_state)
+
+            final_state = %{
+              new_state
+              | game_state: updated_game_state,
+                betting_round: nil,
+                phase: :hand_complete
+            }
+
+            broadcast_state_change(state.game_id, final_state)
+            {:reply, {:ok, :betting_complete, final_state}, final_state}
+          else
+            broadcast_state_change(state.game_id, new_state)
+            {:reply, {:ok, :action_processed, new_state}, new_state}
+          end
+
+        {:error, reason} ->
+          {:reply, {:error, reason}, state}
+      end
+    else
+      {:error, validation_error} ->
+        {:reply, {:error, {:invalid_input, validation_error}}, state}
+    end
+  end
+
+  @impl true
   def handle_call({:player_action, _player_id, _action}, _from, state) do
     {:reply, {:error, Types.error_no_active_betting_round()}, state}
   end
