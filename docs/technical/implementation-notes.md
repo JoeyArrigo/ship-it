@@ -2,22 +2,26 @@
 
 ## GameServer Post-Flop Betting Implementation Plan
 
-**Date**: 2025-08-05  
-**Status**: Ready to implement  
+**Date**: 2025-08-09
+**Status**: **MVP-CRITICAL** - Blocks all real poker gameplay  
 **Estimated Effort**: 2-3 hours  
-**Risk Level**: Very Low  
+**Risk Level**: High Impact (MVP-blocking) / Low Technical Risk
+**Discovery Method**: Dialyzer analysis + @doc/@spec annotation revealed architectural gap  
 
 ### Current State Analysis
 
 **✅ What Works:**
 - Real-time PubSub broadcasting (218 tests passing)
-- Preflop betting with proper player action tracking
+- Preflop betting with proper player action tracking (lines 105-144 in game_server.ex)
 - All underlying game logic (GameState.showdown, HandEvaluator, etc.)
 - Complete test coverage for hand completion logic
+- Perfect template pattern available in existing preflop handler
 
-**❌ What's Missing:**
-- Post-flop betting round handlers in GameServer
-- Phase transitions beyond preflop → flop
+**❌ What's Missing (MVP-BLOCKING):**
+- Post-flop betting round handlers in GameServer (flop_betting, turn_betting, river_betting)
+- Phase transitions beyond preflop → flop (75% of poker hand missing)
+- **Root Cause**: GameServer only pattern matches on `phase: :preflop_betting` (line 108)
+- **Impact**: Players get dealt flop cards but cannot bet - game hangs in :flop phase
 
 ### Implementation Strategy
 

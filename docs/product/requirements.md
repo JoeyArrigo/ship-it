@@ -68,7 +68,12 @@
 **Success Criteria**: Functional 6-player short deck tournaments
 - ✅ Core poker engine with hand evaluation
 - ✅ Real-time multiplayer via WebSocket
-- ✅ Basic web interface for betting actions
+- 🚫 **MVP-BLOCKING**: Post-flop betting implementation missing in GameServer
+  - **Issue**: Only preflop betting handlers exist - no flop/turn/river betting
+  - **Impact**: No poker hand can complete beyond preflop (75% of poker missing)
+  - **Effort**: 2-3 hours to implement missing phase transitions
+  - **Risk**: High impact but low technical complexity (copy existing preflop pattern)
+- 🚧 Basic web interface for betting actions (blocked by above issue)
 - 🚧 Mobile-optimized UI/UX
 - 🚧 Tournament lobby and matchmaking
 
