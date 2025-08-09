@@ -117,14 +117,74 @@ defmodule PokerServer.GameServer do
 
           # Check if betting round is complete
           if BettingRound.betting_complete?(updated_betting_round) do
-            # Move to next phase (flop)
+            # Move to next phase (flop betting)
             updated_game_state = GameState.deal_flop(state.game_state)
+
+            # Create betting round for flop
+            flop_betting_round =
+              BettingRound.new(
+                updated_game_state.players,
+                0,
+                0,
+                :flop
+              )
 
             final_state = %{
               new_state
               | game_state: updated_game_state,
-                betting_round: nil,
-                phase: :flop
+                betting_round: flop_betting_round,
+                phase: :flop_betting
+            }
+
+            broadcast_state_change(state.game_id, final_state)
+            {:reply, {:ok, :betting_complete, final_state}, final_state}
+          else
+            broadcast_state_change(state.game_id, new_state)
+            {:reply, {:ok, :action_processed, new_state}, new_state}
+          end
+
+        {:error, reason} ->
+          {:reply, {:error, reason}, state}
+      end
+    else
+      {:error, validation_error} ->
+        {:reply, {:error, {:invalid_input, validation_error}}, state}
+    end
+  end
+
+  @impl true
+  def handle_call(
+        {:player_action, player_id, action},
+        _from,
+        %{betting_round: betting_round, phase: :flop_betting} = state
+      )
+      when not is_nil(betting_round) do
+    # Validate player exists in the game
+    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
+         :ok <- InputValidator.validate_game_state(state.game_state) do
+      case BettingRound.process_action(betting_round, player_id, action) do
+        {:ok, updated_betting_round} ->
+          new_state = %{state | betting_round: updated_betting_round}
+
+          # Check if betting round is complete
+          if BettingRound.betting_complete?(updated_betting_round) do
+            # Move to next phase (turn betting)
+            updated_game_state = GameState.deal_turn(state.game_state)
+
+            # Create betting round for turn
+            turn_betting_round =
+              BettingRound.new(
+                updated_game_state.players,
+                0,
+                0,
+                :turn
+              )
+
+            final_state = %{
+              new_state
+              | game_state: updated_game_state,
+                betting_round: turn_betting_round,
+                phase: :turn_betting
             }
 
             broadcast_state_change(state.game_id, final_state)
