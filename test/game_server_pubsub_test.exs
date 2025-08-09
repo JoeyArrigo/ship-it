@@ -17,14 +17,66 @@ defmodule PokerServer.GameServerPubSubTest do
     %{game_id: game_id, game_pid: game_pid, players: players}
   end
 
+  # Helper functions for common test setup patterns
+  
+  defp start_hand_and_clear_broadcast(game_pid) do
+    {:ok, state} = GameServer.start_hand(game_pid)
+    assert_receive {:game_updated, _}, 1000
+    state
+  end
+
+  defp complete_preflop_betting(game_pid) do
+    {:ok, _, _} = GameServer.player_action(game_pid, "player1", {:call})
+    assert_receive {:game_updated, _}, 1000
+    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player2", {:check})
+    assert_receive {:game_updated, state}, 1000
+    state
+  end
+
+  defp complete_flop_betting(game_pid) do
+    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
+    assert_receive {:game_updated, _}, 1000
+    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
+    assert_receive {:game_updated, state}, 1000
+    state
+  end
+
+  defp complete_turn_betting(game_pid) do
+    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
+    assert_receive {:game_updated, _}, 1000
+    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
+    assert_receive {:game_updated, state}, 1000
+    state
+  end
+
+  defp complete_river_betting(game_pid) do
+    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
+    assert_receive {:game_updated, _}, 1000
+    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
+    assert_receive {:game_updated, state}, 1000
+    state
+  end
+
+  defp advance_to_flop_betting(game_pid) do
+    start_hand_and_clear_broadcast(game_pid)
+    complete_preflop_betting(game_pid)
+  end
+
+  defp advance_to_turn_betting(game_pid) do
+    advance_to_flop_betting(game_pid)
+    complete_flop_betting(game_pid)
+  end
+
+  defp advance_to_river_betting(game_pid) do
+    advance_to_turn_betting(game_pid)
+    complete_turn_betting(game_pid)
+  end
+
   test "start_hand broadcasts game state update", %{game_pid: game_pid, game_id: game_id} do
-    # Act: Start a hand
     {:ok, _new_state} = GameServer.start_hand(game_pid)
 
-    # Assert: Receive broadcast message
     assert_receive {:game_updated, broadcasted_state}, 1000
 
-    # Verify the broadcasted state
     assert broadcasted_state.game_id == game_id
     assert broadcasted_state.phase == :preflop_betting
     assert not is_nil(broadcasted_state.betting_round)
@@ -32,53 +84,35 @@ defmodule PokerServer.GameServerPubSubTest do
   end
 
   test "player action broadcasts state update", %{game_pid: game_pid, game_id: game_id} do
-    # Setup: Start a hand first
-    {:ok, _} = GameServer.start_hand(game_pid)
+    start_hand_and_clear_broadcast(game_pid)
 
-    # Clear the start_hand broadcast message
-    assert_receive {:game_updated, _}, 1000
-
-    # Act: Player makes an action
     result = GameServer.player_action(game_pid, "player1", {:call})
-
-    # The result should be success (but format may vary)
     assert match?({:ok, _, _}, result) or match?(:ok, result)
 
-    # Assert: Receive broadcast message for player action
     assert_receive {:game_updated, broadcasted_state}, 1000
 
-    # Verify the broadcasted state reflects the action
     assert broadcasted_state.game_id == game_id
-    # Note: State might have progressed beyond preflop if betting completed
     assert broadcasted_state.phase in [:preflop_betting, :flop_betting]
   end
 
   test "betting round completion broadcasts phase change", %{game_pid: game_pid} do
-    # Setup: Start a hand
-    {:ok, _} = GameServer.start_hand(game_pid)
-    assert_receive {:game_updated, _}, 1000
+    start_hand_and_clear_broadcast(game_pid)
 
-    # Act: Complete betting round with both players calling
     result1 = GameServer.player_action(game_pid, "player1", {:call})
     assert match?({:ok, _, _}, result1) or match?(:ok, result1)
     assert_receive {:game_updated, _}, 1000
 
     result2 = GameServer.player_action(game_pid, "player2", {:check})
 
-    # Check if action was valid or if we need different approach
     case result2 do
       {:ok, _, _} ->
-        # Assert: Receive broadcast for phase change to flop_betting
         assert_receive {:game_updated, broadcasted_state}, 1000
-
-        # Verify phase changed to flop_betting with new betting round
         assert broadcasted_state.phase == :flop_betting
         assert not is_nil(broadcasted_state.betting_round)
         assert length(broadcasted_state.game_state.community_cards) == 3
 
       {:error, :no_active_betting_round} ->
-        # Betting already completed with first action
-        # This is actually valid behavior for heads-up poker
+        # Valid behavior for heads-up poker when betting completes with first action
         assert true
 
       _ ->
@@ -132,14 +166,9 @@ defmodule PokerServer.GameServerPubSubTest do
     assert length(player2_in_broadcast.hole_cards) == 0
   end
 
-  test "broadcast message format matches expected structure", %{
-    game_pid: game_pid,
-    game_id: _game_id
-  } do
-    # Act: Start hand
+  test "broadcast message format matches expected structure", %{game_pid: game_pid} do
     {:ok, expected_state} = GameServer.start_hand(game_pid)
 
-    # Assert: Receive and verify message format
     assert_receive {:game_updated, broadcasted_state}, 1000
 
     # Verify complete state structure is broadcasted (but filtered for security)
@@ -148,7 +177,6 @@ defmodule PokerServer.GameServerPubSubTest do
     assert Map.has_key?(broadcasted_state, :betting_round)
     assert Map.has_key?(broadcasted_state, :phase)
 
-    # Verify the basic game data matches
     assert broadcasted_state.game_id == expected_state.game_id
     assert broadcasted_state.phase == expected_state.phase
 
@@ -156,32 +184,24 @@ defmodule PokerServer.GameServerPubSubTest do
     player1_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player1"))
     player2_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player2"))
 
-    # Can see own cards
-    assert length(player1_in_broadcast.hole_cards) == 2
-    # Cannot see other's cards
-    assert length(player2_in_broadcast.hole_cards) == 0
+    assert length(player1_in_broadcast.hole_cards) == 2  # Can see own cards
+    assert length(player2_in_broadcast.hole_cards) == 0  # Cannot see other's cards
   end
 
   test "failed actions do not broadcast state changes", %{game_pid: game_pid} do
-    # Setup: Start hand
-    {:ok, _} = GameServer.start_hand(game_pid)
-    assert_receive {:game_updated, _}, 1000
+    start_hand_and_clear_broadcast(game_pid)
 
-    # Act: Attempt invalid action (non-existent player)
     {:error, _reason} = GameServer.player_action(game_pid, "invalid_player", {:call})
 
-    # Assert: No additional broadcast should be received
     refute_receive {:game_updated, _}, 500
   end
 
   test "broadcast happens atomically with state updates", %{game_pid: game_pid} do
-    # Act: Start hand
     {:ok, returned_state} = GameServer.start_hand(game_pid)
 
-    # Assert: Broadcasted state is filtered but based on returned state
     assert_receive {:game_updated, broadcasted_state}, 1000
 
-    # The broadcasted state should be a filtered version of the returned state
+    # Broadcasted state should be filtered version of returned state
     assert broadcasted_state.game_id == returned_state.game_id
     assert broadcasted_state.phase == returned_state.phase
 
@@ -189,193 +209,78 @@ defmodule PokerServer.GameServerPubSubTest do
     current_state = GameServer.get_state(game_pid)
     assert current_state == returned_state
 
-    # Verify the broadcast filtering worked correctly
+    # Verify broadcast filtering worked correctly
     player1_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player1"))
     player2_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player2"))
 
-    # Can see own cards
-    assert length(player1_in_broadcast.hole_cards) == 2
-    # Cannot see other's cards
-    assert length(player2_in_broadcast.hole_cards) == 0
+    assert length(player1_in_broadcast.hole_cards) == 2  # Can see own cards
+    assert length(player2_in_broadcast.hole_cards) == 0  # Cannot see other's cards
   end
 
   test "preflop betting completion transitions to flop_betting phase", %{game_pid: game_pid} do
-    # Setup: Start a hand
-    {:ok, _} = GameServer.start_hand(game_pid)
-    assert_receive {:game_updated, _}, 1000
-
-    # Act: Complete preflop betting (both players call/check)
-    {:ok, _, _} = GameServer.player_action(game_pid, "player1", {:call})
-    assert_receive {:game_updated, _}, 1000
+    start_hand_and_clear_broadcast(game_pid)
     
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player2", {:check})
-
-    # Assert: Should transition to flop_betting phase with new betting round
-    assert_receive {:game_updated, broadcasted_state}, 1000
+    flop_state = complete_preflop_betting(game_pid)
     
-    assert broadcasted_state.phase == :flop_betting
-    assert not is_nil(broadcasted_state.betting_round)
-    assert length(broadcasted_state.game_state.community_cards) == 3
+    assert flop_state.phase == :flop_betting
+    assert not is_nil(flop_state.betting_round)
+    assert length(flop_state.game_state.community_cards) == 3
   end
 
   test "flop_betting phase allows player actions", %{game_pid: game_pid} do
-    # Setup: Complete preflop betting to reach flop_betting
-    {:ok, _} = GameServer.start_hand(game_pid)
-    assert_receive {:game_updated, _}, 1000
-    
-    {:ok, _, _} = GameServer.player_action(game_pid, "player1", {:call})
-    assert_receive {:game_updated, _}, 1000
-    
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
+    advance_to_flop_betting(game_pid)
 
-    # Act: Make action in flop_betting phase
     {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
 
-    # Assert: Action is processed and broadcast
     assert_receive {:game_updated, broadcasted_state}, 1000
     assert broadcasted_state.phase == :flop_betting
   end
 
   test "flop_betting completion transitions to turn_betting phase", %{game_pid: game_pid} do
-    # Setup: Complete preflop and reach flop_betting
-    {:ok, _} = GameServer.start_hand(game_pid)
-    assert_receive {:game_updated, _}, 1000
+    advance_to_flop_betting(game_pid)
     
-    {:ok, _, _} = GameServer.player_action(game_pid, "player1", {:call})
-    assert_receive {:game_updated, _}, 1000
+    turn_state = complete_flop_betting(game_pid)
     
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-
-    # Act: Complete flop_betting (both players check)
-    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-    
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
-
-    # Assert: Should transition to turn_betting phase with new betting round
-    assert_receive {:game_updated, broadcasted_state}, 1000
-    
-    assert broadcasted_state.phase == :turn_betting
-    assert not is_nil(broadcasted_state.betting_round)
-    assert length(broadcasted_state.game_state.community_cards) == 4
+    assert turn_state.phase == :turn_betting
+    assert not is_nil(turn_state.betting_round)
+    assert length(turn_state.game_state.community_cards) == 4
   end
 
   test "turn_betting phase allows player actions", %{game_pid: game_pid} do
-    # Setup: Complete preflop and flop betting to reach turn_betting
-    {:ok, _} = GameServer.start_hand(game_pid)
-    assert_receive {:game_updated, _}, 1000
-    
-    # Complete preflop
-    {:ok, _, _} = GameServer.player_action(game_pid, "player1", {:call})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
+    advance_to_turn_betting(game_pid)
 
-    # Complete flop betting
-    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
-    assert_receive {:game_updated, _}, 1000
-
-    # Act: Make action in turn_betting phase
     {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
 
-    # Assert: Action is processed and broadcast
     assert_receive {:game_updated, broadcasted_state}, 1000
     assert broadcasted_state.phase == :turn_betting
   end
 
   test "turn_betting completion transitions to river_betting phase", %{game_pid: game_pid} do
-    # Setup: Complete preflop, flop, and reach turn_betting
-    {:ok, _} = GameServer.start_hand(game_pid)
-    assert_receive {:game_updated, _}, 1000
+    advance_to_turn_betting(game_pid)
     
-    # Complete preflop
-    {:ok, _, _} = GameServer.player_action(game_pid, "player1", {:call})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-
-    # Complete flop betting
-    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
-    assert_receive {:game_updated, _}, 1000
-
-    # Act: Complete turn_betting (both players check)
-    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
-
-    # Assert: Should transition to river_betting phase with new betting round
-    assert_receive {:game_updated, broadcasted_state}, 1000
+    river_state = complete_turn_betting(game_pid)
     
-    assert broadcasted_state.phase == :river_betting
-    assert not is_nil(broadcasted_state.betting_round)
-    assert length(broadcasted_state.game_state.community_cards) == 5
+    assert river_state.phase == :river_betting
+    assert not is_nil(river_state.betting_round)
+    assert length(river_state.game_state.community_cards) == 5
   end
 
   test "river_betting phase allows player actions", %{game_pid: game_pid} do
-    # Setup: Complete preflop, flop, turn betting to reach river_betting
-    {:ok, _} = GameServer.start_hand(game_pid)
-    assert_receive {:game_updated, _}, 1000
-    
-    # Complete preflop
-    {:ok, _, _} = GameServer.player_action(game_pid, "player1", {:call})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
+    advance_to_river_betting(game_pid)
 
-    # Complete flop betting
-    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
-    assert_receive {:game_updated, _}, 1000
-
-    # Complete turn betting
-    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
-    assert_receive {:game_updated, _}, 1000
-
-    # Act: Make action in river_betting phase
     {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
 
-    # Assert: Action is processed and broadcast
     assert_receive {:game_updated, broadcasted_state}, 1000
     assert broadcasted_state.phase == :river_betting
   end
 
   test "complete hand flow: preflop -> flop -> turn -> river -> showdown", %{game_pid: game_pid} do
-    # Act: Complete an entire poker hand
-    {:ok, _} = GameServer.start_hand(game_pid)
-    assert_receive {:game_updated, _}, 1000
+    start_hand_and_clear_broadcast(game_pid)
     
-    # Complete preflop betting
-    {:ok, _, _} = GameServer.player_action(game_pid, "player1", {:call})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, flop_state}, 1000
-
-    # Complete flop betting
-    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
-    assert_receive {:game_updated, turn_state}, 1000
-
-    # Complete turn betting
-    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
-    assert_receive {:game_updated, river_state}, 1000
-
-    # Complete river betting (final betting round)
-    {:ok, _, _} = GameServer.player_action(game_pid, "player2", {:check})
-    assert_receive {:game_updated, _}, 1000
-    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player1", {:check})
-    assert_receive {:game_updated, final_state}, 1000
+    flop_state = complete_preflop_betting(game_pid)
+    turn_state = complete_flop_betting(game_pid) 
+    river_state = complete_turn_betting(game_pid)
+    final_state = complete_river_betting(game_pid)
 
     # Assert: Complete poker hand progression
     assert flop_state.phase == :flop_betting
@@ -387,16 +292,12 @@ defmodule PokerServer.GameServerPubSubTest do
     assert river_state.phase == :river_betting
     assert length(river_state.game_state.community_cards) == 5
     
-    # Final state shows hand completion with all 5 community cards
     assert final_state.phase == :hand_complete
     assert length(final_state.game_state.community_cards) == 5
     
-    # Verify we can get the full server state after complete hand
+    # Verify server state after complete hand
     full_state = GameServer.get_state(game_pid)
     assert full_state.phase == :hand_complete
     assert is_nil(full_state.betting_round)
-    
-    # Successful completion of entire poker hand flow!
-    # preflop_betting -> flop_betting -> turn_betting -> river_betting -> hand_complete
   end
 end
