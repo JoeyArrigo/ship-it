@@ -16,6 +16,7 @@ defmodule PokerServer do
 
   Returns {:ok, game_id} where game_id is a unique identifier for the game.
   """
+  @spec create_game([{String.t(), non_neg_integer()}]) :: {:ok, String.t()} | {:error, atom()}
   def create_game(players) when is_list(players) do
     GameManager.create_game(players)
   end
@@ -25,6 +26,7 @@ defmodule PokerServer do
 
   Returns the current game state and phase information.
   """
+  @spec get_game_state(String.t()) :: {:ok, map()} | {:error, atom()}
   def get_game_state(game_id) do
     GameManager.get_game_state(game_id)
   end
@@ -37,13 +39,17 @@ defmodule PokerServer do
   - player_id: The player making the action  
   - action: The action tuple, e.g., {:fold}, {:call}, {:raise, 40}
   """
+  @spec player_action(String.t(), String.t(), tuple()) :: :ok | {:error, atom()}
   def player_action(game_id, player_id, action) do
     GameManager.player_action(game_id, player_id, action)
   end
 
   @doc """
   Start a hand in an existing game.
+
+  Looks up the game process and starts a new hand.
   """
+  @spec start_hand(String.t()) :: :ok | {:error, :game_not_found}
   def start_hand(game_id) do
     PokerServer.GameRegistry
     |> Registry.lookup(game_id)
@@ -65,6 +71,7 @@ defmodule PokerServer do
 
   Returns a list of game IDs for all currently active games.
   """
+  @spec list_games() :: [String.t()]
   def list_games do
     GameManager.list_games()
   end

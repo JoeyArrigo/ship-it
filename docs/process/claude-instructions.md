@@ -72,6 +72,7 @@ Request: [Specific guidance needed from poker product perspective]
 - When experiencing flaky or intermittent test failures
 - Before branch merges that affect real-time multiplayer functionality
 - After performance-related changes to verify no regression
+- **For architectural gap discovery**: Use Dialyzer analysis to find logic inconsistencies
 
 **Optional But Recommended:**  
 - When adding complex concurrency tests
@@ -171,10 +172,23 @@ Risk Assessment: [Level of confidence needed before proceeding]
 
 ---
 
+## Current Critical Issues
+
+**MVP-BLOCKING**: GameServer missing post-flop betting handlers
+- **Location**: `/lib/poker_server/game_server.ex` lines 105-144 (preflop pattern to copy)
+- **Missing**: Handle calls for `:flop_betting`, `:turn_betting`, `:river_betting` phases
+- **Impact**: No poker hand can progress beyond preflop (75% of poker missing)
+- **Effort**: 2-3 hours implementation (copy existing preflop pattern)
+- **Discovery Method**: Dialyzer + @doc/@spec annotation revealed architectural gap
+- **Next Step**: Implement missing phase handlers before any other development
+
+---
+
 ## Quick Reference
 
 **Need product guidance?** → @poker-product-expert + `/docs/product/requirements.md`  
 **Need test verification?** → @test-suite-verifier + comprehensive test run  
 **Making architectural changes?** → Read `/docs/technical/architecture.md` first  
 **Significant decision?** → Create ADR using template in `/docs/product/decisions/`  
-**New team member?** → Follow `/docs/process/onboarding.md` 3-hour guide
+**New team member?** → Follow `/docs/process/onboarding.md` 3-hour guide  
+**MVP-blocked?** → Fix GameServer post-flop betting first (see Critical Issues above)
