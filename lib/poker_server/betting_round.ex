@@ -260,13 +260,11 @@ defmodule PokerServer.BettingRound do
   end
 
   defp execute_action(betting_round, player_id, {:fold}) do
-    # Ensure players_who_can_act is initialized as MapSet
-    players_who_can_act = betting_round.players_who_can_act || MapSet.new()
 
     updated_round = %{
       betting_round
       | folded_players: MapSet.put(betting_round.folded_players, player_id),
-        players_who_can_act: MapSet.delete(players_who_can_act, player_id),
+        players_who_can_act: MapSet.delete(betting_round.players_who_can_act, player_id),
         active_player_index: next_active_player_index(betting_round)
     }
 
@@ -288,16 +286,13 @@ defmodule PokerServer.BettingRound do
           if p.id == player_id, do: %{p | chips: p.chips - call_amount}, else: p
         end)
 
-      # Ensure players_who_can_act is initialized as MapSet
-      players_who_can_act = betting_round.players_who_can_act || MapSet.new()
-
       # Update betting round
       updated_round = %{
         betting_round
         | players: updated_players,
           player_bets: Map.put(betting_round.player_bets, player_id, betting_round.current_bet),
           pot: betting_round.pot + call_amount,
-          players_who_can_act: MapSet.delete(players_who_can_act, player_id),
+          players_who_can_act: MapSet.delete(betting_round.players_who_can_act, player_id),
           active_player_index: next_active_player_index(betting_round)
       }
 
@@ -355,12 +350,9 @@ defmodule PokerServer.BettingRound do
   end
 
   defp execute_action(betting_round, player_id, {:check}) do
-    # Ensure players_who_can_act is initialized as MapSet
-    players_who_can_act = betting_round.players_who_can_act || MapSet.new()
-
     updated_round = %{
       betting_round
-      | players_who_can_act: MapSet.delete(players_who_can_act, player_id),
+      | players_who_can_act: MapSet.delete(betting_round.players_who_can_act, player_id),
         active_player_index: next_active_player_index(betting_round)
     }
 
