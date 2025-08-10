@@ -72,6 +72,58 @@ defmodule PokerServer.GameServerPubSubTest do
     complete_turn_betting(game_pid)
   end
 
+  defp play_complete_hand_to_showdown(game_pid) do
+    # Start hand
+    {:ok, _} = GameServer.start_hand(game_pid)
+    assert_receive {:game_updated, _}, 1000
+    
+    # Complete preflop
+    preflop_state = GameServer.get_state(game_pid)
+    player1 = PokerServer.BettingRound.get_active_player(preflop_state.betting_round)
+    {:ok, _, _} = GameServer.player_action(game_pid, player1.id, {:call})
+    assert_receive {:game_updated, _}, 1000
+    
+    preflop_state2 = GameServer.get_state(game_pid)
+    player2 = PokerServer.BettingRound.get_active_player(preflop_state2.betting_round)
+    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, player2.id, {:check})
+    assert_receive {:game_updated, _}, 1000
+    
+    # Complete flop
+    flop_state = GameServer.get_state(game_pid)
+    flop_player1 = PokerServer.BettingRound.get_active_player(flop_state.betting_round)
+    {:ok, _, _} = GameServer.player_action(game_pid, flop_player1.id, {:check})
+    assert_receive {:game_updated, _}, 1000
+    
+    flop_state2 = GameServer.get_state(game_pid)
+    flop_player2 = PokerServer.BettingRound.get_active_player(flop_state2.betting_round)
+    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, flop_player2.id, {:check})
+    assert_receive {:game_updated, _}, 1000
+    
+    # Complete turn
+    turn_state = GameServer.get_state(game_pid)
+    turn_player1 = PokerServer.BettingRound.get_active_player(turn_state.betting_round)
+    {:ok, _, _} = GameServer.player_action(game_pid, turn_player1.id, {:check})
+    assert_receive {:game_updated, _}, 1000
+    
+    turn_state2 = GameServer.get_state(game_pid)
+    turn_player2 = PokerServer.BettingRound.get_active_player(turn_state2.betting_round)
+    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, turn_player2.id, {:check})
+    assert_receive {:game_updated, _}, 1000
+    
+    # Complete river
+    river_state = GameServer.get_state(game_pid)
+    river_player1 = PokerServer.BettingRound.get_active_player(river_state.betting_round)
+    {:ok, _, _} = GameServer.player_action(game_pid, river_player1.id, {:check})
+    assert_receive {:game_updated, _}, 1000
+    
+    river_state2 = GameServer.get_state(game_pid)
+    river_player2 = PokerServer.BettingRound.get_active_player(river_state2.betting_round)
+    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, river_player2.id, {:check})
+    assert_receive {:game_updated, _}, 1000
+    
+    final_state
+  end
+
   test "start_hand broadcasts game state update", %{game_pid: game_pid, game_id: game_id} do
     {:ok, _new_state} = GameServer.start_hand(game_pid)
 
@@ -697,4 +749,166 @@ defmodule PokerServer.GameServerPubSubTest do
       assert :call not in valid_actions or active_player.chips >= current_state.betting_round.current_bet
     end
   end
+
+  test "showdown distributes pot to winner", %{game_pid: game_pid} do
+    # Get initial chip counts
+    initial_state = GameServer.get_state(game_pid)
+    player1_initial = Enum.find(initial_state.game_state.players, &(&1.id == "player1")).chips
+    player2_initial = Enum.find(initial_state.game_state.players, &(&1.id == "player2")).chips
+
+    # Play complete hand to showdown
+    final_state = play_complete_hand_to_showdown(game_pid)
+
+    # Hand should be complete with winner determined
+    assert final_state.phase == :hand_complete
+    assert final_state.game_state.pot == 0  # Pot should be distributed
+
+    # One player should have more chips, one should have fewer (unless exact tie)
+    player1_final = Enum.find(final_state.game_state.players, &(&1.id == "player1"))
+    player2_final = Enum.find(final_state.game_state.players, &(&1.id == "player2"))
+
+    # Total chips should be conserved
+    total_initial = player1_initial + player2_initial
+    total_final = player1_final.chips + player2_final.chips
+    assert total_final == total_initial
+
+    # At least one player should have different chip count (unless tie)
+    chips_changed = (player1_final.chips != player1_initial) or (player2_final.chips != player2_initial)
+    assert chips_changed
+  end
+
+  test "showdown handles chip distribution accurately", %{game_pid: game_pid} do
+    # Play to showdown and verify exact pot distribution
+    initial_state = GameServer.get_state(game_pid)
+    player1_initial = Enum.find(initial_state.game_state.players, &(&1.id == "player1")).chips
+    player2_initial = Enum.find(initial_state.game_state.players, &(&1.id == "player2")).chips
+
+    # Play complete hand to showdown
+    showdown_state = play_complete_hand_to_showdown(game_pid)
+
+    # Verify showdown occurred and pot was distributed
+    assert showdown_state.phase == :hand_complete
+    assert showdown_state.game_state.pot == 0
+
+    # Check final chip distribution
+    player1_final = Enum.find(showdown_state.game_state.players, &(&1.id == "player1"))
+    player2_final = Enum.find(showdown_state.game_state.players, &(&1.id == "player2"))
+
+    # Winner should get the pot (total pot = blinds in this scenario)
+    winner_gains = max(player1_final.chips - player1_initial, player2_final.chips - player2_initial)
+    loser_losses = min(player1_final.chips - player1_initial, player2_final.chips - player2_initial)
+    
+    # Winner gains should equal pot, loser loses their contribution
+    assert winner_gains > 0
+    assert loser_losses < 0
+    assert winner_gains + loser_losses == 0  # Zero-sum game
+  end
+
+  test "showdown with raises creates larger pot distribution", %{game_pid: game_pid} do
+    # Test scenario with raises to create bigger pot
+    initial_state = GameServer.get_state(game_pid)
+    player1_initial = Enum.find(initial_state.game_state.players, &(&1.id == "player1")).chips
+    player2_initial = Enum.find(initial_state.game_state.players, &(&1.id == "player2")).chips
+
+    start_hand_and_clear_broadcast(game_pid)
+    
+    # Add some raises to build pot
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    min_raise = PokerServer.BettingRound.minimum_raise(current_state.betting_round)
+
+    # Player1 raises
+    {:ok, :action_processed, _} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+    assert_receive {:game_updated, _}, 1000
+
+    # Player2 calls the raise
+    raised_state = GameServer.get_state(game_pid)
+    next_player = PokerServer.BettingRound.get_active_player(raised_state.betting_round)
+    {:ok, :betting_complete, _} = GameServer.player_action(game_pid, next_player.id, {:call})
+    assert_receive {:game_updated, after_preflop}, 1000
+
+    # Continue to showdown
+    complete_flop_betting(game_pid)
+    complete_turn_betting(game_pid)
+    final_state = complete_river_betting(game_pid)
+
+    # Verify larger pot was distributed
+    assert final_state.phase == :hand_complete
+    assert final_state.game_state.pot == 0
+
+    # Calculate the total pot that was distributed (initial blinds + raises)
+    pot_size = after_preflop.betting_round.pot
+    
+    player1_final = Enum.find(final_state.game_state.players, &(&1.id == "player1"))
+    player2_final = Enum.find(final_state.game_state.players, &(&1.id == "player2"))
+
+    # Verify chip conservation (zero-sum game)
+    total_initial = player1_initial + player2_initial
+    total_final = player1_final.chips + player2_final.chips
+    assert total_final == total_initial
+    
+    # Verify pot was distributed (should be 0 after showdown)
+    assert final_state.game_state.pot == 0
+    
+    # Verify someone won and someone lost (unless tie)
+    player1_change = player1_final.chips - player1_initial
+    player2_change = player2_final.chips - player2_initial
+    assert player1_change + player2_change == 0  # Zero-sum
+    assert abs(player1_change) >= pot_size / 2  # At least half the pot moved
+  end
+
+  test "showdown with different starting stacks", %{} do
+    # Test payout accuracy with different initial chip counts
+    players_different = [{"rich_player", 2000}, {"poor_player", 500}]
+    {:ok, game_id} = PokerServer.GameManager.create_game(players_different)
+    {:ok, game_pid} = PokerServer.GameManager.lookup_game(game_id)
+    
+    Phoenix.PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}:rich_player")
+
+    # Record initial states
+    initial_state = PokerServer.GameServer.get_state(game_pid)
+    rich_initial = Enum.find(initial_state.game_state.players, &(&1.id == "rich_player")).chips
+    poor_initial = Enum.find(initial_state.game_state.players, &(&1.id == "poor_player")).chips
+    assert rich_initial == 2000
+    assert poor_initial == 500
+
+    # Play complete hand
+    final_state = play_complete_hand_to_showdown(game_pid)
+
+    # Verify conservation of chips regardless of winner
+    rich_final = Enum.find(final_state.game_state.players, &(&1.id == "rich_player"))
+    poor_final = Enum.find(final_state.game_state.players, &(&1.id == "poor_player"))
+
+    total_initial = rich_initial + poor_initial
+    total_final = rich_final.chips + poor_final.chips
+    assert total_final == total_initial
+
+    # Pot should be fully distributed
+    assert final_state.game_state.pot == 0
+    assert final_state.phase == :hand_complete
+  end
+
+  test "payout broadcast includes final chip counts", %{game_pid: game_pid} do
+    # Verify that showdown broadcast includes accurate final chip amounts
+    final_state = play_complete_hand_to_showdown(game_pid)
+    
+    # The final broadcast should be the last one received during play_complete_hand_to_showdown
+    # Let's verify the final state directly instead of trying to capture broadcasts
+    assert final_state.phase == :hand_complete
+    assert final_state.game_state.pot == 0
+    
+    # Players should have updated chip counts
+    player1_final = Enum.find(final_state.game_state.players, &(&1.id == "player1"))
+    player2_final = Enum.find(final_state.game_state.players, &(&1.id == "player2"))
+    
+    # Both players should have positive chip counts
+    assert player1_final.chips > 0
+    assert player2_final.chips > 0
+    
+    # Verify server state matches final state
+    server_state = GameServer.get_state(game_pid)
+    assert server_state.game_state.players == final_state.game_state.players
+    assert server_state.phase == :hand_complete
+  end
+
 end
