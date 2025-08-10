@@ -300,4 +300,97 @@ defmodule PokerServer.GameServerPubSubTest do
     assert full_state.phase == :hand_complete
     assert is_nil(full_state.betting_round)
   end
+
+  test "fold action broadcasts state update", %{game_pid: game_pid, game_id: game_id} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get the active player who should act
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    
+    result = GameServer.player_action(game_pid, active_player.id, {:fold})
+    assert match?({:ok, :betting_complete, _}, result)
+
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    assert broadcasted_state.game_id == game_id
+    # When one player folds in heads-up preflop, betting completes and advances to flop
+    # (The hand doesn't end immediately - it continues through all streets)
+    assert broadcasted_state.phase == :flop_betting
+  end
+
+  test "player fold creates single active player scenario", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get active player and initial state
+    initial_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
+    
+    # Player folds, leaving other player as only active
+    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, active_player.id, {:fold})
+
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    # Betting completes and advances to next phase (flop_betting)
+    assert final_state.phase == :flop_betting
+    assert broadcasted_state.phase == :flop_betting
+    assert not is_nil(final_state.betting_round)
+
+    # Game continues through all streets even with one folded player
+    assert length(final_state.game_state.community_cards) == 3
+  end
+
+  test "fold during flop betting continues to turn", %{game_pid: game_pid} do
+    advance_to_flop_betting(game_pid)
+
+    # Get active player for flop betting
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+
+    # Player folds during flop betting
+    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, active_player.id, {:fold})
+
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    # Game continues to turn_betting (doesn't end immediately)
+    assert final_state.phase == :turn_betting
+    assert broadcasted_state.phase == :turn_betting
+    assert length(final_state.game_state.community_cards) == 4  # Turn card dealt
+  end
+
+  test "fold during turn betting continues to river", %{game_pid: game_pid} do
+    advance_to_turn_betting(game_pid)
+
+    # Get active player for turn betting
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+
+    # Player folds during turn betting  
+    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, active_player.id, {:fold})
+
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    # Game continues to river_betting (doesn't end immediately)
+    assert final_state.phase == :river_betting
+    assert broadcasted_state.phase == :river_betting
+    assert length(final_state.game_state.community_cards) == 5  # River card dealt
+  end
+
+  test "fold during river betting ends hand", %{game_pid: game_pid} do
+    advance_to_river_betting(game_pid)
+
+    # Get active player for river betting
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+
+    # Player folds during final betting round
+    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, active_player.id, {:fold})
+
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    # Hand completes after river betting
+    assert final_state.phase == :hand_complete
+    assert broadcasted_state.phase == :hand_complete
+    assert length(final_state.game_state.community_cards) == 5  # All community cards dealt
+  end
 end
