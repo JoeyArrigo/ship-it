@@ -73,6 +73,63 @@ defmodule PokerServer.GameServer do
     {:reply, state, state}
   end
 
+  # Private helper function for processing betting phase actions
+  defp process_betting_phase_action(
+         state,
+         player_id,
+         action,
+         next_game_state_fn,
+         next_betting_round_type,
+         next_phase
+       ) do
+    # Validate player exists in the game
+    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
+         :ok <- InputValidator.validate_game_state(state.game_state) do
+      case BettingRound.process_action(state.betting_round, player_id, action) do
+        {:ok, updated_betting_round} ->
+          new_state = %{state | betting_round: updated_betting_round}
+
+          # Check if betting round is complete
+          if BettingRound.betting_complete?(updated_betting_round) do
+            # Move to next phase
+            updated_game_state = next_game_state_fn.(state.game_state)
+
+            # Create betting round for next phase (or nil for hand_complete)
+            next_betting_round =
+              if next_betting_round_type do
+                BettingRound.new(
+                  updated_game_state.players,
+                  0,
+                  0,
+                  next_betting_round_type
+                )
+              else
+                nil
+              end
+
+            final_state = %{
+              new_state
+              | game_state: updated_game_state,
+                betting_round: next_betting_round,
+                phase: next_phase
+            }
+
+            broadcast_state_change(state.game_id, final_state)
+            {:reply, {:ok, :betting_complete, final_state}, final_state}
+          else
+            broadcast_state_change(state.game_id, new_state)
+            {:reply, {:ok, :action_processed, new_state}, new_state}
+          end
+
+        {:error, reason} ->
+          {:reply, {:error, reason}, state}
+      end
+    else
+      {:error, validation_error} ->
+        {:reply, {:error, {:invalid_input, validation_error}}, state}
+    end
+  end
+
   @impl true
   def handle_call(:start_hand, _from, %{game_state: game_state} = state) do
     # Set blind amounts in game state before starting hand
@@ -108,48 +165,14 @@ defmodule PokerServer.GameServer do
         %{betting_round: betting_round, phase: :preflop_betting} = state
       )
       when not is_nil(betting_round) do
-    # Validate player exists in the game
-    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
-         :ok <- InputValidator.validate_game_state(state.game_state) do
-      case BettingRound.process_action(betting_round, player_id, action) do
-        {:ok, updated_betting_round} ->
-          new_state = %{state | betting_round: updated_betting_round}
-
-          # Check if betting round is complete
-          if BettingRound.betting_complete?(updated_betting_round) do
-            # Move to next phase (flop betting)
-            updated_game_state = GameState.deal_flop(state.game_state)
-
-            # Create betting round for flop
-            flop_betting_round =
-              BettingRound.new(
-                updated_game_state.players,
-                0,
-                0,
-                :flop
-              )
-
-            final_state = %{
-              new_state
-              | game_state: updated_game_state,
-                betting_round: flop_betting_round,
-                phase: :flop_betting
-            }
-
-            broadcast_state_change(state.game_id, final_state)
-            {:reply, {:ok, :betting_complete, final_state}, final_state}
-          else
-            broadcast_state_change(state.game_id, new_state)
-            {:reply, {:ok, :action_processed, new_state}, new_state}
-          end
-
-        {:error, reason} ->
-          {:reply, {:error, reason}, state}
-      end
-    else
-      {:error, validation_error} ->
-        {:reply, {:error, {:invalid_input, validation_error}}, state}
-    end
+    process_betting_phase_action(
+      state,
+      player_id,
+      action,
+      &GameState.deal_flop/1,
+      :flop,
+      :flop_betting
+    )
   end
 
   @impl true
@@ -159,48 +182,14 @@ defmodule PokerServer.GameServer do
         %{betting_round: betting_round, phase: :flop_betting} = state
       )
       when not is_nil(betting_round) do
-    # Validate player exists in the game
-    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
-         :ok <- InputValidator.validate_game_state(state.game_state) do
-      case BettingRound.process_action(betting_round, player_id, action) do
-        {:ok, updated_betting_round} ->
-          new_state = %{state | betting_round: updated_betting_round}
-
-          # Check if betting round is complete
-          if BettingRound.betting_complete?(updated_betting_round) do
-            # Move to next phase (turn betting)
-            updated_game_state = GameState.deal_turn(state.game_state)
-
-            # Create betting round for turn
-            turn_betting_round =
-              BettingRound.new(
-                updated_game_state.players,
-                0,
-                0,
-                :turn
-              )
-
-            final_state = %{
-              new_state
-              | game_state: updated_game_state,
-                betting_round: turn_betting_round,
-                phase: :turn_betting
-            }
-
-            broadcast_state_change(state.game_id, final_state)
-            {:reply, {:ok, :betting_complete, final_state}, final_state}
-          else
-            broadcast_state_change(state.game_id, new_state)
-            {:reply, {:ok, :action_processed, new_state}, new_state}
-          end
-
-        {:error, reason} ->
-          {:reply, {:error, reason}, state}
-      end
-    else
-      {:error, validation_error} ->
-        {:reply, {:error, {:invalid_input, validation_error}}, state}
-    end
+    process_betting_phase_action(
+      state,
+      player_id,
+      action,
+      &GameState.deal_turn/1,
+      :turn,
+      :turn_betting
+    )
   end
 
   @impl true
@@ -210,48 +199,14 @@ defmodule PokerServer.GameServer do
         %{betting_round: betting_round, phase: :turn_betting} = state
       )
       when not is_nil(betting_round) do
-    # Validate player exists in the game
-    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
-         :ok <- InputValidator.validate_game_state(state.game_state) do
-      case BettingRound.process_action(betting_round, player_id, action) do
-        {:ok, updated_betting_round} ->
-          new_state = %{state | betting_round: updated_betting_round}
-
-          # Check if betting round is complete
-          if BettingRound.betting_complete?(updated_betting_round) do
-            # Move to next phase (river betting)
-            updated_game_state = GameState.deal_river(state.game_state)
-
-            # Create betting round for river
-            river_betting_round =
-              BettingRound.new(
-                updated_game_state.players,
-                0,
-                0,
-                :river
-              )
-
-            final_state = %{
-              new_state
-              | game_state: updated_game_state,
-                betting_round: river_betting_round,
-                phase: :river_betting
-            }
-
-            broadcast_state_change(state.game_id, final_state)
-            {:reply, {:ok, :betting_complete, final_state}, final_state}
-          else
-            broadcast_state_change(state.game_id, new_state)
-            {:reply, {:ok, :action_processed, new_state}, new_state}
-          end
-
-        {:error, reason} ->
-          {:reply, {:error, reason}, state}
-      end
-    else
-      {:error, validation_error} ->
-        {:reply, {:error, {:invalid_input, validation_error}}, state}
-    end
+    process_betting_phase_action(
+      state,
+      player_id,
+      action,
+      &GameState.deal_river/1,
+      :river,
+      :river_betting
+    )
   end
 
   @impl true
@@ -261,39 +216,14 @@ defmodule PokerServer.GameServer do
         %{betting_round: betting_round, phase: :river_betting} = state
       )
       when not is_nil(betting_round) do
-    # Validate player exists in the game
-    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
-         :ok <- InputValidator.validate_game_state(state.game_state) do
-      case BettingRound.process_action(betting_round, player_id, action) do
-        {:ok, updated_betting_round} ->
-          new_state = %{state | betting_round: updated_betting_round}
-
-          # Check if betting round is complete
-          if BettingRound.betting_complete?(updated_betting_round) do
-            # Move to showdown
-            updated_game_state = GameState.showdown(state.game_state)
-
-            final_state = %{
-              new_state
-              | game_state: updated_game_state,
-                betting_round: nil,
-                phase: :hand_complete
-            }
-
-            broadcast_state_change(state.game_id, final_state)
-            {:reply, {:ok, :betting_complete, final_state}, final_state}
-          else
-            broadcast_state_change(state.game_id, new_state)
-            {:reply, {:ok, :action_processed, new_state}, new_state}
-          end
-
-        {:error, reason} ->
-          {:reply, {:error, reason}, state}
-      end
-    else
-      {:error, validation_error} ->
-        {:reply, {:error, {:invalid_input, validation_error}}, state}
-    end
+    process_betting_phase_action(
+      state,
+      player_id,
+      action,
+      &GameState.showdown/1,
+      nil,
+      :hand_complete
+    )
   end
 
   @impl true
