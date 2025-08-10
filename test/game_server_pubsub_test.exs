@@ -535,4 +535,166 @@ defmodule PokerServer.GameServerPubSubTest do
     assert final_state.phase == :preflop_betting
     assert broadcasted_state.phase == :preflop_betting
   end
+
+  test "out of turn action is rejected", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get active player and identify the non-active player
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    
+    non_active_player = Enum.find(current_state.game_state.players, &(&1.id != active_player.id))
+
+    # Non-active player tries to act - should fail
+    {:error, reason} = GameServer.player_action(game_pid, non_active_player.id, {:call})
+    
+    assert reason == "not your turn"
+
+    # No broadcast should occur for failed action
+    refute_receive {:game_updated, _}, 500
+  end
+
+  test "invalid action for game state is rejected", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get active player
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+
+    # In preflop with big blind, player1 cannot check (must call or fold/raise)
+    # This depends on betting structure, let me check what actions are valid first
+    valid_actions = PokerServer.BettingRound.valid_actions(current_state.betting_round)
+    
+    # Try an action that's not in the valid actions list
+    invalid_action = if :check in valid_actions do
+      # If check is valid, use a different invalid approach
+      {:raise, -10}  # Negative raise amount
+    else
+      {:check}  # Check when bet is facing
+    end
+
+    {:error, _reason} = GameServer.player_action(game_pid, active_player.id, invalid_action)
+
+    # No broadcast should occur for failed action
+    refute_receive {:game_updated, _}, 500
+  end
+
+  test "raise with insufficient chips is rejected", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get active player
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    
+    # Try to raise more than player's total chip stack
+    excessive_raise = active_player.chips + 1000
+    {:error, reason} = GameServer.player_action(game_pid, active_player.id, {:raise, excessive_raise})
+    
+    assert is_binary(reason)
+    assert String.contains?(reason, "insufficient")
+
+    # No broadcast should occur for failed action
+    refute_receive {:game_updated, _}, 500
+  end
+
+  test "negative raise amount is rejected", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get active player
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    
+    # Try negative raise - should fail validation
+    {:error, reason} = GameServer.player_action(game_pid, active_player.id, {:raise, -50})
+    
+    assert is_binary(reason)
+
+    # No broadcast should occur for failed action
+    refute_receive {:game_updated, _}, 500
+  end
+
+  test "action by non-existent player is rejected", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Try action by player not in the game
+    {:error, reason} = GameServer.player_action(game_pid, "non_existent_player", {:call})
+    
+    # Should be a validation error about player not found
+    assert match?({:invalid_input, _}, reason)
+
+    # No broadcast should occur for failed action  
+    refute_receive {:game_updated, _}, 500
+  end
+
+  test "action during wrong game phase is rejected", %{game_pid: game_pid} do
+    # Don't start a hand - game should be in waiting phase
+    
+    # Try to make an action when no betting round is active
+    {:error, reason} = GameServer.player_action(game_pid, "player1", {:call})
+    
+    assert reason == "no_active_betting_round"
+
+    # No broadcast should occur for failed action
+    refute_receive {:game_updated, _}, 500
+  end
+
+  test "multiple sequential invalid actions don't break game state", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get game state before invalid actions
+    initial_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
+    non_active_player = Enum.find(initial_state.game_state.players, &(&1.id != active_player.id))
+
+    # Try multiple invalid actions in sequence
+    {:error, _} = GameServer.player_action(game_pid, non_active_player.id, {:call})  # Not their turn
+    {:error, _} = GameServer.player_action(game_pid, "fake_player", {:call})  # Non-existent player
+    {:error, _} = GameServer.player_action(game_pid, active_player.id, {:raise, -10})  # Negative raise
+
+    # Game state should be unchanged
+    current_state = GameServer.get_state(game_pid)
+    assert current_state.phase == initial_state.phase
+    assert current_state.betting_round.pot == initial_state.betting_round.pot
+    
+    # Active player should still be the same
+    current_active = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    assert current_active.id == active_player.id
+
+    # Valid action should still work
+    min_raise = PokerServer.BettingRound.minimum_raise(current_state.betting_round)
+    {:ok, :action_processed, _} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+    
+    assert_receive {:game_updated, _}, 1000
+
+    # No broadcast should have occurred for invalid actions
+    refute_receive {:game_updated, _}, 100
+  end
+
+  test "call amount exceeding chip stack triggers all-in", %{game_pid: _game_pid} do
+    # This test verifies edge case handling when call amount > chips
+    # We need a scenario where one player has very few chips
+    
+    # Create players with different stack sizes for this test
+    players_unequal = [{"rich_player", 1000}, {"poor_player", 15}]  # Poor player has less than big blind
+    {:ok, game_id} = PokerServer.GameManager.create_game(players_unequal)
+    {:ok, game_pid} = PokerServer.GameManager.lookup_game(game_id)
+    
+    # Subscribe to this game's events
+    Phoenix.PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}:poor_player")
+
+    # Start hand
+    {:ok, _} = PokerServer.GameServer.start_hand(game_pid)
+    assert_receive {:game_updated, _}, 1000
+
+    # Get game state - poor player should be able to act but can't afford full call
+    current_state = PokerServer.GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    
+    if active_player.id == "poor_player" and active_player.chips < current_state.betting_round.current_bet do
+      # Poor player can't afford full call - should be forced to all-in or fold
+      valid_actions = PokerServer.BettingRound.valid_actions(current_state.betting_round)
+      assert :all_in in valid_actions
+      assert :call not in valid_actions or active_player.chips >= current_state.betting_round.current_bet
+    end
+  end
 end
