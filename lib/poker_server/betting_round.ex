@@ -151,12 +151,21 @@ defmodule PokerServer.BettingRound do
         actions ++ [:check]
       end
 
-    # Can raise if has enough chips for minimum raise
+    # Can raise if has enough chips for minimum raise AND there are opponents who can respond
     min_raise_amount = minimum_raise(betting_round)
     total_to_raise = min_raise_amount - player_current_bet
+    
+    # Check if all opponents are either folded or all-in (cannot raise if so)
+    opponents_can_respond = 
+      betting_round.players
+      |> Enum.any?(fn player ->
+        player.id != active_player.id &&
+        player.id not in betting_round.folded_players &&
+        player.id not in betting_round.all_in_players
+      end)
 
     actions =
-      if active_player.chips >= total_to_raise do
+      if active_player.chips >= total_to_raise && opponents_can_respond do
         actions ++ [:raise]
       else
         # Can't afford full raise but might be able to go all-in
