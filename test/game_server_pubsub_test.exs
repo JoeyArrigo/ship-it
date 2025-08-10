@@ -393,4 +393,146 @@ defmodule PokerServer.GameServerPubSubTest do
     assert broadcasted_state.phase == :hand_complete
     assert length(final_state.game_state.community_cards) == 5  # All community cards dealt
   end
+
+  test "raise action broadcasts state update", %{game_pid: game_pid, game_id: game_id} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get active player and minimum raise amount
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    min_raise = PokerServer.BettingRound.minimum_raise(current_state.betting_round)
+
+    # Player makes minimum raise
+    result = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+    assert match?({:ok, :action_processed, _}, result)
+
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    assert broadcasted_state.game_id == game_id
+    assert broadcasted_state.phase == :preflop_betting
+    # Betting should continue after raise (other player needs to respond)
+    assert not is_nil(broadcasted_state.betting_round)
+  end
+
+  test "minimum raise validation", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get active player and minimum raise
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    min_raise = PokerServer.BettingRound.minimum_raise(current_state.betting_round)
+
+    # Try to raise below minimum - should fail
+    below_min_raise = min_raise - 1
+    {:error, reason} = GameServer.player_action(game_pid, active_player.id, {:raise, below_min_raise})
+    
+    assert is_binary(reason)
+    assert String.contains?(reason, "below minimum raise")
+
+    # No broadcast should occur for failed action
+    refute_receive {:game_updated, _}, 500
+  end
+
+  test "raise increases pot and requires response", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get initial state and active player
+    initial_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
+    initial_pot = initial_state.betting_round.pot
+    min_raise = PokerServer.BettingRound.minimum_raise(initial_state.betting_round)
+
+    # Player raises
+    {:ok, :action_processed, updated_state} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    # Pot should increase by the raise amount
+    assert updated_state.betting_round.pot > initial_pot
+    assert broadcasted_state.betting_round.pot > initial_pot
+
+    # Betting should continue (other player must respond to raise)
+    assert updated_state.phase == :preflop_betting
+    assert broadcasted_state.phase == :preflop_betting
+  end
+
+  test "raise during flop betting", %{game_pid: game_pid} do
+    advance_to_flop_betting(game_pid)
+
+    # Get active player for flop betting
+    current_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
+    min_raise = PokerServer.BettingRound.minimum_raise(current_state.betting_round)
+    initial_pot = current_state.betting_round.pot
+
+    # Player raises during flop
+    {:ok, :action_processed, updated_state} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    # Still in flop betting phase, pot increased (or at least >= initial if initial was 0)
+    assert updated_state.phase == :flop_betting
+    assert updated_state.betting_round.pot >= initial_pot + min_raise
+    assert broadcasted_state.phase == :flop_betting
+    assert length(broadcasted_state.game_state.community_cards) == 3
+  end
+
+  test "raise followed by call completes betting round", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get active player and raise
+    initial_state = GameServer.get_state(game_pid)
+    active_player = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
+    min_raise = PokerServer.BettingRound.minimum_raise(initial_state.betting_round)
+
+    # First player raises
+    {:ok, :action_processed, _} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+    assert_receive {:game_updated, _}, 1000
+
+    # Get next active player
+    raised_state = GameServer.get_state(game_pid) 
+    next_player = PokerServer.BettingRound.get_active_player(raised_state.betting_round)
+
+    # Second player calls the raise
+    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, next_player.id, {:call})
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    # Should advance to flop betting after raise + call
+    assert final_state.phase == :flop_betting
+    assert broadcasted_state.phase == :flop_betting
+    assert length(final_state.game_state.community_cards) == 3
+  end
+
+  test "re-raise scenario increases pot further", %{game_pid: game_pid} do
+    start_hand_and_clear_broadcast(game_pid)
+
+    # Get initial state
+    initial_state = GameServer.get_state(game_pid)
+    player1 = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
+    min_raise = PokerServer.BettingRound.minimum_raise(initial_state.betting_round)
+    initial_pot = initial_state.betting_round.pot
+
+    # Player 1 raises
+    {:ok, :action_processed, _} = GameServer.player_action(game_pid, player1.id, {:raise, min_raise})
+    assert_receive {:game_updated, _}, 1000
+
+    # Get next player and new minimum raise
+    raised_state = GameServer.get_state(game_pid)
+    player2 = PokerServer.BettingRound.get_active_player(raised_state.betting_round)
+    new_min_raise = PokerServer.BettingRound.minimum_raise(raised_state.betting_round)
+    pot_after_raise = raised_state.betting_round.pot
+
+    # Player 2 re-raises
+    {:ok, :action_processed, final_state} = GameServer.player_action(game_pid, player2.id, {:raise, new_min_raise})
+    assert_receive {:game_updated, broadcasted_state}, 1000
+
+    # Pot should have increased twice
+    assert final_state.betting_round.pot > pot_after_raise
+    assert final_state.betting_round.pot > initial_pot
+    assert broadcasted_state.betting_round.pot > pot_after_raise
+
+    # Still in preflop betting, waiting for player1 to respond
+    assert final_state.phase == :preflop_betting
+    assert broadcasted_state.phase == :preflop_betting
+  end
 end
