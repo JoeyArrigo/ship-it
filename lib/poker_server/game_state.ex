@@ -1,7 +1,7 @@
 defmodule PokerServer.GameState do
   @moduledoc """
   Manages the overall state of a poker game across multiple hands.
-  
+
   Key responsibilities:
   - Track players, positions, and chip counts
   - Handle deck management and card dealing

@@ -18,7 +18,7 @@ defmodule PokerServer.GameServerPubSubTest do
   end
 
   # Helper functions for common test setup patterns
-  
+
   defp start_hand_and_clear_broadcast(game_pid) do
     {:ok, state} = GameServer.start_hand(game_pid)
     assert_receive {:game_updated, _}, 1000
@@ -76,51 +76,54 @@ defmodule PokerServer.GameServerPubSubTest do
     # Start hand
     {:ok, _} = GameServer.start_hand(game_pid)
     assert_receive {:game_updated, _}, 1000
-    
+
     # Complete preflop
     preflop_state = GameServer.get_state(game_pid)
     player1 = PokerServer.BettingRound.get_active_player(preflop_state.betting_round)
     {:ok, _, _} = GameServer.player_action(game_pid, player1.id, {:call})
     assert_receive {:game_updated, _}, 1000
-    
+
     preflop_state2 = GameServer.get_state(game_pid)
     player2 = PokerServer.BettingRound.get_active_player(preflop_state2.betting_round)
     {:ok, :betting_complete, _} = GameServer.player_action(game_pid, player2.id, {:check})
     assert_receive {:game_updated, _}, 1000
-    
+
     # Complete flop
     flop_state = GameServer.get_state(game_pid)
     flop_player1 = PokerServer.BettingRound.get_active_player(flop_state.betting_round)
     {:ok, _, _} = GameServer.player_action(game_pid, flop_player1.id, {:check})
     assert_receive {:game_updated, _}, 1000
-    
+
     flop_state2 = GameServer.get_state(game_pid)
     flop_player2 = PokerServer.BettingRound.get_active_player(flop_state2.betting_round)
     {:ok, :betting_complete, _} = GameServer.player_action(game_pid, flop_player2.id, {:check})
     assert_receive {:game_updated, _}, 1000
-    
+
     # Complete turn
     turn_state = GameServer.get_state(game_pid)
     turn_player1 = PokerServer.BettingRound.get_active_player(turn_state.betting_round)
     {:ok, _, _} = GameServer.player_action(game_pid, turn_player1.id, {:check})
     assert_receive {:game_updated, _}, 1000
-    
+
     turn_state2 = GameServer.get_state(game_pid)
     turn_player2 = PokerServer.BettingRound.get_active_player(turn_state2.betting_round)
     {:ok, :betting_complete, _} = GameServer.player_action(game_pid, turn_player2.id, {:check})
     assert_receive {:game_updated, _}, 1000
-    
+
     # Complete river
     river_state = GameServer.get_state(game_pid)
     river_player1 = PokerServer.BettingRound.get_active_player(river_state.betting_round)
     {:ok, _, _} = GameServer.player_action(game_pid, river_player1.id, {:check})
     assert_receive {:game_updated, _}, 1000
-    
+
     river_state2 = GameServer.get_state(game_pid)
     river_player2 = PokerServer.BettingRound.get_active_player(river_state2.betting_round)
-    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, river_player2.id, {:check})
+
+    {:ok, :betting_complete, final_state} =
+      GameServer.player_action(game_pid, river_player2.id, {:check})
+
     assert_receive {:game_updated, _}, 1000
-    
+
     final_state
   end
 
@@ -236,8 +239,10 @@ defmodule PokerServer.GameServerPubSubTest do
     player1_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player1"))
     player2_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player2"))
 
-    assert length(player1_in_broadcast.hole_cards) == 2  # Can see own cards
-    assert length(player2_in_broadcast.hole_cards) == 0  # Cannot see other's cards
+    # Can see own cards
+    assert length(player1_in_broadcast.hole_cards) == 2
+    # Cannot see other's cards
+    assert length(player2_in_broadcast.hole_cards) == 0
   end
 
   test "failed actions do not broadcast state changes", %{game_pid: game_pid} do
@@ -265,15 +270,17 @@ defmodule PokerServer.GameServerPubSubTest do
     player1_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player1"))
     player2_in_broadcast = Enum.find(broadcasted_state.game_state.players, &(&1.id == "player2"))
 
-    assert length(player1_in_broadcast.hole_cards) == 2  # Can see own cards
-    assert length(player2_in_broadcast.hole_cards) == 0  # Cannot see other's cards
+    # Can see own cards
+    assert length(player1_in_broadcast.hole_cards) == 2
+    # Cannot see other's cards
+    assert length(player2_in_broadcast.hole_cards) == 0
   end
 
   test "preflop betting completion transitions to flop_betting phase", %{game_pid: game_pid} do
     start_hand_and_clear_broadcast(game_pid)
-    
+
     flop_state = complete_preflop_betting(game_pid)
-    
+
     assert flop_state.phase == :flop_betting
     assert not is_nil(flop_state.betting_round)
     assert length(flop_state.game_state.community_cards) == 3
@@ -290,9 +297,9 @@ defmodule PokerServer.GameServerPubSubTest do
 
   test "flop_betting completion transitions to turn_betting phase", %{game_pid: game_pid} do
     advance_to_flop_betting(game_pid)
-    
+
     turn_state = complete_flop_betting(game_pid)
-    
+
     assert turn_state.phase == :turn_betting
     assert not is_nil(turn_state.betting_round)
     assert length(turn_state.game_state.community_cards) == 4
@@ -309,9 +316,9 @@ defmodule PokerServer.GameServerPubSubTest do
 
   test "turn_betting completion transitions to river_betting phase", %{game_pid: game_pid} do
     advance_to_turn_betting(game_pid)
-    
+
     river_state = complete_turn_betting(game_pid)
-    
+
     assert river_state.phase == :river_betting
     assert not is_nil(river_state.betting_round)
     assert length(river_state.game_state.community_cards) == 5
@@ -328,25 +335,25 @@ defmodule PokerServer.GameServerPubSubTest do
 
   test "complete hand flow: preflop -> flop -> turn -> river -> showdown", %{game_pid: game_pid} do
     start_hand_and_clear_broadcast(game_pid)
-    
+
     flop_state = complete_preflop_betting(game_pid)
-    turn_state = complete_flop_betting(game_pid) 
+    turn_state = complete_flop_betting(game_pid)
     river_state = complete_turn_betting(game_pid)
     final_state = complete_river_betting(game_pid)
 
     # Assert: Complete poker hand progression
     assert flop_state.phase == :flop_betting
     assert length(flop_state.game_state.community_cards) == 3
-    
-    assert turn_state.phase == :turn_betting  
+
+    assert turn_state.phase == :turn_betting
     assert length(turn_state.game_state.community_cards) == 4
-    
+
     assert river_state.phase == :river_betting
     assert length(river_state.game_state.community_cards) == 5
-    
+
     assert final_state.phase == :hand_complete
     assert length(final_state.game_state.community_cards) == 5
-    
+
     # Verify server state after complete hand
     full_state = GameServer.get_state(game_pid)
     assert full_state.phase == :hand_complete
@@ -359,7 +366,7 @@ defmodule PokerServer.GameServerPubSubTest do
     # Get the active player who should act
     current_state = GameServer.get_state(game_pid)
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
-    
+
     result = GameServer.player_action(game_pid, active_player.id, {:fold})
     assert match?({:ok, :betting_complete, _}, result)
 
@@ -377,9 +384,10 @@ defmodule PokerServer.GameServerPubSubTest do
     # Get active player and initial state
     initial_state = GameServer.get_state(game_pid)
     active_player = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
-    
+
     # Player folds, leaving other player as only active
-    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, active_player.id, {:fold})
+    {:ok, :betting_complete, final_state} =
+      GameServer.player_action(game_pid, active_player.id, {:fold})
 
     assert_receive {:game_updated, broadcasted_state}, 1000
 
@@ -400,14 +408,16 @@ defmodule PokerServer.GameServerPubSubTest do
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
 
     # Player folds during flop betting
-    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, active_player.id, {:fold})
+    {:ok, :betting_complete, final_state} =
+      GameServer.player_action(game_pid, active_player.id, {:fold})
 
     assert_receive {:game_updated, broadcasted_state}, 1000
 
     # Game continues to turn_betting (doesn't end immediately)
     assert final_state.phase == :turn_betting
     assert broadcasted_state.phase == :turn_betting
-    assert length(final_state.game_state.community_cards) == 4  # Turn card dealt
+    # Turn card dealt
+    assert length(final_state.game_state.community_cards) == 4
   end
 
   test "fold during turn betting continues to river", %{game_pid: game_pid} do
@@ -418,14 +428,16 @@ defmodule PokerServer.GameServerPubSubTest do
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
 
     # Player folds during turn betting  
-    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, active_player.id, {:fold})
+    {:ok, :betting_complete, final_state} =
+      GameServer.player_action(game_pid, active_player.id, {:fold})
 
     assert_receive {:game_updated, broadcasted_state}, 1000
 
     # Game continues to river_betting (doesn't end immediately)
     assert final_state.phase == :river_betting
     assert broadcasted_state.phase == :river_betting
-    assert length(final_state.game_state.community_cards) == 5  # River card dealt
+    # River card dealt
+    assert length(final_state.game_state.community_cards) == 5
   end
 
   test "fold during river betting ends hand", %{game_pid: game_pid} do
@@ -436,14 +448,16 @@ defmodule PokerServer.GameServerPubSubTest do
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
 
     # Player folds during final betting round
-    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, active_player.id, {:fold})
+    {:ok, :betting_complete, final_state} =
+      GameServer.player_action(game_pid, active_player.id, {:fold})
 
     assert_receive {:game_updated, broadcasted_state}, 1000
 
     # Hand completes after river betting
     assert final_state.phase == :hand_complete
     assert broadcasted_state.phase == :hand_complete
-    assert length(final_state.game_state.community_cards) == 5  # All community cards dealt
+    # All community cards dealt
+    assert length(final_state.game_state.community_cards) == 5
   end
 
   test "raise action broadcasts state update", %{game_pid: game_pid, game_id: game_id} do
@@ -476,8 +490,10 @@ defmodule PokerServer.GameServerPubSubTest do
 
     # Try to raise below minimum - should fail
     below_min_raise = min_raise - 1
-    {:error, reason} = GameServer.player_action(game_pid, active_player.id, {:raise, below_min_raise})
-    
+
+    {:error, reason} =
+      GameServer.player_action(game_pid, active_player.id, {:raise, below_min_raise})
+
     assert is_binary(reason)
     assert String.contains?(reason, "below minimum raise")
 
@@ -495,7 +511,8 @@ defmodule PokerServer.GameServerPubSubTest do
     min_raise = PokerServer.BettingRound.minimum_raise(initial_state.betting_round)
 
     # Player raises
-    {:ok, :action_processed, updated_state} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+    {:ok, :action_processed, updated_state} =
+      GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
 
     assert_receive {:game_updated, broadcasted_state}, 1000
 
@@ -518,7 +535,8 @@ defmodule PokerServer.GameServerPubSubTest do
     initial_pot = current_state.betting_round.pot
 
     # Player raises during flop
-    {:ok, :action_processed, updated_state} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+    {:ok, :action_processed, updated_state} =
+      GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
 
     assert_receive {:game_updated, broadcasted_state}, 1000
 
@@ -538,15 +556,19 @@ defmodule PokerServer.GameServerPubSubTest do
     min_raise = PokerServer.BettingRound.minimum_raise(initial_state.betting_round)
 
     # First player raises
-    {:ok, :action_processed, _} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+    {:ok, :action_processed, _} =
+      GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+
     assert_receive {:game_updated, _}, 1000
 
     # Get next active player
-    raised_state = GameServer.get_state(game_pid) 
+    raised_state = GameServer.get_state(game_pid)
     next_player = PokerServer.BettingRound.get_active_player(raised_state.betting_round)
 
     # Second player calls the raise
-    {:ok, :betting_complete, final_state} = GameServer.player_action(game_pid, next_player.id, {:call})
+    {:ok, :betting_complete, final_state} =
+      GameServer.player_action(game_pid, next_player.id, {:call})
+
     assert_receive {:game_updated, broadcasted_state}, 1000
 
     # Should advance to flop betting after raise + call
@@ -565,7 +587,9 @@ defmodule PokerServer.GameServerPubSubTest do
     initial_pot = initial_state.betting_round.pot
 
     # Player 1 raises
-    {:ok, :action_processed, _} = GameServer.player_action(game_pid, player1.id, {:raise, min_raise})
+    {:ok, :action_processed, _} =
+      GameServer.player_action(game_pid, player1.id, {:raise, min_raise})
+
     assert_receive {:game_updated, _}, 1000
 
     # Get next player and new minimum raise
@@ -575,7 +599,9 @@ defmodule PokerServer.GameServerPubSubTest do
     pot_after_raise = raised_state.betting_round.pot
 
     # Player 2 re-raises
-    {:ok, :action_processed, final_state} = GameServer.player_action(game_pid, player2.id, {:raise, new_min_raise})
+    {:ok, :action_processed, final_state} =
+      GameServer.player_action(game_pid, player2.id, {:raise, new_min_raise})
+
     assert_receive {:game_updated, broadcasted_state}, 1000
 
     # Pot should have increased twice
@@ -594,12 +620,12 @@ defmodule PokerServer.GameServerPubSubTest do
     # Get active player and identify the non-active player
     current_state = GameServer.get_state(game_pid)
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
-    
+
     non_active_player = Enum.find(current_state.game_state.players, &(&1.id != active_player.id))
 
     # Non-active player tries to act - should fail
     {:error, reason} = GameServer.player_action(game_pid, non_active_player.id, {:call})
-    
+
     assert reason == "not your turn"
 
     # No broadcast should occur for failed action
@@ -616,14 +642,17 @@ defmodule PokerServer.GameServerPubSubTest do
     # In preflop with big blind, player1 cannot check (must call or fold/raise)
     # This depends on betting structure, let me check what actions are valid first
     valid_actions = PokerServer.BettingRound.valid_actions(current_state.betting_round)
-    
+
     # Try an action that's not in the valid actions list
-    invalid_action = if :check in valid_actions do
-      # If check is valid, use a different invalid approach
-      {:raise, -10}  # Negative raise amount
-    else
-      {:check}  # Check when bet is facing
-    end
+    invalid_action =
+      if :check in valid_actions do
+        # If check is valid, use a different invalid approach
+        # Negative raise amount
+        {:raise, -10}
+      else
+        # Check when bet is facing
+        {:check}
+      end
 
     {:error, _reason} = GameServer.player_action(game_pid, active_player.id, invalid_action)
 
@@ -637,11 +666,13 @@ defmodule PokerServer.GameServerPubSubTest do
     # Get active player
     current_state = GameServer.get_state(game_pid)
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
-    
+
     # Try to raise more than player's total chip stack
     excessive_raise = active_player.chips + 1000
-    {:error, reason} = GameServer.player_action(game_pid, active_player.id, {:raise, excessive_raise})
-    
+
+    {:error, reason} =
+      GameServer.player_action(game_pid, active_player.id, {:raise, excessive_raise})
+
     assert is_binary(reason)
     assert String.contains?(reason, "insufficient")
 
@@ -655,10 +686,10 @@ defmodule PokerServer.GameServerPubSubTest do
     # Get active player
     current_state = GameServer.get_state(game_pid)
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
-    
+
     # Try negative raise - should fail validation
     {:error, reason} = GameServer.player_action(game_pid, active_player.id, {:raise, -50})
-    
+
     assert is_binary(reason)
 
     # No broadcast should occur for failed action
@@ -670,7 +701,7 @@ defmodule PokerServer.GameServerPubSubTest do
 
     # Try action by player not in the game
     {:error, reason} = GameServer.player_action(game_pid, "non_existent_player", {:call})
-    
+
     # Should be a validation error about player not found
     assert match?({:invalid_input, _}, reason)
 
@@ -680,10 +711,10 @@ defmodule PokerServer.GameServerPubSubTest do
 
   test "action during wrong game phase is rejected", %{game_pid: game_pid} do
     # Don't start a hand - game should be in waiting phase
-    
+
     # Try to make an action when no betting round is active
     {:error, reason} = GameServer.player_action(game_pid, "player1", {:call})
-    
+
     assert reason == "no_active_betting_round"
 
     # No broadcast should occur for failed action
@@ -699,23 +730,28 @@ defmodule PokerServer.GameServerPubSubTest do
     non_active_player = Enum.find(initial_state.game_state.players, &(&1.id != active_player.id))
 
     # Try multiple invalid actions in sequence
-    {:error, _} = GameServer.player_action(game_pid, non_active_player.id, {:call})  # Not their turn
-    {:error, _} = GameServer.player_action(game_pid, "fake_player", {:call})  # Non-existent player
-    {:error, _} = GameServer.player_action(game_pid, active_player.id, {:raise, -10})  # Negative raise
+    # Not their turn
+    {:error, _} = GameServer.player_action(game_pid, non_active_player.id, {:call})
+    # Non-existent player
+    {:error, _} = GameServer.player_action(game_pid, "fake_player", {:call})
+    # Negative raise
+    {:error, _} = GameServer.player_action(game_pid, active_player.id, {:raise, -10})
 
     # Game state should be unchanged
     current_state = GameServer.get_state(game_pid)
     assert current_state.phase == initial_state.phase
     assert current_state.betting_round.pot == initial_state.betting_round.pot
-    
+
     # Active player should still be the same
     current_active = PokerServer.BettingRound.get_active_player(current_state.betting_round)
     assert current_active.id == active_player.id
 
     # Valid action should still work
     min_raise = PokerServer.BettingRound.minimum_raise(current_state.betting_round)
-    {:ok, :action_processed, _} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
-    
+
+    {:ok, :action_processed, _} =
+      GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+
     assert_receive {:game_updated, _}, 1000
 
     # No broadcast should have occurred for invalid actions
@@ -725,12 +761,13 @@ defmodule PokerServer.GameServerPubSubTest do
   test "call amount exceeding chip stack triggers all-in", %{game_pid: _game_pid} do
     # This test verifies edge case handling when call amount > chips
     # We need a scenario where one player has very few chips
-    
+
     # Create players with different stack sizes for this test
-    players_unequal = [{"rich_player", 1000}, {"poor_player", 15}]  # Poor player has less than big blind
+    # Poor player has less than big blind
+    players_unequal = [{"rich_player", 1000}, {"poor_player", 15}]
     {:ok, game_id} = PokerServer.GameManager.create_game(players_unequal)
     {:ok, game_pid} = PokerServer.GameManager.lookup_game(game_id)
-    
+
     # Subscribe to this game's events
     Phoenix.PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}:poor_player")
 
@@ -741,12 +778,15 @@ defmodule PokerServer.GameServerPubSubTest do
     # Get game state - poor player should be able to act but can't afford full call
     current_state = PokerServer.GameServer.get_state(game_pid)
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
-    
-    if active_player.id == "poor_player" and active_player.chips < current_state.betting_round.current_bet do
+
+    if active_player.id == "poor_player" and
+         active_player.chips < current_state.betting_round.current_bet do
       # Poor player can't afford full call - should be forced to all-in or fold
       valid_actions = PokerServer.BettingRound.valid_actions(current_state.betting_round)
       assert :all_in in valid_actions
-      assert :call not in valid_actions or active_player.chips >= current_state.betting_round.current_bet
+
+      assert :call not in valid_actions or
+               active_player.chips >= current_state.betting_round.current_bet
     end
   end
 
@@ -761,7 +801,8 @@ defmodule PokerServer.GameServerPubSubTest do
 
     # Hand should be complete with winner determined
     assert final_state.phase == :hand_complete
-    assert final_state.game_state.pot == 0  # Pot should be distributed
+    # Pot should be distributed
+    assert final_state.game_state.pot == 0
 
     # One player should have more chips, one should have fewer (unless exact tie)
     player1_final = Enum.find(final_state.game_state.players, &(&1.id == "player1"))
@@ -773,7 +814,9 @@ defmodule PokerServer.GameServerPubSubTest do
     assert total_final == total_initial
 
     # At least one player should have different chip count (unless tie)
-    chips_changed = (player1_final.chips != player1_initial) or (player2_final.chips != player2_initial)
+    chips_changed =
+      player1_final.chips != player1_initial or player2_final.chips != player2_initial
+
     assert chips_changed
   end
 
@@ -795,13 +838,17 @@ defmodule PokerServer.GameServerPubSubTest do
     player2_final = Enum.find(showdown_state.game_state.players, &(&1.id == "player2"))
 
     # Winner should get the pot (total pot = blinds in this scenario)
-    winner_gains = max(player1_final.chips - player1_initial, player2_final.chips - player2_initial)
-    loser_losses = min(player1_final.chips - player1_initial, player2_final.chips - player2_initial)
-    
+    winner_gains =
+      max(player1_final.chips - player1_initial, player2_final.chips - player2_initial)
+
+    loser_losses =
+      min(player1_final.chips - player1_initial, player2_final.chips - player2_initial)
+
     # Winner gains should equal pot, loser loses their contribution
     assert winner_gains > 0
     assert loser_losses < 0
-    assert winner_gains + loser_losses == 0  # Zero-sum game
+    # Zero-sum game
+    assert winner_gains + loser_losses == 0
   end
 
   test "showdown with raises creates larger pot distribution", %{game_pid: game_pid} do
@@ -811,14 +858,16 @@ defmodule PokerServer.GameServerPubSubTest do
     player2_initial = Enum.find(initial_state.game_state.players, &(&1.id == "player2")).chips
 
     start_hand_and_clear_broadcast(game_pid)
-    
+
     # Add some raises to build pot
     current_state = GameServer.get_state(game_pid)
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
     min_raise = PokerServer.BettingRound.minimum_raise(current_state.betting_round)
 
     # Player1 raises
-    {:ok, :action_processed, _} = GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+    {:ok, :action_processed, _} =
+      GameServer.player_action(game_pid, active_player.id, {:raise, min_raise})
+
     assert_receive {:game_updated, _}, 1000
 
     # Player2 calls the raise
@@ -838,7 +887,7 @@ defmodule PokerServer.GameServerPubSubTest do
 
     # Calculate the total pot that was distributed (initial blinds + raises)
     pot_size = after_preflop.betting_round.pot
-    
+
     player1_final = Enum.find(final_state.game_state.players, &(&1.id == "player1"))
     player2_final = Enum.find(final_state.game_state.players, &(&1.id == "player2"))
 
@@ -846,18 +895,20 @@ defmodule PokerServer.GameServerPubSubTest do
     total_initial = player1_initial + player2_initial
     total_final = player1_final.chips + player2_final.chips
     assert total_final == total_initial
-    
+
     # Verify pot was distributed (should be 0 after showdown)
     assert final_state.game_state.pot == 0
-    
+
     # Verify pot was properly distributed
     player1_change = player1_final.chips - player1_initial
     player2_change = player2_final.chips - player2_initial
-    assert player1_change + player2_change == 0  # Zero-sum
-    
+    # Zero-sum
+    assert player1_change + player2_change == 0
+
     # In case of tie, both players get equal share; otherwise winner gets all
     # The assertion should verify that pot was distributed (not necessarily moved between players)
-    assert abs(player1_change) + abs(player2_change) == pot_size  # Total pot distributed
+    # Total pot distributed
+    assert abs(player1_change) + abs(player2_change) == pot_size
   end
 
   test "showdown with different starting stacks", %{} do
@@ -865,7 +916,7 @@ defmodule PokerServer.GameServerPubSubTest do
     players_different = [{"rich_player", 2000}, {"poor_player", 500}]
     {:ok, game_id} = PokerServer.GameManager.create_game(players_different)
     {:ok, game_pid} = PokerServer.GameManager.lookup_game(game_id)
-    
+
     Phoenix.PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}:rich_player")
 
     # Record initial states
@@ -894,24 +945,23 @@ defmodule PokerServer.GameServerPubSubTest do
   test "payout broadcast includes final chip counts", %{game_pid: game_pid} do
     # Verify that showdown broadcast includes accurate final chip amounts
     final_state = play_complete_hand_to_showdown(game_pid)
-    
+
     # The final broadcast should be the last one received during play_complete_hand_to_showdown
     # Let's verify the final state directly instead of trying to capture broadcasts
     assert final_state.phase == :hand_complete
     assert final_state.game_state.pot == 0
-    
+
     # Players should have updated chip counts
     player1_final = Enum.find(final_state.game_state.players, &(&1.id == "player1"))
     player2_final = Enum.find(final_state.game_state.players, &(&1.id == "player2"))
-    
+
     # Both players should have positive chip counts
     assert player1_final.chips > 0
     assert player2_final.chips > 0
-    
+
     # Verify server state matches final state
     server_state = GameServer.get_state(game_pid)
     assert server_state.game_state.players == final_state.game_state.players
     assert server_state.phase == :hand_complete
   end
-
 end

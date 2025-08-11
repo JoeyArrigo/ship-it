@@ -118,9 +118,9 @@ defmodule PokerServer.UIAdapter do
   def can_player_act?(game_server_state, player_id) do
     case game_server_state do
       # All betting phases from GameServer
-      %{phase: phase, betting_round: betting_round} 
-        when phase in [:preflop_betting, :flop_betting, :turn_betting, :river_betting] 
-        and not is_nil(betting_round) ->
+      %{phase: phase, betting_round: betting_round}
+      when phase in [:preflop_betting, :flop_betting, :turn_betting, :river_betting] and
+             not is_nil(betting_round) ->
         active_player = BettingRound.get_active_player(betting_round)
         active_player && active_player.id == player_id
 
@@ -251,7 +251,7 @@ defmodule PokerServer.UIAdapter do
   end
 
   defp can_start_hand?(game_state) do
-    (game_state.phase == :waiting_for_players or game_state.phase == :hand_complete) and 
-    length(game_state.players) >= 2
+    (game_state.phase == :waiting_for_players or game_state.phase == :hand_complete) and
+      length(game_state.players) >= 2
   end
 end
