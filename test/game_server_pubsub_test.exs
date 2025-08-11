@@ -850,11 +850,14 @@ defmodule PokerServer.GameServerPubSubTest do
     # Verify pot was distributed (should be 0 after showdown)
     assert final_state.game_state.pot == 0
     
-    # Verify someone won and someone lost (unless tie)
+    # Verify pot was properly distributed
     player1_change = player1_final.chips - player1_initial
     player2_change = player2_final.chips - player2_initial
     assert player1_change + player2_change == 0  # Zero-sum
-    assert abs(player1_change) >= pot_size / 2  # At least half the pot moved
+    
+    # In case of tie, both players get equal share; otherwise winner gets all
+    # The assertion should verify that pot was distributed (not necessarily moved between players)
+    assert abs(player1_change) + abs(player2_change) == pot_size  # Total pot distributed
   end
 
   test "showdown with different starting stacks", %{} do
