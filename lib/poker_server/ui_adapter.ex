@@ -251,6 +251,7 @@ defmodule PokerServer.UIAdapter do
   end
 
   defp can_start_hand?(game_state) do
-    game_state.phase == :waiting_for_players and length(game_state.players) >= 2
+    (game_state.phase == :waiting_for_players or game_state.phase == :hand_complete) and 
+    length(game_state.players) >= 2
   end
 end
