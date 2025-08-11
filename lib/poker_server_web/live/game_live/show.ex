@@ -93,6 +93,28 @@ defmodule PokerServerWeb.GameLive.Show do
   end
 
   @impl true
+  def handle_event("player_action", %{"action" => "all_in"}, socket) do
+    make_player_action(socket, {:all_in})
+  end
+
+  @impl true
+  def handle_event("start_hand", _params, socket) do
+    case GameManager.lookup_game(socket.assigns.game_id) do
+      {:ok, pid} ->
+        case PokerServer.GameServer.start_hand(pid) do
+          {:ok, _state} ->
+            {:noreply, socket}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to start hand: #{inspect(reason)}")}
+        end
+
+      {:error, :game_not_found} ->
+        {:noreply, put_flash(socket, :error, "Game not found")}
+    end
+  end
+
+  @impl true
   def handle_event("back_to_lobby", _params, socket) do
     {:noreply, push_navigate(socket, to: ~p"/")}
   end
@@ -189,7 +211,9 @@ defmodule PokerServerWeb.GameLive.Show do
 
           <div :if={@player_view.can_act}>
             <p class="mb-4">Your turn to act</p>
-            <div class="flex justify-center gap-3 flex-wrap">
+            
+            <!-- Main action buttons -->
+            <div class="flex justify-center gap-3 flex-wrap mb-4">
               <.button 
                 :if={:fold in @player_view.valid_actions}
                 phx-click="player_action" 
@@ -211,7 +235,45 @@ defmodule PokerServerWeb.GameLive.Show do
                 class="bg-gray-600 hover:bg-gray-700">
                 Check
               </.button>
+              <.button 
+                :if={:all_in in @player_view.valid_actions}
+                phx-click="player_action" 
+                phx-value-action="all_in" 
+                class="bg-purple-600 hover:bg-purple-700">
+                All-In ($<%= @player_view.current_player.chips %>)
+              </.button>
             </div>
+
+            <!-- Raise controls -->
+            <div :if={:raise in @player_view.valid_actions} class="flex justify-center items-center gap-2">
+              <form phx-submit="player_action" class="flex items-center gap-2">
+                <input 
+                  name="amount"
+                  type="number" 
+                  placeholder="Amount" 
+                  min={@player_view.betting_info.min_raise}
+                  max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
+                  class="w-20 text-center border border-gray-300 rounded px-2 py-1"
+                  required
+                />
+                <input type="hidden" name="action" value="raise" />
+                <.button type="submit" class="bg-orange-600 hover:bg-orange-700">
+                  Raise
+                </.button>
+              </form>
+              <span class="text-sm text-gray-600">
+                Min: $<%= @player_view.betting_info.min_raise %>
+              </span>
+            </div>
+          </div>
+
+          <div :if={@player_view.can_start_hand}>
+            <p class="mb-4">Hand complete! Ready to start next hand?</p>
+            <.button 
+              phx-click="start_hand" 
+              class="bg-green-600 hover:bg-green-700">
+              Start New Hand
+            </.button>
           </div>
 
           <div :if={not @player_view.can_act and not @player_view.can_start_hand and not @player_view.is_waiting_for_players}>

@@ -165,7 +165,8 @@ defmodule PokerServer.BettingRoundTest do
         player_bets: %{1 => 0, 2 => 0},
         active_player_index: 0,
         folded_players: MapSet.new(),
-        all_in_players: MapSet.new()
+        all_in_players: MapSet.new(),
+        players_who_can_act: MapSet.new([1, 2])
       }
 
       {:ok, updated_round} = BettingRound.process_action(betting_round, 1, {:check})

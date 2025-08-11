@@ -1,15 +1,27 @@
 defmodule PokerServer.BettingRound do
+  @moduledoc """
+  Handles all betting logic for a single round of poker.
+  
+  Key responsibilities:
+  - Track player bets and validate actions  
+  - Calculate side pots for all-in scenarios
+  - Determine when betting round is complete
+  - Enforce poker betting rules (blinds, raises, calls)
+
+  State transitions: new/4 -> process_action/3 -> betting_complete?/1
+  """
+
   alias PokerServer.{Player, Types}
 
   @type t :: %__MODULE__{
-          players: [Player.t()],
+          players: list(),
           small_blind: number(),
           big_blind: number(),
           round_type: Types.betting_round_type(),
           pot: number(),
           current_bet: number(),
           player_bets: map(),
-          active_player_index: 0 | 1 | 2,
+          active_player_index: non_neg_integer(),
           folded_players: MapSet.t(),
           all_in_players: MapSet.t(),
           last_raise_size: number() | nil,
@@ -33,6 +45,23 @@ defmodule PokerServer.BettingRound do
     :last_raiser
   ]
 
+  @doc """
+  Create a new betting round with the given parameters.
+
+  Posts blinds automatically and sets up initial betting state.
+  Small blind is position 0, big blind is position 1.
+
+  ## Parameters
+  - players: List of Player structs with positions assigned
+  - small_blind: Small blind amount 
+  - big_blind: Big blind amount
+  - round_type: :preflop, :flop, :turn, or :river
+
+  ## Examples
+      iex> players = [%Player{id: "p1", position: 0, chips: 100}, %Player{id: "p2", position: 1, chips: 100}]
+      iex> BettingRound.new(players, 5, 10, :preflop)
+      %BettingRound{small_blind: 5, big_blind: 10, ...}
+  """
   def new(players, small_blind, big_blind, round_type) do
     # Validate betting round type
     Types.validate_betting_round_type!(round_type)
@@ -92,10 +121,69 @@ defmodule PokerServer.BettingRound do
     }
   end
 
+  @doc """
+  Create a new betting round from existing game state without posting blinds.
+  
+  Used for post-preflop betting rounds where blinds have already been posted
+  and we need to continue with the existing pot and player chip counts.
+
+  ## Parameters
+  - players: List of Player structs with current chip counts
+  - existing_pot: Current pot amount from previous betting round
+  - current_bet: Current bet to match (typically 0 for post-preflop)
+  - round_type: :flop, :turn, or :river
+
+  ## Examples
+      iex> players = [%Player{id: "p1", position: 0, chips: 90}, %Player{id: "p2", position: 1, chips: 80}]
+      iex> BettingRound.new_from_existing(players, 30, 0, :flop)
+      %BettingRound{pot: 30, current_bet: 0, ...}
+  """
+  def new_from_existing(players, existing_pot, current_bet, round_type) do
+    # Validate betting round type
+    Types.validate_betting_round_type!(round_type)
+
+    # Initialize player bets map - all start at 0 for post-preflop rounds
+    player_bets = 
+      players
+      |> Enum.map(&{&1.id, 0})
+      |> Enum.into(%{})
+
+    # All active players need to act in post-preflop rounds
+    active_player_ids = Enum.map(players, & &1.id) |> MapSet.new()
+
+    %__MODULE__{
+      players: players,
+      small_blind: 0,  # Not applicable for post-preflop rounds
+      big_blind: 0,    # Not applicable for post-preflop rounds
+      round_type: round_type,
+      pot: existing_pot,
+      current_bet: current_bet,
+      player_bets: player_bets,
+      active_player_index: get_initial_active_player_index(players, round_type),
+      folded_players: MapSet.new(),
+      all_in_players: MapSet.new(),
+      last_raise_size: nil,
+      players_who_can_act: active_player_ids,
+      last_raiser: nil
+    }
+  end
+
+  @doc """
+  Get the list of valid actions for the current active player.
+
+  Returns a list of atoms representing allowed actions: :fold, :call, :check, :raise, :all_in.
+  Actions depend on current betting state and player chip count.
+  """
+  @spec valid_actions(t()) :: [atom()]
   def valid_actions(betting_round) do
     active_player = get_active_player(betting_round)
-    player_current_bet = betting_round.player_bets[active_player.id] || 0
-    amount_to_call = betting_round.current_bet - player_current_bet
+    
+    # Return empty actions if no active player
+    if is_nil(active_player) do
+      []
+    else
+      player_current_bet = betting_round.player_bets[active_player.id] || 0
+      amount_to_call = betting_round.current_bet - player_current_bet
 
     # Can always fold (unless already all-in)
     actions = [:fold]
@@ -114,12 +202,21 @@ defmodule PokerServer.BettingRound do
         actions ++ [:check]
       end
 
-    # Can raise if has enough chips for minimum raise
+    # Can raise if has enough chips for minimum raise AND there are opponents who can respond
     min_raise_amount = minimum_raise(betting_round)
     total_to_raise = min_raise_amount - player_current_bet
+    
+    # Check if all opponents are either folded or all-in (cannot raise if so)
+    opponents_can_respond = 
+      betting_round.players
+      |> Enum.any?(fn player ->
+        player.id != active_player.id &&
+        player.id not in betting_round.folded_players &&
+        player.id not in betting_round.all_in_players
+      end)
 
     actions =
-      if active_player.chips >= total_to_raise do
+      if active_player.chips >= total_to_raise && opponents_can_respond do
         actions ++ [:raise]
       else
         # Can't afford full raise but might be able to go all-in
@@ -131,15 +228,16 @@ defmodule PokerServer.BettingRound do
         end
       end
 
-    # Players can always go all-in if they have chips (unless already all-in)
-    actions =
-      if active_player.chips > 0 && active_player.id not in betting_round.all_in_players do
-        if :all_in not in actions, do: actions ++ [:all_in], else: actions
-      else
-        actions
-      end
+      # Players can always go all-in if they have chips (unless already all-in)
+      actions =
+        if active_player.chips > 0 && active_player.id not in betting_round.all_in_players do
+          if :all_in not in actions, do: actions ++ [:all_in], else: actions
+        else
+          actions
+        end
 
-    actions
+      actions
+    end
   end
 
   defp get_initial_active_player_index(players, round_type) do
@@ -159,44 +257,84 @@ defmodule PokerServer.BettingRound do
     end
   end
 
+  @doc """
+  Get the current player whose turn it is to act.
+
+  Returns the Player struct for the active player based on active_player_index.
+  Handles index bounds checking safely.
+  """
+  @spec get_active_player(t()) :: Player.t() | nil
   def get_active_player(betting_round) do
-    # Handle case where active_player_index might be out of bounds
+    # Handle case where active_player_index might be out of bounds or no players
     player_count = length(betting_round.players)
-    safe_index = rem(betting_round.active_player_index, player_count)
-    Enum.at(betting_round.players, safe_index)
+    if player_count == 0 do
+      nil
+    else
+      safe_index = rem(betting_round.active_player_index, player_count)
+      Enum.at(betting_round.players, safe_index)
+    end
   end
 
+  @doc """
+  Calculate the minimum raise amount for the current betting round.
+
+  Based on the current bet plus the size of the last raise (or big blind if no raises yet).
+  """
+  @spec minimum_raise(t()) :: number()
   def minimum_raise(betting_round) do
     betting_round.current_bet + (betting_round.last_raise_size || betting_round.big_blind)
   end
 
+  @doc """
+  Process a player action and update the betting round state.
+
+  Validates the action is legal and from the correct player, then updates
+  all relevant state including pot, bets, and active player.
+
+  ## Parameters
+  - betting_round: Current betting round state
+  - player_id: ID of player making the action  
+  - action: Action tuple like {:fold}, {:call}, {:raise, amount}, {:check}, {:all_in}
+
+  ## Returns
+  - {:ok, updated_betting_round} on success
+  - {:error, reason} if action is invalid
+
+  ## Examples
+      iex> BettingRound.process_action(betting_round, "player1", {:call})
+      {:ok, %BettingRound{...}}
+  """
+  @spec process_action(t(), String.t(), tuple()) :: {:ok, t()} | {:error, atom()}
   def process_action(betting_round, player_id, action) do
     # Validate it's the correct player's turn
     active_player = get_active_player(betting_round)
 
-    if active_player.id != player_id do
-      {:error, Types.error_not_your_turn()}
-    else
-      # Validate the action is allowed
-      valid_actions = valid_actions(betting_round)
-      action_type = elem(action, 0)
+    cond do
+      is_nil(active_player) ->
+        {:error, "no_active_player"}
+      
+      active_player.id != player_id ->
+        {:error, Types.error_not_your_turn()}
+      
+      true ->
+        # Validate the action is allowed
+        valid_actions = valid_actions(betting_round)
+        action_type = elem(action, 0)
 
-      if action_type in valid_actions do
-        execute_action(betting_round, player_id, action)
-      else
-        {:error, Types.error_invalid_action()}
-      end
+        if action_type in valid_actions do
+          execute_action(betting_round, player_id, action)
+        else
+          {:error, Types.error_invalid_action()}
+        end
     end
   end
 
   defp execute_action(betting_round, player_id, {:fold}) do
-    # Ensure players_who_can_act is initialized as MapSet
-    players_who_can_act = betting_round.players_who_can_act || MapSet.new()
 
     updated_round = %{
       betting_round
       | folded_players: MapSet.put(betting_round.folded_players, player_id),
-        players_who_can_act: MapSet.delete(players_who_can_act, player_id),
+        players_who_can_act: MapSet.delete(betting_round.players_who_can_act, player_id),
         active_player_index: next_active_player_index(betting_round)
     }
 
@@ -218,16 +356,13 @@ defmodule PokerServer.BettingRound do
           if p.id == player_id, do: %{p | chips: p.chips - call_amount}, else: p
         end)
 
-      # Ensure players_who_can_act is initialized as MapSet
-      players_who_can_act = betting_round.players_who_can_act || MapSet.new()
-
       # Update betting round
       updated_round = %{
         betting_round
         | players: updated_players,
           player_bets: Map.put(betting_round.player_bets, player_id, betting_round.current_bet),
           pot: betting_round.pot + call_amount,
-          players_who_can_act: MapSet.delete(players_who_can_act, player_id),
+          players_who_can_act: MapSet.delete(betting_round.players_who_can_act, player_id),
           active_player_index: next_active_player_index(betting_round)
       }
 
@@ -285,12 +420,9 @@ defmodule PokerServer.BettingRound do
   end
 
   defp execute_action(betting_round, player_id, {:check}) do
-    # Ensure players_who_can_act is initialized as MapSet
-    players_who_can_act = betting_round.players_who_can_act || MapSet.new()
-
     updated_round = %{
       betting_round
-      | players_who_can_act: MapSet.delete(players_who_can_act, player_id),
+      | players_who_can_act: MapSet.delete(betting_round.players_who_can_act, player_id),
         active_player_index: next_active_player_index(betting_round)
     }
 
@@ -348,6 +480,18 @@ defmodule PokerServer.BettingRound do
     rem(betting_round.active_player_index + 1, player_count)
   end
 
+  @doc """
+  Check if the betting round is complete.
+
+  Betting is complete when:
+  - Only one player remains (others folded), OR  
+  - No players have pending actions (all have acted or are all-in)
+
+  ## Returns
+  - true if betting round is finished
+  - false if more actions are needed
+  """
+  @spec betting_complete?(t()) :: boolean()
   def betting_complete?(betting_round) do
     # Check if only one player remains (others folded)
     active_players = length(betting_round.players) - MapSet.size(betting_round.folded_players)
@@ -360,6 +504,23 @@ defmodule PokerServer.BettingRound do
     end
   end
 
+  @doc """
+  Calculate side pots for all-in scenarios.
+
+  When players go all-in with different amounts, multiple side pots are created.
+  Each pot includes only players who contributed enough to that pot level.
+
+  ## Returns
+  List of pot maps with:
+  - :amount - Chips in this side pot
+  - :eligible_players - MapSet of player IDs who can win this pot
+
+  ## Examples
+  If Player A bets 50, Player B goes all-in for 30, Player C calls 50:
+  - Side pot 1: 90 chips (30×3), eligible: A, B, C  
+  - Side pot 2: 40 chips (20×2), eligible: A, C only
+  """
+  @spec side_pots(t()) :: [%{amount: number(), eligible_players: MapSet.t()}]
   def side_pots(betting_round) do
     # Get all player bets sorted by amount
     player_bet_amounts =

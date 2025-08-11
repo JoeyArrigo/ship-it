@@ -1,4 +1,17 @@
 defmodule PokerServer.GameState do
+  @moduledoc """
+  Manages the overall state of a poker game across multiple hands.
+  
+  Key responsibilities:
+  - Track players, positions, and chip counts
+  - Handle deck management and card dealing
+  - Manage game phases (waiting, dealing, showdown)  
+  - Tournament progression and player elimination
+  - Button position advancement
+
+  State flow: new/1 -> start_hand/1 -> deal_flop/1 -> deal_turn/1 -> deal_river/1 -> showdown/1
+  """
+
   alias PokerServer.{Deck, Player, Card, Types}
 
   @type t :: %__MODULE__{
@@ -25,6 +38,18 @@ defmodule PokerServer.GameState do
     :big_blind
   ]
 
+  @doc """
+  Create a new game state with the given players.
+
+  Initializes a tournament with players in random seating order,
+  fresh deck, and waiting phase.
+
+  ## Parameters
+  - players: List of Player structs
+
+  ## Returns
+  GameState struct ready for tournament play
+  """
   def new(players) do
     # Assign positions to players
     players_with_positions =
@@ -137,6 +162,25 @@ defmodule PokerServer.GameState do
     }
   end
 
+  @doc """
+  Start a new hand of poker.
+
+  Advances button position, deals 2 hole cards to each player,
+  posts blinds, and transitions to preflop phase.
+
+  ## Parameters
+  - game_state: Current game state
+
+  ## Returns
+  Updated game state ready for preflop betting
+
+  ## Side effects
+  - Advances button position
+  - Deals fresh deck and hole cards
+  - Posts small and big blinds
+  - Updates pot with blind amounts
+  """
+  @spec start_hand(t()) :: t()
   def start_hand(game_state) do
     # Create fresh shuffled deck for new hand (as per poker rules)
     fresh_deck = Deck.create() |> Deck.shuffle()
@@ -225,6 +269,27 @@ defmodule PokerServer.GameState do
     }
   end
 
+  @doc """
+  Evaluate all player hands and determine winners.
+
+  Compares all remaining players' hole cards against community cards
+  using short deck poker hand rankings. Awards pot to winner(s) and
+  transitions to hand complete phase.
+
+  ## Parameters  
+  - game_state: Current game state with community cards dealt
+
+  ## Returns
+  Updated game state with:
+  - Winners determined and chips awarded
+  - Phase set to :hand_complete
+  - Pot distributed to winning player(s)
+
+  ## Notes
+  Uses short deck hand evaluation where flush beats full house.
+  Handles ties by splitting pot equally among winners.
+  """
+  @spec showdown(t()) :: t()
   def showdown(game_state) do
     alias PokerServer.HandEvaluator
 
