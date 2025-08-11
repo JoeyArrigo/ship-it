@@ -123,6 +123,54 @@ defmodule PokerServer.BettingRound do
   end
 
   @doc """
+  Create a new betting round from existing game state without posting blinds.
+  
+  Used for post-preflop betting rounds where blinds have already been posted
+  and we need to continue with the existing pot and player chip counts.
+
+  ## Parameters
+  - players: List of Player structs with current chip counts
+  - existing_pot: Current pot amount from previous betting round
+  - current_bet: Current bet to match (typically 0 for post-preflop)
+  - round_type: :flop, :turn, or :river
+
+  ## Examples
+      iex> players = [%Player{id: "p1", position: 0, chips: 90}, %Player{id: "p2", position: 1, chips: 80}]
+      iex> BettingRound.new_from_existing(players, 30, 0, :flop)
+      %BettingRound{pot: 30, current_bet: 0, ...}
+  """
+  @spec new_from_existing([Player.t()], number(), number(), Types.betting_round_type()) :: t()
+  def new_from_existing(players, existing_pot, current_bet, round_type) do
+    # Validate betting round type
+    Types.validate_betting_round_type!(round_type)
+
+    # Initialize player bets map - all start at 0 for post-preflop rounds
+    player_bets = 
+      players
+      |> Enum.map(&{&1.id, 0})
+      |> Enum.into(%{})
+
+    # All active players need to act in post-preflop rounds
+    active_player_ids = Enum.map(players, & &1.id) |> MapSet.new()
+
+    %__MODULE__{
+      players: players,
+      small_blind: 0,  # Not applicable for post-preflop rounds
+      big_blind: 0,    # Not applicable for post-preflop rounds
+      round_type: round_type,
+      pot: existing_pot,
+      current_bet: current_bet,
+      player_bets: player_bets,
+      active_player_index: get_initial_active_player_index(players, round_type),
+      folded_players: MapSet.new(),
+      all_in_players: MapSet.new(),
+      last_raise_size: nil,
+      players_who_can_act: active_player_ids,
+      last_raiser: nil
+    }
+  end
+
+  @doc """
   Get the list of valid actions for the current active player.
 
   Returns a list of atoms representing allowed actions: :fold, :call, :check, :raise, :all_in.
