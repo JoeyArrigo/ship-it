@@ -45,12 +45,11 @@ defmodule PokerServer.GameState do
   fresh deck, and waiting phase.
 
   ## Parameters
-  - players: List of {player_id, starting_chips} tuples
+  - players: List of Player structs
 
   ## Returns
   GameState struct ready for tournament play
   """
-  @spec new([{String.t(), non_neg_integer()}]) :: t()
   def new(players) do
     # Assign positions to players
     players_with_positions =

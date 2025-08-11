@@ -73,67 +73,6 @@ defmodule PokerServer.GameServer do
     {:reply, state, state}
   end
 
-  # Private helper function for processing betting phase actions
-  defp process_betting_phase_action(
-         state,
-         player_id,
-         action,
-         next_game_state_fn,
-         next_betting_round_type,
-         next_phase
-       ) do
-    # Validate player exists in the game
-    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
-         :ok <- InputValidator.validate_game_state(state.game_state) do
-      case BettingRound.process_action(state.betting_round, player_id, action) do
-        {:ok, updated_betting_round} ->
-          # Sync updated player chips from betting round to game state
-          synced_game_state = %{state.game_state | players: updated_betting_round.players}
-          new_state = %{state | betting_round: updated_betting_round, game_state: synced_game_state}
-
-          # Check if betting round is complete
-          if BettingRound.betting_complete?(updated_betting_round) do
-            # Move to next phase using synced player data with accumulated pot
-            game_state_with_pot = %{synced_game_state | pot: updated_betting_round.pot}
-            updated_game_state = next_game_state_fn.(game_state_with_pot)
-
-            # Create betting round for next phase (or nil for hand_complete)
-            next_betting_round =
-              if next_betting_round_type do
-                # Use new constructor that preserves existing pot without reposting blinds
-                BettingRound.new_from_existing(
-                  updated_game_state.players,
-                  updated_game_state.pot,
-                  0,
-                  next_betting_round_type
-                )
-              else
-                nil
-              end
-
-            final_state = %{
-              new_state
-              | game_state: updated_game_state,
-                betting_round: next_betting_round,
-                phase: next_phase
-            }
-
-            broadcast_state_change(state.game_id, final_state)
-            {:reply, {:ok, :betting_complete, final_state}, final_state}
-          else
-            broadcast_state_change(state.game_id, new_state)
-            {:reply, {:ok, :action_processed, new_state}, new_state}
-          end
-
-        {:error, reason} ->
-          {:reply, {:error, reason}, state}
-      end
-    else
-      {:error, validation_error} ->
-        {:reply, {:error, {:invalid_input, validation_error}}, state}
-    end
-  end
-
   @impl true
   def handle_call(:start_hand, _from, %{game_state: game_state} = state) do
     # Set blind amounts in game state before starting hand
@@ -242,6 +181,69 @@ defmodule PokerServer.GameServer do
   end
 
   # Private Functions
+
+  # Private helper function for processing betting phase actions
+  # Dialyzer incorrectly warns about unreachable error pattern - suppressing for this function
+  @dialyzer {:nowarn_function, process_betting_phase_action: 6}
+  defp process_betting_phase_action(
+         state,
+         player_id,
+         action,
+         next_game_state_fn,
+         next_betting_round_type,
+         next_phase
+       ) do
+    # Validate player exists in the game
+    with :ok <- InputValidator.validate_player_exists(player_id, state.game_state.players),
+         :ok <- InputValidator.validate_game_state(state.game_state) do
+      case BettingRound.process_action(state.betting_round, player_id, action) do
+        {:ok, updated_betting_round} ->
+          # Sync updated player chips from betting round to game state
+          synced_game_state = %{state.game_state | players: updated_betting_round.players}
+          new_state = %{state | betting_round: updated_betting_round, game_state: synced_game_state}
+
+          # Check if betting round is complete
+          if BettingRound.betting_complete?(updated_betting_round) do
+            # Move to next phase using synced player data with accumulated pot
+            game_state_with_pot = %{synced_game_state | pot: updated_betting_round.pot}
+            updated_game_state = next_game_state_fn.(game_state_with_pot)
+
+            # Create betting round for next phase (or nil for hand_complete)
+            next_betting_round =
+              if next_betting_round_type do
+                # Use new constructor that preserves existing pot without reposting blinds
+                BettingRound.new_from_existing(
+                  updated_game_state.players,
+                  updated_game_state.pot,
+                  0,
+                  next_betting_round_type
+                )
+              else
+                nil
+              end
+
+            final_state = %{
+              new_state
+              | game_state: updated_game_state,
+                betting_round: next_betting_round,
+                phase: next_phase
+            }
+
+            broadcast_state_change(state.game_id, final_state)
+            {:reply, {:ok, :betting_complete, final_state}, final_state}
+          else
+            broadcast_state_change(state.game_id, new_state)
+            {:reply, {:ok, :action_processed, new_state}, new_state}
+          end
+
+        {:error, reason} ->
+          {:reply, {:error, reason}, state}
+      end
+    else
+      {:error, validation_error} ->
+        {:reply, {:error, {:invalid_input, validation_error}}, state}
+    end
+  end
 
   # TODO: Architectural smell - GameServer should not depend on UIAdapter (presentation layer)
   # This creates proper per-player filtering to prevent hole card leakage but violates separation of concerns

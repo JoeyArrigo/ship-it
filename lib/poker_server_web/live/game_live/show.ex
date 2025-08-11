@@ -102,7 +102,7 @@ defmodule PokerServerWeb.GameLive.Show do
     case GameManager.lookup_game(socket.assigns.game_id) do
       {:ok, pid} ->
         case PokerServer.GameServer.start_hand(pid) do
-          {:ok, _result, _state} ->
+          {:ok, _state} ->
             {:noreply, socket}
 
           {:error, reason} ->

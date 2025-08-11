@@ -14,14 +14,14 @@ defmodule PokerServer.BettingRound do
   alias PokerServer.{Player, Types}
 
   @type t :: %__MODULE__{
-          players: [Player.t()],
+          players: list(),
           small_blind: number(),
           big_blind: number(),
           round_type: Types.betting_round_type(),
           pot: number(),
           current_bet: number(),
           player_bets: map(),
-          active_player_index: 0 | 1 | 2,
+          active_player_index: non_neg_integer(),
           folded_players: MapSet.t(),
           all_in_players: MapSet.t(),
           last_raise_size: number() | nil,
@@ -62,7 +62,6 @@ defmodule PokerServer.BettingRound do
       iex> BettingRound.new(players, 5, 10, :preflop)
       %BettingRound{small_blind: 5, big_blind: 10, ...}
   """
-  @spec new([Player.t()], number(), number(), Types.betting_round_type()) :: t()
   def new(players, small_blind, big_blind, round_type) do
     # Validate betting round type
     Types.validate_betting_round_type!(round_type)
@@ -139,7 +138,6 @@ defmodule PokerServer.BettingRound do
       iex> BettingRound.new_from_existing(players, 30, 0, :flop)
       %BettingRound{pot: 30, current_bet: 0, ...}
   """
-  @spec new_from_existing([Player.t()], number(), number(), Types.betting_round_type()) :: t()
   def new_from_existing(players, existing_pot, current_bet, round_type) do
     # Validate betting round type
     Types.validate_betting_round_type!(round_type)
@@ -179,8 +177,13 @@ defmodule PokerServer.BettingRound do
   @spec valid_actions(t()) :: [atom()]
   def valid_actions(betting_round) do
     active_player = get_active_player(betting_round)
-    player_current_bet = betting_round.player_bets[active_player.id] || 0
-    amount_to_call = betting_round.current_bet - player_current_bet
+    
+    # Return empty actions if no active player
+    if is_nil(active_player) do
+      []
+    else
+      player_current_bet = betting_round.player_bets[active_player.id] || 0
+      amount_to_call = betting_round.current_bet - player_current_bet
 
     # Can always fold (unless already all-in)
     actions = [:fold]
@@ -225,15 +228,16 @@ defmodule PokerServer.BettingRound do
         end
       end
 
-    # Players can always go all-in if they have chips (unless already all-in)
-    actions =
-      if active_player.chips > 0 && active_player.id not in betting_round.all_in_players do
-        if :all_in not in actions, do: actions ++ [:all_in], else: actions
-      else
-        actions
-      end
+      # Players can always go all-in if they have chips (unless already all-in)
+      actions =
+        if active_player.chips > 0 && active_player.id not in betting_round.all_in_players do
+          if :all_in not in actions, do: actions ++ [:all_in], else: actions
+        else
+          actions
+        end
 
-    actions
+      actions
+    end
   end
 
   defp get_initial_active_player_index(players, round_type) do
@@ -259,12 +263,16 @@ defmodule PokerServer.BettingRound do
   Returns the Player struct for the active player based on active_player_index.
   Handles index bounds checking safely.
   """
-  @spec get_active_player(t()) :: Player.t()
+  @spec get_active_player(t()) :: Player.t() | nil
   def get_active_player(betting_round) do
-    # Handle case where active_player_index might be out of bounds
+    # Handle case where active_player_index might be out of bounds or no players
     player_count = length(betting_round.players)
-    safe_index = rem(betting_round.active_player_index, player_count)
-    Enum.at(betting_round.players, safe_index)
+    if player_count == 0 do
+      nil
+    else
+      safe_index = rem(betting_round.active_player_index, player_count)
+      Enum.at(betting_round.players, safe_index)
+    end
   end
 
   @doc """
@@ -301,18 +309,23 @@ defmodule PokerServer.BettingRound do
     # Validate it's the correct player's turn
     active_player = get_active_player(betting_round)
 
-    if active_player.id != player_id do
-      {:error, Types.error_not_your_turn()}
-    else
-      # Validate the action is allowed
-      valid_actions = valid_actions(betting_round)
-      action_type = elem(action, 0)
+    cond do
+      is_nil(active_player) ->
+        {:error, "no_active_player"}
+      
+      active_player.id != player_id ->
+        {:error, Types.error_not_your_turn()}
+      
+      true ->
+        # Validate the action is allowed
+        valid_actions = valid_actions(betting_round)
+        action_type = elem(action, 0)
 
-      if action_type in valid_actions do
-        execute_action(betting_round, player_id, action)
-      else
-        {:error, Types.error_invalid_action()}
-      end
+        if action_type in valid_actions do
+          execute_action(betting_round, player_id, action)
+        else
+          {:error, Types.error_invalid_action()}
+        end
     end
   end
 
