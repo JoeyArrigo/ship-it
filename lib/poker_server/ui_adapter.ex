@@ -137,9 +137,6 @@ defmodule PokerServer.UIAdapter do
       %{phase: :river} ->
         false
 
-      %{phase: :hand_complete} ->
-        false
-
       # Fallback for any unknown phases
       _ ->
         false
