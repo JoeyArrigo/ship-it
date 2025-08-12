@@ -274,6 +274,55 @@ defmodule PokerServerWeb.GameLive.Show do
             </div>
           </div>
 
+          <!-- Showdown Results -->
+          <div :if={@player_view.showdown_results} class="mb-6">
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h3 class="text-lg font-semibold mb-3 text-center">Showdown Results</h3>
+              
+              <!-- Winner Announcement -->
+              <%= for winner_id <- @player_view.showdown_results.winners do %>
+                <div class="text-center mb-4">
+                  <div class="text-xl font-bold text-green-600">
+                    <%= if winner_id == @current_player, do: "You Win!", else: "#{winner_id} Wins!" %>
+                  </div>
+                  <div class="text-sm text-gray-600">
+                    <%= @player_view.showdown_results.hand_descriptions[winner_id] %>
+                  </div>
+                </div>
+              <% end %>
+              
+              <!-- All Player Hands -->
+              <div class="space-y-3">
+                <%= for player <- @player_view.players do %>
+                  <%= if length(player.hole_cards) > 0 do %>
+                    <div class={"flex justify-between items-center p-3 rounded-lg " <>
+                      if player.id in @player_view.showdown_results.winners do
+                        "bg-green-100 border border-green-300"
+                      else
+                        "bg-gray-100"
+                      end}>
+                      <div class="flex items-center gap-3">
+                        <span class="font-medium">
+                          <%= if player.is_current_player, do: "You", else: player.id %>
+                        </span>
+                        <div class="flex gap-1">
+                          <%= for card <- player.hole_cards do %>
+                            <span class={"px-2 py-1 rounded border text-#{card.color} bg-white text-sm"}>
+                              <%= card.display %>
+                            </span>
+                          <% end %>
+                        </div>
+                      </div>
+                      <div class="text-sm text-gray-600">
+                        <%= @player_view.showdown_results.hand_descriptions[player.id] %>
+                      </div>
+                    </div>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+
           <div :if={@player_view.can_start_hand}>
             <p class="mb-4">Hand complete! Ready to start next hand?</p>
             <.button 

@@ -6,7 +6,7 @@ defmodule PokerServer.UIAdapter do
   Handles data filtering for anti-cheat and formats data for display.
   """
 
-  alias PokerServer.{GameManager, BettingRound}
+  alias PokerServer.{GameManager, BettingRound, HandEvaluator}
 
   @doc """
   Get filtered game state for a specific player.
@@ -212,7 +212,10 @@ defmodule PokerServer.UIAdapter do
 
       # UI helpers
       can_start_hand: can_start_hand?(game_state),
-      is_waiting_for_players: game_state.phase == :waiting_for_players
+      is_waiting_for_players: game_state.phase == :waiting_for_players,
+      
+      # Showdown information
+      showdown_results: get_showdown_results(game_state, filtered_players)
     }
   end
 
@@ -274,6 +277,61 @@ defmodule PokerServer.UIAdapter do
       betting_round -> 
         committed_this_round = betting_round.player_bets[player.id] || 0
         player.chips - committed_this_round
+    end
+  end
+
+  # Get showdown results for display during hand_complete phase.
+  defp get_showdown_results(game_state, filtered_players) do
+    if game_state.phase == :hand_complete do
+      # Get non-folded players with their original hole cards
+      non_folded_players = 
+        game_state.players
+        |> Enum.reject(fn player ->
+          # Player is folded if they have no hole cards visible in filtered view
+          filtered_player = Enum.find(filtered_players, &(&1.id == player.id))
+          filtered_player && Enum.empty?(filtered_player.hole_cards)
+        end)
+
+      # Evaluate hands for all non-folded players
+      player_hands = 
+        non_folded_players
+        |> Enum.map(fn player ->
+          hand_result = HandEvaluator.evaluate_hand(player.hole_cards, game_state.community_cards)
+          {player.id, hand_result}
+        end)
+
+      # Determine winners
+      winners = HandEvaluator.determine_winners(player_hands)
+
+      # Create hand descriptions
+      hand_descriptions = 
+        player_hands
+        |> Enum.into(%{}, fn {player_id, {hand_type, _cards}} ->
+          {player_id, format_hand_description(hand_type)}
+        end)
+
+      %{
+        winners: winners,
+        hand_descriptions: hand_descriptions,
+        player_hands: Enum.into(player_hands, %{})
+      }
+    else
+      nil
+    end
+  end
+
+  # Format hand type into readable description
+  defp format_hand_description(hand_type) do
+    case hand_type do
+      :straight_flush -> "Straight Flush"
+      :four_of_a_kind -> "Four of a Kind"
+      :flush -> "Flush"
+      :full_house -> "Full House"
+      :straight -> "Straight"
+      :three_of_a_kind -> "Three of a Kind"
+      :two_pair -> "Two Pair"
+      :one_pair -> "One Pair"
+      :high_card -> "High Card"
     end
   end
 end
