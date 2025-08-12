@@ -176,7 +176,7 @@ defmodule PokerServer.UIAdapter do
         
         %{
           id: player.id,
-          chips: player.chips,
+          chips: get_effective_chips(game_server_state, player),
           position: player.position,
           hole_cards: if(can_see_cards, do: format_cards(player.hole_cards), else: []),
           is_current_player: player.id == player_id
@@ -203,7 +203,7 @@ defmodule PokerServer.UIAdapter do
 
       # Cards and pot
       community_cards: format_cards(game_state.community_cards),
-      pot: game_state.pot,
+      pot: get_current_pot(game_server_state),
 
       # Betting
       betting_info: betting_info,
@@ -255,6 +255,25 @@ defmodule PokerServer.UIAdapter do
     case game_server_state.betting_round do
       nil -> MapSet.new()
       betting_round -> betting_round.folded_players
+    end
+  end
+
+  # Get the current pot amount, preferring betting round pot when active.
+  defp get_current_pot(game_server_state) do
+    case game_server_state.betting_round do
+      nil -> game_server_state.game_state.pot
+      betting_round -> betting_round.pot
+    end
+  end
+
+  # Get effective chips for a player (current chips minus bets committed this round).
+  defp get_effective_chips(game_server_state, player) do
+    case game_server_state.betting_round do
+      nil -> 
+        player.chips
+      betting_round -> 
+        committed_this_round = betting_round.player_bets[player.id] || 0
+        player.chips - committed_this_round
     end
   end
 end
