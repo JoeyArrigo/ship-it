@@ -200,7 +200,12 @@ defmodule PokerServer.GameServer do
         {:ok, updated_betting_round} ->
           # Sync updated player chips from betting round to game state
           synced_game_state = %{state.game_state | players: updated_betting_round.players}
-          new_state = %{state | betting_round: updated_betting_round, game_state: synced_game_state}
+
+          new_state = %{
+            state
+            | betting_round: updated_betting_round,
+              game_state: synced_game_state
+          }
 
           # Check if betting round is complete
           if BettingRound.betting_complete?(updated_betting_round) do

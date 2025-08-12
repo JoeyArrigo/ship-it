@@ -1,7 +1,7 @@
 defmodule PokerServer.BettingRound do
   @moduledoc """
   Handles all betting logic for a single round of poker.
-  
+
   Key responsibilities:
   - Track player bets and validate actions  
   - Calculate side pots for all-in scenarios
@@ -123,7 +123,7 @@ defmodule PokerServer.BettingRound do
 
   @doc """
   Create a new betting round from existing game state without posting blinds.
-  
+
   Used for post-preflop betting rounds where blinds have already been posted
   and we need to continue with the existing pot and player chip counts.
 
@@ -143,7 +143,7 @@ defmodule PokerServer.BettingRound do
     Types.validate_betting_round_type!(round_type)
 
     # Initialize player bets map - all start at 0 for post-preflop rounds
-    player_bets = 
+    player_bets =
       players
       |> Enum.map(&{&1.id, 0})
       |> Enum.into(%{})
@@ -153,8 +153,10 @@ defmodule PokerServer.BettingRound do
 
     %__MODULE__{
       players: players,
-      small_blind: 0,  # Not applicable for post-preflop rounds
-      big_blind: 0,    # Not applicable for post-preflop rounds
+      # Not applicable for post-preflop rounds
+      small_blind: 0,
+      # Not applicable for post-preflop rounds
+      big_blind: 0,
       round_type: round_type,
       pot: existing_pot,
       current_bet: current_bet,
@@ -177,7 +179,7 @@ defmodule PokerServer.BettingRound do
   @spec valid_actions(t()) :: [atom()]
   def valid_actions(betting_round) do
     active_player = get_active_player(betting_round)
-    
+
     # Return empty actions if no active player
     if is_nil(active_player) do
       []
@@ -185,48 +187,48 @@ defmodule PokerServer.BettingRound do
       player_current_bet = betting_round.player_bets[active_player.id] || 0
       amount_to_call = betting_round.current_bet - player_current_bet
 
-    # Can always fold (unless already all-in)
-    actions = [:fold]
+      # Can always fold (unless already all-in)
+      actions = [:fold]
 
-    actions =
-      if amount_to_call > 0 do
-        # There's a bet to call
-        if active_player.chips >= amount_to_call do
-          actions ++ [:call]
+      actions =
+        if amount_to_call > 0 do
+          # There's a bet to call
+          if active_player.chips >= amount_to_call do
+            actions ++ [:call]
+          else
+            # Can't afford full call, can only go all-in
+            actions ++ [:all_in]
+          end
         else
-          # Can't afford full call, can only go all-in
-          actions ++ [:all_in]
+          # No bet to call, can check
+          actions ++ [:check]
         end
-      else
-        # No bet to call, can check
-        actions ++ [:check]
-      end
 
-    # Can raise if has enough chips for minimum raise AND there are opponents who can respond
-    min_raise_amount = minimum_raise(betting_round)
-    total_to_raise = min_raise_amount - player_current_bet
-    
-    # Check if all opponents are either folded or all-in (cannot raise if so)
-    opponents_can_respond = 
-      betting_round.players
-      |> Enum.any?(fn player ->
-        player.id != active_player.id &&
-        player.id not in betting_round.folded_players &&
-        player.id not in betting_round.all_in_players
-      end)
+      # Can raise if has enough chips for minimum raise AND there are opponents who can respond
+      min_raise_amount = minimum_raise(betting_round)
+      total_to_raise = min_raise_amount - player_current_bet
 
-    actions =
-      if active_player.chips >= total_to_raise && opponents_can_respond do
-        actions ++ [:raise]
-      else
-        # Can't afford full raise but might be able to go all-in
-        if active_player.chips > amount_to_call do
-          # Has more than call amount, can go all-in as a raise
-          if :all_in not in actions, do: actions ++ [:all_in], else: actions
+      # Check if all opponents are either folded or all-in (cannot raise if so)
+      opponents_can_respond =
+        betting_round.players
+        |> Enum.any?(fn player ->
+          player.id != active_player.id &&
+            player.id not in betting_round.folded_players &&
+            player.id not in betting_round.all_in_players
+        end)
+
+      actions =
+        if active_player.chips >= total_to_raise && opponents_can_respond do
+          actions ++ [:raise]
         else
-          actions
+          # Can't afford full raise but might be able to go all-in
+          if active_player.chips > amount_to_call do
+            # Has more than call amount, can go all-in as a raise
+            if :all_in not in actions, do: actions ++ [:all_in], else: actions
+          else
+            actions
+          end
         end
-      end
 
       # Players can always go all-in if they have chips (unless already all-in)
       actions =
@@ -267,6 +269,7 @@ defmodule PokerServer.BettingRound do
   def get_active_player(betting_round) do
     # Handle case where active_player_index might be out of bounds or no players
     player_count = length(betting_round.players)
+
     if player_count == 0 do
       nil
     else
@@ -312,10 +315,10 @@ defmodule PokerServer.BettingRound do
     cond do
       is_nil(active_player) ->
         {:error, "no_active_player"}
-      
+
       active_player.id != player_id ->
         {:error, Types.error_not_your_turn()}
-      
+
       true ->
         # Validate the action is allowed
         valid_actions = valid_actions(betting_round)
@@ -330,7 +333,6 @@ defmodule PokerServer.BettingRound do
   end
 
   defp execute_action(betting_round, player_id, {:fold}) do
-
     updated_round = %{
       betting_round
       | folded_players: MapSet.put(betting_round.folded_players, player_id),

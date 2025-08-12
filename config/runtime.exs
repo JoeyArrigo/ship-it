@@ -81,5 +81,6 @@ end
 
 # Configure the port for all environments
 if System.get_env("PORT") do
-  config :poker_server, PokerServerWeb.Endpoint, http: [port: String.to_integer(System.get_env("PORT"))]
+  config :poker_server, PokerServerWeb.Endpoint,
+    http: [port: String.to_integer(System.get_env("PORT"))]
 end

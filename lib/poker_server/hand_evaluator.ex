@@ -1,7 +1,7 @@
 defmodule PokerServer.HandEvaluator do
   @moduledoc """
   Evaluates poker hands using short deck (6+ hold'em) rules.
-  
+
   Key differences from standard poker:
   - Flush beats full house (fewer flush combinations in 36-card deck)  
   - A-6-7-8-9 is the lowest straight (no A-2-3-4-5 wheel)
@@ -350,7 +350,8 @@ defmodule PokerServer.HandEvaluator do
   Uses combinatorics to check all possible 5-card combinations when 7+ cards available.
   Returns the highest-ranking hand according to short deck poker rules.
   """
-  @spec evaluate_hand([PokerServer.Card.t()], [PokerServer.Card.t()]) :: {atom(), [PokerServer.Card.t()]}
+  @spec evaluate_hand([PokerServer.Card.t()], [PokerServer.Card.t()]) ::
+          {atom(), [PokerServer.Card.t()]}
   def evaluate_hand(hole_cards, community_cards) do
     all_cards = hole_cards ++ community_cards
 
