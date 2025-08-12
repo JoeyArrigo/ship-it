@@ -147,20 +147,53 @@ defmodule PokerServerWeb.GameLive.Show do
     ~H"""
     <div class="max-w-6xl mx-auto">
       <.header>
-        Poker Game
+        <%= if @player_view && length(@player_view.players) == 2 do %>
+          Heads-Up Poker
+        <% else %>
+          Poker Game
+        <% end %>
         <:subtitle>
-          Game ID: <%= @game_id %> | Player: <%= @current_player %>
+          <span class="hidden sm:inline">Game ID: <%= @game_id %> | </span>Player: <%= @current_player %>
         </:subtitle>
         <:actions>
-          <.button phx-click="back_to_lobby" class="bg-gray-600 hover:bg-gray-700">
-            Back to Lobby
+          <.button phx-click="back_to_lobby" class="bg-gray-600 hover:bg-gray-700 text-sm px-3 py-2">
+            <span class="hidden sm:inline">Back to </span>Lobby
           </.button>
         </:actions>
       </.header>
 
       <!-- Game Display using UIAdapter -->
-      <div :if={@player_view} class="mt-8 bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-semibold mb-4">Game Status</h2>
+      <div :if={@player_view} class="mt-8 bg-white rounded-lg shadow-md p-4 md:p-6">
+        
+        <!-- 2-Player Opponent Display -->
+        <%= if length(@player_view.players) == 2 do %>
+          <% opponent = Enum.find(@player_view.players, &(not &1.is_current_player)) %>
+          <div :if={opponent} class="mb-6 p-4 rounded-lg border-2 border-gray-200 bg-gray-50">
+            <div class="flex justify-between items-center">
+              <div class="flex items-center gap-3">
+                <span class="text-lg font-semibold text-gray-900"><%= opponent.id %></span>
+                <span class="text-sm px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                  <%= if @player_view.can_act do %>
+                    Waiting
+                  <% else %>
+                    <%= if not @player_view.can_start_hand and not @player_view.is_waiting_for_players do %>
+                      Thinking...
+                    <% else %>
+                      <%= if @player_view.can_start_hand, do: "Ready", else: "Waiting" %>
+                    <% end %>
+                  <% end %>
+                </span>
+              </div>
+              <div class="text-lg font-bold text-green-600">
+                $<%= opponent.chips %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <h2 class="text-xl font-semibold mb-4">
+          <%= if length(@player_view.players) == 2, do: "Game Info", else: "Game Status" %>
+        </h2>
         
         <!-- Game info from UIAdapter -->
         <div class="grid grid-cols-2 gap-4 mb-6">
@@ -277,7 +310,14 @@ defmodule PokerServerWeb.GameLive.Show do
           </div>
 
           <div :if={not @player_view.can_act and not @player_view.can_start_hand and not @player_view.is_waiting_for_players}>
-            <p class="text-gray-600">Waiting for other players...</p>
+            <% opponent = if length(@player_view.players) == 2, do: Enum.find(@player_view.players, &(not &1.is_current_player)) %>
+            <p class="text-gray-600">
+              <%= if opponent do %>
+                Waiting for <%= opponent.id %>...
+              <% else %>
+                Waiting for other players...
+              <% end %>
+            </p>
           </div>
         </div>
       </div>
