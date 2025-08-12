@@ -142,6 +142,11 @@ defmodule PokerServerWeb.GameLive.Show do
     end
   end
 
+  # Check if debug info should be shown based on environment variable
+  defp show_debug?() do
+    System.get_env("SHOW_DEBUG_PLAYER_VIEW", "false") == "true"
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -366,8 +371,8 @@ defmodule PokerServerWeb.GameLive.Show do
         </div>
       </div>
 
-      <!-- Debug Info (temporary) -->
-      <div :if={@player_view} class="mt-4 bg-gray-100 rounded-lg p-4">
+      <!-- Debug Info (toggleable via environment variable) -->
+      <div :if={@player_view != nil and show_debug?()} class="mt-4 bg-gray-100 rounded-lg p-4">
         <details>
           <summary class="cursor-pointer font-medium">Debug: Player View</summary>
           <pre class="mt-2 text-xs overflow-auto"><%= inspect(@player_view, pretty: true) %></pre>
