@@ -146,24 +146,8 @@ defmodule PokerServerWeb.GameLive.Show do
   def render(assigns) do
     ~H"""
     <div class="max-w-6xl mx-auto">
-      <.header>
-        <%= if @player_view && length(@player_view.players) == 2 do %>
-          Heads-Up Poker
-        <% else %>
-          Poker Game
-        <% end %>
-        <:subtitle>
-          <span class="hidden sm:inline">Game ID: <%= @game_id %> | </span>Player: <%= @current_player %>
-        </:subtitle>
-        <:actions>
-          <.button phx-click="back_to_lobby" class="bg-gray-600 hover:bg-gray-700 text-sm px-3 py-2">
-            <span class="hidden sm:inline">Back to </span>Lobby
-          </.button>
-        </:actions>
-      </.header>
-
       <!-- Game Display using UIAdapter -->
-      <div :if={@player_view} class="mt-8 bg-white rounded-lg shadow-md p-4 md:p-6">
+      <div :if={@player_view} class="mt-2 bg-white rounded-lg shadow-md p-4 md:p-6">
         
         <!-- 2-Player Opponent Display -->
         <%= if length(@player_view.players) == 2 do %>
@@ -198,10 +182,6 @@ defmodule PokerServerWeb.GameLive.Show do
         <!-- Game info from UIAdapter -->
         <div class="grid grid-cols-2 gap-4 mb-6">
           <div>
-            <span class="text-gray-600">Phase:</span>
-            <span class="font-medium capitalize"><%= @player_view.phase || "waiting" %></span>
-          </div>
-          <div>
             <span class="text-gray-600">Hand Number:</span>
             <span class="font-medium"><%= @player_view.hand_number || 0 %></span>
           </div>
@@ -213,6 +193,7 @@ defmodule PokerServerWeb.GameLive.Show do
             <span class="text-gray-600">Your Chips:</span>
             <span class="font-medium">$<%= @player_view.current_player.chips %></span>
           </div>
+          <div></div>
         </div>
 
         <!-- Community Cards -->
