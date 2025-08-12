@@ -175,25 +175,16 @@ defmodule PokerServerWeb.GameLive.Show do
           </div>
         <% end %>
 
-        <h2 class="text-xl font-semibold mb-4">
-          <%= if length(@player_view.players) == 2, do: "Game Info", else: "Game Status" %>
-        </h2>
+        <!-- Prominent Pot Display -->
+        <div class="text-center mb-6">
+          <div class="text-3xl font-bold text-green-600 mb-1">$<%= @player_view.pot %></div>
+          <div class="text-sm text-gray-600">Pot</div>
+        </div>
         
-        <!-- Game info from UIAdapter -->
-        <div class="grid grid-cols-2 gap-4 mb-6">
-          <div>
-            <span class="text-gray-600">Hand Number:</span>
-            <span class="font-medium"><%= @player_view.hand_number || 0 %></span>
-          </div>
-          <div>
-            <span class="text-gray-600">Pot:</span>
-            <span class="font-medium">$<%= @player_view.pot %></span>
-          </div>
-          <div>
-            <span class="text-gray-600">Your Chips:</span>
-            <span class="font-medium">$<%= @player_view.current_player.chips %></span>
-          </div>
-          <div></div>
+        <!-- Simplified Game info -->
+        <div class="flex justify-between items-center mb-6 text-sm text-gray-600">
+          <div>Hand #<%= @player_view.hand_number || 0 %></div>
+          <div>Your Chips: <span class="font-semibold text-gray-900">$<%= @player_view.current_player.chips %></span></div>
         </div>
 
         <!-- Community Cards -->
@@ -226,58 +217,60 @@ defmodule PokerServerWeb.GameLive.Show do
           <div :if={@player_view.can_act}>
             <p class="mb-4">Your turn to act</p>
             
-            <!-- Main action buttons -->
-            <div class="flex justify-center gap-3 flex-wrap mb-4">
+            <!-- Mobile-optimized action buttons -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
               <.button 
                 :if={:fold in @player_view.valid_actions}
                 phx-click="player_action" 
                 phx-value-action="fold" 
-                class="bg-red-600 hover:bg-red-700">
+                class="bg-red-600 hover:bg-red-700 text-lg py-3">
                 Fold
               </.button>
               <.button 
                 :if={:call in @player_view.valid_actions}
                 phx-click="player_action" 
                 phx-value-action="call" 
-                class="bg-blue-600 hover:bg-blue-700">
+                class="bg-blue-600 hover:bg-blue-700 text-lg py-3">
                 Call $<%= @player_view.betting_info.call_amount %>
               </.button>
               <.button 
                 :if={:check in @player_view.valid_actions}
                 phx-click="player_action" 
                 phx-value-action="check" 
-                class="bg-gray-600 hover:bg-gray-700">
+                class="bg-gray-600 hover:bg-gray-700 text-lg py-3 col-span-2">
                 Check
               </.button>
               <.button 
                 :if={:all_in in @player_view.valid_actions}
                 phx-click="player_action" 
                 phx-value-action="all_in" 
-                class="bg-purple-600 hover:bg-purple-700">
+                class="bg-purple-600 hover:bg-purple-700 text-lg py-3 col-span-2">
                 All-In ($<%= @player_view.current_player.chips %>)
               </.button>
             </div>
 
-            <!-- Raise controls -->
-            <div :if={:raise in @player_view.valid_actions} class="flex justify-center items-center gap-2">
-              <form phx-submit="player_action" class="flex items-center gap-2">
-                <input 
-                  name="amount"
-                  type="number" 
-                  placeholder="Amount" 
-                  min={@player_view.betting_info.min_raise}
-                  max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
-                  class="w-20 text-center border border-gray-300 rounded px-2 py-1"
-                  required
-                />
+            <!-- Mobile-optimized raise controls -->
+            <div :if={:raise in @player_view.valid_actions} class="bg-gray-50 rounded-lg p-3">
+              <form phx-submit="player_action" class="space-y-3">
+                <div class="flex items-center gap-3">
+                  <input 
+                    name="amount"
+                    type="number" 
+                    placeholder="Amount" 
+                    min={@player_view.betting_info.min_raise}
+                    max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
+                    class="flex-1 text-center border border-gray-300 rounded-lg px-3 py-2 text-lg"
+                    required
+                  />
+                  <.button type="submit" class="bg-orange-600 hover:bg-orange-700 text-lg py-2 px-6">
+                    Raise
+                  </.button>
+                </div>
+                <div class="text-sm text-gray-600 text-center">
+                  Min: $<%= @player_view.betting_info.min_raise %>
+                </div>
                 <input type="hidden" name="action" value="raise" />
-                <.button type="submit" class="bg-orange-600 hover:bg-orange-700">
-                  Raise
-                </.button>
               </form>
-              <span class="text-sm text-gray-600">
-                Min: $<%= @player_view.betting_info.min_raise %>
-              </span>
             </div>
           </div>
 
