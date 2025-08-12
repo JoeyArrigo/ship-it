@@ -165,28 +165,22 @@ defmodule PokerServer.UIAdapter do
   def build_player_view(game_server_state, player_id, _game_id \\ nil) do
     game_state = game_server_state.game_state
 
-    # Filter players to hide other players' hole cards
+    # Filter players to hide other players' hole cards (except non-folded players during showdown)
+    is_showdown = game_state.phase == :hand_complete
+    folded_players = get_folded_players(game_server_state)
+    
     filtered_players =
       Enum.map(game_state.players, fn player ->
-        if player.id == player_id do
-          # Current player can see their own cards
-          %{
-            id: player.id,
-            chips: player.chips,
-            position: player.position,
-            hole_cards: format_cards(player.hole_cards),
-            is_current_player: true
-          }
-        else
-          # Other players' hole cards are hidden
-          %{
-            id: player.id,
-            chips: player.chips,
-            position: player.position,
-            hole_cards: [],
-            is_current_player: false
-          }
-        end
+        can_see_cards = player.id == player_id or 
+          (is_showdown and player.id not in folded_players)
+        
+        %{
+          id: player.id,
+          chips: player.chips,
+          position: player.position,
+          hole_cards: if(can_see_cards, do: format_cards(player.hole_cards), else: []),
+          is_current_player: player.id == player_id
+        }
       end)
 
     # Get current player data
@@ -253,5 +247,14 @@ defmodule PokerServer.UIAdapter do
   defp can_start_hand?(game_state) do
     (game_state.phase == :waiting_for_players or game_state.phase == :hand_complete) and
       length(game_state.players) >= 2
+  end
+
+  # Get the set of players who folded during the current hand.
+  # Returns empty set if no active betting round.
+  defp get_folded_players(game_server_state) do
+    case game_server_state.betting_round do
+      nil -> MapSet.new()
+      betting_round -> betting_round.folded_players
+    end
   end
 end
