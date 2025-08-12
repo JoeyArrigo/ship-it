@@ -109,6 +109,23 @@
   color: #1f2937;
 }
 
+/* Four-color deck support */
+.text-red {
+  color: #dc2626 !important;
+}
+
+.text-black {
+  color: #1f2937 !important;
+}
+
+.text-blue {
+  color: #2563eb !important;
+}
+
+.text-green {
+  color: #16a34a !important;
+}
+
 .poker-table {
   background: #0f5132;
   border-radius: 50px;

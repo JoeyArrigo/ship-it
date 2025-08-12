@@ -108,7 +108,12 @@ defmodule PokerServer.UIAdapter do
 
     %{
       display: "#{rank_str}#{suit_symbol}",
-      color: if(suit in [:hearts, :diamonds], do: "red", else: "black")
+      color: case suit do
+        :hearts -> "red"
+        :diamonds -> "blue" 
+        :clubs -> "green"
+        :spades -> "black"
+      end
     }
   end
 
