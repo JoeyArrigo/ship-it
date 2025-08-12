@@ -193,7 +193,14 @@ defmodule PokerServerWeb.GameLive.Show do
           <div class="flex gap-2">
             <span 
               :for={card <- @player_view.community_cards} 
-              class={"px-2 py-1 rounded border text-#{card.color} bg-white"}>
+              class={"px-2 py-1 rounded border bg-white " <> 
+                case card.color do
+                  "red-600" -> "text-red-600"
+                  "blue-600" -> "text-blue-600" 
+                  "green-600" -> "text-green-600"
+                  "gray-900" -> "text-gray-900"
+                  _ -> "text-gray-900"
+                end}>
               <%= card.display %>
             </span>
           </div>
@@ -205,7 +212,14 @@ defmodule PokerServerWeb.GameLive.Show do
           <div class="flex gap-2">
             <span 
               :for={card <- @player_view.current_player.hole_cards} 
-              class={"px-2 py-1 rounded border text-#{card.color} bg-white"}>
+              class={"px-2 py-1 rounded border bg-white " <> 
+                case card.color do
+                  "red-600" -> "text-red-600"
+                  "blue-600" -> "text-blue-600" 
+                  "green-600" -> "text-green-600"
+                  "gray-900" -> "text-gray-900"
+                  _ -> "text-gray-900"
+                end}>
               <%= card.display %>
             </span>
           </div>
@@ -307,7 +321,14 @@ defmodule PokerServerWeb.GameLive.Show do
                         </span>
                         <div class="flex gap-1">
                           <%= for card <- player.hole_cards do %>
-                            <span class={"px-2 py-1 rounded border text-#{card.color} bg-white text-sm"}>
+                            <span class={"px-2 py-1 rounded border bg-white text-sm " <> 
+                              case card.color do
+                                "red-600" -> "text-red-600"
+                                "blue-600" -> "text-blue-600" 
+                                "green-600" -> "text-green-600"
+                                "gray-900" -> "text-gray-900"
+                                _ -> "text-gray-900"
+                              end}>
                               <%= card.display %>
                             </span>
                           <% end %>
