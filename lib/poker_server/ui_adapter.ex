@@ -275,14 +275,10 @@ defmodule PokerServer.UIAdapter do
   end
 
   # Get effective chips for a player (current chips minus bets committed this round).
-  defp get_effective_chips(game_server_state, player) do
-    case game_server_state.betting_round do
-      nil -> 
-        player.chips
-      betting_round -> 
-        committed_this_round = betting_round.player_bets[player.id] || 0
-        player.chips - committed_this_round
-    end
+  defp get_effective_chips(_game_server_state, player) do
+    # Player chips in GameState already reflect all committed bets
+    # (blinds are deducted in GameState.start_hand, betting actions sync back via GameServer)
+    player.chips
   end
 
   # Get showdown results for display during hand_complete phase.

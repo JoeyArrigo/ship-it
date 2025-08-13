@@ -90,9 +90,12 @@ defmodule PokerServer.GameServer do
         :preflop
       )
 
+    # Sync player chips from betting round back to game state (blinds are posted in BettingRound.new)
+    synced_game_state = %{updated_game_state | players: betting_round.players, pot: betting_round.pot}
+
     new_state = %{
       state
-      | game_state: updated_game_state,
+      | game_state: synced_game_state,
         betting_round: betting_round,
         phase: :preflop_betting
     }
