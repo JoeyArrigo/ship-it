@@ -120,6 +120,35 @@ defmodule PokerServerWeb.GameLive.Show do
   end
 
   @impl true
+  def handle_event("play_again", _params, socket) do
+    # Get current player name
+    current_player = socket.assigns.current_player
+    
+    if current_player do
+      # Subscribe to personal notifications BEFORE joining queue
+      if connected?(socket) do
+        PubSub.subscribe(PokerServer.PubSub, "player:#{current_player}")
+      end
+      
+      case PokerServer.GameQueue.join_queue(current_player) do
+        :ok ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Joined queue for next game!")
+           |> push_navigate(to: ~p"/")}
+        
+        {:error, :already_in_queue} ->
+          {:noreply, put_flash(socket, :error, "You are already in the queue.")}
+        
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, "Failed to join queue: #{reason}")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "Player name not found")}
+    end
+  end
+
+  @impl true
   def handle_info({:game_updated, filtered_player_view}, socket) do
     # Receive pre-filtered player view from GameServer (no need to re-filter)
     {:noreply, assign(socket, :player_view, filtered_player_view)}
@@ -356,6 +385,19 @@ defmodule PokerServerWeb.GameLive.Show do
               class="bg-green-600 hover:bg-green-700">
               Start New Hand
             </.button>
+          </div>
+
+          <!-- Play Again button when only one player has chips (tournament complete) -->
+          <div :if={@player_view.players && length(Enum.filter(@player_view.players, &(&1.chips > 0))) == 1}>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+              <h3 class="text-xl font-semibold mb-4 text-green-800">Game Complete!</h3>
+              <p class="mb-4 text-green-700">Ready for another game?</p>
+              <.button 
+                phx-click="play_again" 
+                class="bg-green-600 hover:bg-green-700 text-lg py-3 px-6">
+                Play Again
+              </.button>
+            </div>
           </div>
 
           <div :if={not @player_view.can_act and not @player_view.can_start_hand and not @player_view.is_waiting_for_players}>
