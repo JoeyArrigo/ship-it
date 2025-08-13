@@ -140,9 +140,18 @@ defmodule PokerServer.BettingRound do
       iex> BettingRound.new_from_existing(players, 30, 0, :flop)
       %BettingRound{pot: 30, current_bet: 0, ...}
   """
-  def new_from_existing(players, existing_pot, current_bet, round_type) do
+  def new_from_existing(players, existing_pot, current_bet, round_type, button_position \\ nil) do
     # Validate betting round type
     Types.validate_betting_round_type!(round_type)
+
+    # Calculate blind positions from button position for correct action order
+    {small_blind_position, big_blind_position} = 
+      if button_position != nil do
+        determine_blind_positions(players, button_position)
+      else
+        # Fallback to old logic if no button position provided
+        {0, 1}
+      end
 
     # Initialize player bets map - all start at 0 for post-preflop rounds
     player_bets =
@@ -163,7 +172,7 @@ defmodule PokerServer.BettingRound do
       pot: existing_pot,
       current_bet: current_bet,
       player_bets: player_bets,
-      active_player_index: get_initial_active_player_index(players, round_type),
+      active_player_index: get_initial_active_player_index(players, round_type, small_blind_position, big_blind_position),
       folded_players: MapSet.new(),
       all_in_players: MapSet.new(),
       last_raise_size: nil,
@@ -244,7 +253,7 @@ defmodule PokerServer.BettingRound do
     end
   end
 
-  defp get_initial_active_player_index(players, round_type, small_blind_position \\ 0, big_blind_position \\ 1) do
+  defp get_initial_active_player_index(players, round_type, small_blind_position, big_blind_position) do
     player_count = length(players)
 
     if player_count == 2 do

@@ -237,7 +237,8 @@ defmodule PokerServer.GameServer do
                   updated_game_state.players,
                   updated_game_state.pot,
                   0,
-                  next_betting_round_type
+                  next_betting_round_type,
+                  updated_game_state.button_position
                 )
               else
                 nil
