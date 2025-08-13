@@ -46,16 +46,25 @@ defmodule PokerServer.GameState do
 
   ## Parameters
   - players: List of Player structs
+  - opts: Optional keyword list
+    - button_position: Override random button placement (for testing)
 
   ## Returns
   GameState struct ready for tournament play
   """
-  def new(players) do
+  def new(players, opts \\ []) do
     # Assign positions to players
     players_with_positions =
       players
       |> Enum.with_index()
       |> Enum.map(fn {player, index} -> %{player | position: index} end)
+
+    button_position = 
+      case Keyword.get(opts, :button_position) do
+        nil -> Enum.random(0..(length(players) - 1))
+        pos when is_integer(pos) and pos >= 0 and pos < length(players) -> pos
+        _ -> raise ArgumentError, "button_position must be a valid player position"
+      end
 
     %__MODULE__{
       players: players_with_positions,
@@ -63,7 +72,7 @@ defmodule PokerServer.GameState do
       hand_number: 0,
       pot: 0,
       community_cards: [],
-      button_position: Enum.random(0..(length(players) - 1)),
+      button_position: button_position,
       deck: Deck.create()
     }
   end
@@ -189,9 +198,18 @@ defmodule PokerServer.GameState do
     player_count = length(game_state.players)
     new_button_position = rem(game_state.button_position + 1, player_count)
 
-    # Determine blind positions
-    small_blind_position = rem(new_button_position + 1, player_count)
-    big_blind_position = rem(new_button_position + 2, player_count)
+    # Determine blind positions based on player count
+    {small_blind_position, big_blind_position} = 
+      if player_count == 2 do
+        # Heads-up: button is small blind, other player is big blind
+        big_blind_position = rem(new_button_position + 1, player_count)
+        {new_button_position, big_blind_position}
+      else
+        # Multi-player: small blind is button + 1, big blind is button + 2
+        small_blind_position = rem(new_button_position + 1, player_count)
+        big_blind_position = rem(new_button_position + 2, player_count)
+        {small_blind_position, big_blind_position}
+      end
 
     # Deal 2 cards to each player and post blinds
     {updated_players, remaining_deck, pot} =

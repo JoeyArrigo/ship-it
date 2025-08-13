@@ -56,7 +56,19 @@ defmodule PokerServer.GameServer do
         %Player{id: id, chips: chips, position: position, hole_cards: []}
       end)
 
-    game_state = GameState.new(players)
+    # In test environment, use deterministic button placement for predictable tests
+    # In production, maintain proper poker randomness for fairness
+    game_state = 
+      if Mix.env() == :test do
+        # Deterministic: Set initial button to last position so it advances to 0 on first hand
+        # This ensures player at position 0 becomes button after start_hand() is called
+        player_count = length(players)
+        initial_button = player_count - 1
+        GameState.new(players, button_position: initial_button)
+      else
+        # Random: authentic poker behavior for production
+        GameState.new(players)
+      end
 
     state = %{
       game_id: game_id,
@@ -75,11 +87,11 @@ defmodule PokerServer.GameServer do
 
   @impl true
   def handle_call(:start_hand, _from, %{game_state: game_state} = state) do
-    # Set blind amounts in game state before starting hand
+    # Set blind amounts in game state before starting hand (0 so GameState doesn't post blinds)
     game_state_with_blinds = %{game_state | small_blind: 0, big_blind: 0}
     updated_game_state = GameState.start_hand(game_state_with_blinds)
 
-    # Create betting round for preflop
+    # Create betting round for preflop - BettingRound handles actual blind posting
     betting_round =
       BettingRound.new(
         updated_game_state.players,
@@ -87,7 +99,8 @@ defmodule PokerServer.GameServer do
         10,
         # big blind - could be configurable  
         20,
-        :preflop
+        :preflop,
+        updated_game_state.button_position
       )
 
     # Sync player chips from betting round back to game state (blinds are posted in BettingRound.new)

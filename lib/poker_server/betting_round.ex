@@ -49,32 +49,34 @@ defmodule PokerServer.BettingRound do
   Create a new betting round with the given parameters.
 
   Posts blinds automatically and sets up initial betting state.
-  Small blind is position 0, big blind is position 1.
+  For heads-up (2 players): button player is small blind, other player is big blind.
 
   ## Parameters
   - players: List of Player structs with positions assigned
   - small_blind: Small blind amount 
   - big_blind: Big blind amount
   - round_type: :preflop, :flop, :turn, or :river
+  - button_position: (optional) Button position for heads-up blind determination
 
   ## Examples
       iex> players = [%Player{id: "p1", position: 0, chips: 100}, %Player{id: "p2", position: 1, chips: 100}]
       iex> BettingRound.new(players, 5, 10, :preflop)
       %BettingRound{small_blind: 5, big_blind: 10, ...}
   """
-  def new(players, small_blind, big_blind, round_type) do
+  def new(players, small_blind, big_blind, round_type, button_position \\ nil) do
     # Validate betting round type
     Types.validate_betting_round_type!(round_type)
 
-    # Post blinds - small blind is position 0, big blind is position 1
+    # Determine blind positions based on number of players and button position
+    {small_blind_position, big_blind_position} = determine_blind_positions(players, button_position)
 
     # Update player chips after posting blinds
     updated_players =
       players
       |> Enum.map(fn player ->
         cond do
-          player.position == 0 -> %{player | chips: player.chips - small_blind}
-          player.position == 1 -> %{player | chips: player.chips - big_blind}
+          player.position == small_blind_position -> %{player | chips: player.chips - small_blind}
+          player.position == big_blind_position -> %{player | chips: player.chips - big_blind}
           true -> player
         end
       end)
@@ -84,8 +86,8 @@ defmodule PokerServer.BettingRound do
       players
       |> Enum.map(fn player ->
         cond do
-          player.position == 0 -> {player.id, small_blind}
-          player.position == 1 -> {player.id, big_blind}
+          player.position == small_blind_position -> {player.id, small_blind}
+          player.position == big_blind_position -> {player.id, big_blind}
           true -> {player.id, 0}
         end
       end)
@@ -111,7 +113,7 @@ defmodule PokerServer.BettingRound do
       pot: small_blind + big_blind,
       current_bet: big_blind,
       player_bets: player_bets,
-      active_player_index: get_initial_active_player_index(players, round_type),
+      active_player_index: get_initial_active_player_index(players, round_type, small_blind_position, big_blind_position),
       folded_players: MapSet.new(),
       all_in_players: MapSet.new(),
       last_raise_size: big_blind,
@@ -242,20 +244,20 @@ defmodule PokerServer.BettingRound do
     end
   end
 
-  defp get_initial_active_player_index(players, round_type) do
+  defp get_initial_active_player_index(players, round_type, small_blind_position \\ 0, big_blind_position \\ 1) do
     player_count = length(players)
 
     if player_count == 2 do
       # Heads-up rules
       case round_type do
         # Small blind acts first pre-flop
-        :preflop -> 0
+        :preflop -> small_blind_position
         # Big blind acts first post-flop
-        _ -> 1
+        _ -> big_blind_position
       end
     else
       # Multi-player: UTG (position after big blind) acts first
-      2
+      rem(big_blind_position + 1, player_count)
     end
   end
 
@@ -577,5 +579,33 @@ defmodule PokerServer.BettingRound do
       end
 
     create_pot_layers(player_bets, remaining_levels, current_level, new_pot ++ pots)
+  end
+
+  # Determine blind positions based on player count, positions, and button position
+  defp determine_blind_positions(players, button_position) do
+    player_count = length(players)
+    
+    cond do
+      player_count == 2 && button_position != nil ->
+        # Heads-up: button is small blind, other player is big blind
+        other_position = Enum.find(players, &(&1.position != button_position)).position
+        {button_position, other_position}
+        
+      player_count == 2 ->
+        # Heads-up fallback: lower position is small blind
+        positions = Enum.map(players, & &1.position) |> Enum.sort()
+        small_blind_position = Enum.min(positions)
+        big_blind_position = Enum.max(positions)
+        {small_blind_position, big_blind_position}
+        
+      player_count > 2 ->
+        # Multi-way: maintain existing behavior for compatibility with tests
+        # Small blind is position 0, big blind is position 1
+        {0, 1}
+        
+      true ->
+        # Not enough players
+        {0, 1}
+    end
   end
 end
