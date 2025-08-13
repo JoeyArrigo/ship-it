@@ -228,7 +228,8 @@ defmodule PokerServer.GameState do
         phase: :preflop,
         hand_number: game_state.hand_number + 1,
         button_position: new_button_position,
-        pot: pot
+        pot: pot,
+        community_cards: []
     }
   end
 

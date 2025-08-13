@@ -6,7 +6,7 @@ defmodule PokerServer.UIAdapter do
   Handles data filtering for anti-cheat and formats data for display.
   """
 
-  alias PokerServer.{GameManager, BettingRound}
+  alias PokerServer.{GameManager, BettingRound, HandEvaluator}
 
   @doc """
   Get filtered game state for a specific player.
@@ -108,7 +108,12 @@ defmodule PokerServer.UIAdapter do
 
     %{
       display: "#{rank_str}#{suit_symbol}",
-      color: if(suit in [:hearts, :diamonds], do: "red", else: "black")
+      color: case suit do
+        :hearts -> "red-600"
+        :diamonds -> "blue-600" 
+        :clubs -> "green-600"
+        :spades -> "gray-900"
+      end
     }
   end
 
@@ -165,28 +170,22 @@ defmodule PokerServer.UIAdapter do
   def build_player_view(game_server_state, player_id, _game_id \\ nil) do
     game_state = game_server_state.game_state
 
-    # Filter players to hide other players' hole cards
+    # Filter players to hide other players' hole cards (except non-folded players during showdown)
+    is_showdown = game_state.phase == :hand_complete
+    folded_players = get_folded_players(game_server_state)
+    
     filtered_players =
       Enum.map(game_state.players, fn player ->
-        if player.id == player_id do
-          # Current player can see their own cards
-          %{
-            id: player.id,
-            chips: player.chips,
-            position: player.position,
-            hole_cards: format_cards(player.hole_cards),
-            is_current_player: true
-          }
-        else
-          # Other players' hole cards are hidden
-          %{
-            id: player.id,
-            chips: player.chips,
-            position: player.position,
-            hole_cards: [],
-            is_current_player: false
-          }
-        end
+        can_see_cards = player.id == player_id or 
+          (is_showdown and player.id not in folded_players)
+        
+        %{
+          id: player.id,
+          chips: get_effective_chips(game_server_state, player),
+          position: player.position,
+          hole_cards: if(can_see_cards, do: format_cards(player.hole_cards), else: []),
+          is_current_player: player.id == player_id
+        }
       end)
 
     # Get current player data
@@ -209,7 +208,7 @@ defmodule PokerServer.UIAdapter do
 
       # Cards and pot
       community_cards: format_cards(game_state.community_cards),
-      pot: game_state.pot,
+      pot: get_current_pot(game_server_state),
 
       # Betting
       betting_info: betting_info,
@@ -218,7 +217,10 @@ defmodule PokerServer.UIAdapter do
 
       # UI helpers
       can_start_hand: can_start_hand?(game_state),
-      is_waiting_for_players: game_state.phase == :waiting_for_players
+      is_waiting_for_players: game_state.phase == :waiting_for_players,
+      
+      # Showdown information
+      showdown_results: get_showdown_results(game_state, filtered_players)
     }
   end
 
@@ -253,5 +255,88 @@ defmodule PokerServer.UIAdapter do
   defp can_start_hand?(game_state) do
     (game_state.phase == :waiting_for_players or game_state.phase == :hand_complete) and
       length(game_state.players) >= 2
+  end
+
+  # Get the set of players who folded during the current hand.
+  # Returns empty set if no active betting round.
+  defp get_folded_players(game_server_state) do
+    case game_server_state.betting_round do
+      nil -> MapSet.new()
+      betting_round -> betting_round.folded_players
+    end
+  end
+
+  # Get the current pot amount, preferring betting round pot when active.
+  defp get_current_pot(game_server_state) do
+    case game_server_state.betting_round do
+      nil -> game_server_state.game_state.pot
+      betting_round -> betting_round.pot
+    end
+  end
+
+  # Get effective chips for a player (current chips minus bets committed this round).
+  defp get_effective_chips(game_server_state, player) do
+    case game_server_state.betting_round do
+      nil -> 
+        player.chips
+      betting_round -> 
+        committed_this_round = betting_round.player_bets[player.id] || 0
+        player.chips - committed_this_round
+    end
+  end
+
+  # Get showdown results for display during hand_complete phase.
+  defp get_showdown_results(game_state, filtered_players) do
+    if game_state.phase == :hand_complete do
+      # Get non-folded players with their original hole cards
+      non_folded_players = 
+        game_state.players
+        |> Enum.reject(fn player ->
+          # Player is folded if they have no hole cards visible in filtered view
+          filtered_player = Enum.find(filtered_players, &(&1.id == player.id))
+          filtered_player && Enum.empty?(filtered_player.hole_cards)
+        end)
+
+      # Evaluate hands for all non-folded players
+      player_hands = 
+        non_folded_players
+        |> Enum.map(fn player ->
+          hand_result = HandEvaluator.evaluate_hand(player.hole_cards, game_state.community_cards)
+          {player.id, hand_result}
+        end)
+
+      # Determine winners
+      winners = HandEvaluator.determine_winners(player_hands)
+
+      # Create hand descriptions
+      hand_descriptions = 
+        player_hands
+        |> Enum.into(%{}, fn {player_id, {hand_type, _cards}} ->
+          {player_id, format_hand_description(hand_type)}
+        end)
+
+      %{
+        winners: winners,
+        hand_descriptions: hand_descriptions,
+        player_hands: Enum.into(player_hands, %{})
+      }
+    else
+      nil
+    end
+  end
+
+  # Format hand type into readable description
+  defp format_hand_description(hand_type) do
+    case hand_type do
+      :straight_flush -> "Straight Flush"
+      :four_of_a_kind -> "Four of a Kind"
+      :flush -> "Flush"
+      :full_house -> "Full House"
+      :straight -> "Straight"
+      :three_of_a_kind -> "Three of a Kind"
+      :two_pair -> "Two Pair"
+      :one_pair -> "One Pair"
+      :high_card -> "High Card"
+    end
   end
 end

@@ -1,5 +1,6 @@
 defmodule PokerServer.GameServerConcurrencyTest do
   use ExUnit.Case
+  import ExUnit.CaptureLog
   alias PokerServer.{GameManager, GameServer}
 
   # Helper to create a player tuple (format expected by GameServer)
@@ -232,10 +233,14 @@ defmodule PokerServer.GameServerConcurrencyTest do
       {:ok, game_id} = GameManager.create_game(players)
       {:ok, game_pid} = GameManager.lookup_game(game_id)
 
-      # Send unexpected messages to the game server process
-      send(game_pid, :unexpected_message)
-      send(game_pid, {:random, "data"})
-      send(game_pid, 12345)
+      # Send unexpected messages to the game server process (suppress error logs)
+      capture_log(fn ->
+        send(game_pid, :unexpected_message)
+        send(game_pid, {:random, "data"})
+        send(game_pid, 12345)
+        # Give a moment for messages to be processed
+        Process.sleep(10)
+      end)
 
       # Game should still be functional
       assert Process.alive?(game_pid)

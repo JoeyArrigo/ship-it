@@ -109,6 +109,8 @@
   color: #1f2937;
 }
 
+/* Four-color deck uses Tailwind classes: text-red-600, text-blue-600, text-green-600, text-gray-900 */
+
 .poker-table {
   background: #0f5132;
   border-radius: 50px;
