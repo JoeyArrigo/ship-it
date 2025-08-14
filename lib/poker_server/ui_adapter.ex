@@ -170,14 +170,21 @@ defmodule PokerServer.UIAdapter do
   def build_player_view(game_server_state, player_id, _game_id \\ nil) do
     game_state = game_server_state.game_state
 
-    # Filter players to hide other players' hole cards (except non-folded players during showdown)
-    is_showdown = game_state.phase == :hand_complete
+    # Filter players to hide other players' hole cards 
+    # Show cards only during true showdown (not when hand ended due to folds)
+    is_hand_complete = game_state.phase == :hand_complete
     folded_players = get_folded_players(game_server_state)
+    
+    # Determine if this was a true showdown vs fold win
+    # If hand is complete and there are folded players, check if only 1 player remains
+    is_fold_win = is_hand_complete and 
+                  MapSet.size(folded_players) > 0 and
+                  (length(game_state.players) - MapSet.size(folded_players)) <= 1
     
     filtered_players =
       Enum.map(game_state.players, fn player ->
         can_see_cards = player.id == player_id or 
-          (is_showdown and player.id not in folded_players)
+          (is_hand_complete and not is_fold_win and player.id not in folded_players)
         
         %{
           id: player.id,
@@ -220,7 +227,7 @@ defmodule PokerServer.UIAdapter do
       is_waiting_for_players: game_state.phase == :waiting_for_players,
       
       # Showdown information
-      showdown_results: get_showdown_results(game_state, filtered_players)
+      showdown_results: get_showdown_results(game_server_state, filtered_players)
     }
   end
 
@@ -258,11 +265,20 @@ defmodule PokerServer.UIAdapter do
   end
 
   # Get the set of players who folded during the current hand.
-  # Returns empty set if no active betting round.
+  # Returns empty set if no fold information available.
   defp get_folded_players(game_server_state) do
-    case game_server_state.betting_round do
-      nil -> MapSet.new()
-      betting_round -> betting_round.folded_players
+    case game_server_state do
+      # If we have an active betting round, use its folded players
+      %{betting_round: betting_round} when not is_nil(betting_round) ->
+        betting_round.folded_players
+      
+      # If no betting round but we have preserved folded players (hand ended early)
+      %{folded_players: folded_players} when not is_nil(folded_players) ->
+        folded_players
+        
+      # Fallback to empty set
+      _ ->
+        MapSet.new()
     end
   end
 
@@ -282,40 +298,72 @@ defmodule PokerServer.UIAdapter do
   end
 
   # Get showdown results for display during hand_complete phase.
-  defp get_showdown_results(game_state, filtered_players) do
+  defp get_showdown_results(game_server_state, filtered_players) do
+    game_state = game_server_state.game_state
     if game_state.phase == :hand_complete do
-      # Get non-folded players with their original hole cards
-      non_folded_players = 
-        game_state.players
-        |> Enum.reject(fn player ->
-          # Player is folded if they have no hole cards visible in filtered view
-          filtered_player = Enum.find(filtered_players, &(&1.id == player.id))
-          filtered_player && Enum.empty?(filtered_player.hole_cards)
+      # Check if this was a fold win - if so, don't show hand analysis
+      current_player = Enum.find(filtered_players, &(&1.is_current_player))
+      current_player_id = if current_player, do: current_player.id, else: nil
+      
+      folded_players_count = Enum.count(filtered_players, fn player -> 
+        Enum.empty?(player.hole_cards) and player.id != current_player_id
+      end)
+      active_players_count = length(filtered_players) - folded_players_count
+      
+      is_fold_win = folded_players_count > 0 and active_players_count <= 1
+      
+      if is_fold_win do
+        # For fold wins, the winner is the player who didn't fold
+        # Find the player who is not in the folded players set
+        folded_players = get_folded_players(game_server_state)
+        winner_id = Enum.find(game_state.players, fn player -> 
+          player.id not in folded_players
         end)
+        
+        winner_ids = if winner_id, do: [winner_id.id], else: []
+        
+        %{
+          winners: winner_ids,
+          hand_descriptions: %{},
+          player_hands: %{},
+          is_fold_win: true
+        }
+      else
+        # True showdown - evaluate hands normally
+        # Get non-folded players with their original hole cards
+        non_folded_players = 
+          game_state.players
+          |> Enum.reject(fn player ->
+            # Player is folded if they have no hole cards visible in filtered view
+            filtered_player = Enum.find(filtered_players, &(&1.id == player.id))
+            filtered_player && Enum.empty?(filtered_player.hole_cards)
+          end)
 
-      # Evaluate hands for all non-folded players
-      player_hands = 
-        non_folded_players
-        |> Enum.map(fn player ->
-          hand_result = HandEvaluator.evaluate_hand(player.hole_cards, game_state.community_cards)
-          {player.id, hand_result}
-        end)
+        # Evaluate hands for all non-folded players
+        player_hands = 
+          non_folded_players
+          |> Enum.map(fn player ->
+            hand_result = HandEvaluator.evaluate_hand(player.hole_cards, game_state.community_cards)
+            {player.id, hand_result}
+          end)
 
-      # Determine winners
-      winners = HandEvaluator.determine_winners(player_hands)
+        # Determine winners
+        winners = HandEvaluator.determine_winners(player_hands)
 
-      # Create hand descriptions
-      hand_descriptions = 
-        player_hands
-        |> Enum.into(%{}, fn {player_id, {hand_type, _cards}} ->
-          {player_id, format_hand_description(hand_type)}
-        end)
+        # Create hand descriptions
+        hand_descriptions = 
+          player_hands
+          |> Enum.into(%{}, fn {player_id, {hand_type, _cards}} ->
+            {player_id, format_hand_description(hand_type)}
+          end)
 
-      %{
-        winners: winners,
-        hand_descriptions: hand_descriptions,
-        player_hands: Enum.into(player_hands, %{})
-      }
+        %{
+          winners: winners,
+          hand_descriptions: hand_descriptions,
+          player_hands: Enum.into(player_hands, %{}),
+          is_fold_win: false
+        }
+      end
     else
       nil
     end

@@ -8,7 +8,8 @@ defmodule PokerServer.GameServer do
           game_id: String.t(),
           game_state: GameState.t(),
           betting_round: BettingRound.t() | nil,
-          phase: Types.server_phase()
+          phase: Types.server_phase(),
+          folded_players: MapSet.t()
         }
 
   # Client API
@@ -62,7 +63,8 @@ defmodule PokerServer.GameServer do
       game_id: game_id,
       game_state: game_state,
       betting_round: nil,
-      phase: :waiting_to_start
+      phase: :waiting_to_start,
+      folded_players: MapSet.new()
     }
 
     {:ok, state}
@@ -98,7 +100,8 @@ defmodule PokerServer.GameServer do
       state
       | game_state: synced_game_state,
         betting_round: betting_round,
-        phase: :preflop_betting
+        phase: :preflop_betting,
+        folded_players: MapSet.new()
     }
 
     broadcast_state_change(state.game_id, new_state)
@@ -230,7 +233,8 @@ defmodule PokerServer.GameServer do
                 new_state
                 | game_state: final_game_state,
                   betting_round: nil,
-                  phase: :hand_complete
+                  phase: :hand_complete,
+                  folded_players: updated_betting_round.folded_players
               }
               
               broadcast_state_change(state.game_id, final_state)
