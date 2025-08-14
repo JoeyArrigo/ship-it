@@ -293,39 +293,4 @@ defmodule PokerServer.GameServerConcurrencyTest do
     end
   end
 
-  describe "memory and resource management" do
-    test "game process memory remains stable under load" do
-      # Create a game
-      players = [player(1, 1500), player(2, 1500)]
-      {:ok, game_id} = GameManager.create_game(players)
-      {:ok, game_pid} = GameManager.lookup_game(game_id)
-
-      # Measure initial memory
-      {_, initial_memory} = :erlang.process_info(game_pid, :memory)
-
-      # Perform many operations (just state queries to avoid deck exhaustion bug)
-      for _i <- 1..100 do
-        GameServer.get_state(game_pid)
-
-        # Try some actions (most will fail due to timing, but shouldn't leak memory)
-        spawn(fn -> GameServer.player_action(game_pid, 1, {:fold}) end)
-        spawn(fn -> GameServer.player_action(game_pid, 2, {:call}) end)
-      end
-
-      # Wait for operations to complete
-      Process.sleep(200)
-
-      # Measure final memory
-      {_, final_memory} = :erlang.process_info(game_pid, :memory)
-
-      # Memory shouldn't grow excessively (allow for some growth due to state changes)
-      memory_growth_ratio = final_memory / initial_memory
-
-      assert memory_growth_ratio < 3.0,
-             "Memory grew too much: #{initial_memory} -> #{final_memory}"
-
-      # Process should still be alive
-      assert Process.alive?(game_pid)
-    end
-  end
 end

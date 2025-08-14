@@ -83,6 +83,28 @@
 - Prevent information leakage through timing
 - Audit trail for all actions
 
+### Security Vulnerabilities (Known Issues)
+
+#### DoS Vector: Unread Message Accumulation
+**Issue**: GameServer processes can accumulate unbounded unread messages in their mailbox when clients disconnect after sending requests but before reading responses.
+
+**Attack Vector**: Sustained flooding by malicious clients who disconnect after sending requests.
+
+**Impact**: Medium - can cause memory growth in individual game servers, requires sustained effort to exploit
+
+**Real-world scenarios**:
+- Legitimate: Players disconnecting mid-action due to poor mobile networks (low volume)
+- Malicious: Requires targeted, sustained attack against specific poker app
+- Accidental: Buggy client implementations more likely than deliberate attacks
+
+**Mitigation Strategy**: 
+- Add connection-level rate limiting
+- Implement basic message queue monitoring
+- Consider connection cleanup on disconnect
+- Monitor for unusual traffic patterns
+
+**Priority**: Medium - address during next refactor cycle, not emergency
+
 ## Concurrent Tournament Support
 
 ### Process Isolation
