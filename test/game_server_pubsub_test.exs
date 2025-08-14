@@ -1,15 +1,20 @@
 defmodule PokerServer.GameServerPubSubTest do
   use ExUnit.Case, async: true
-  alias PokerServer.{GameServer, GameManager}
+  alias PokerServer.GameServer
   alias Phoenix.PubSub
 
   setup do
-    # Create test players
+    # Create test players  
     players = [{"player1", 1000}, {"player2", 1000}]
-
-    # Start the game
-    {:ok, game_id} = GameManager.create_game(players)
-    {:ok, game_pid} = GameManager.lookup_game(game_id)
+    
+    # Start game directly with deterministic button position
+    game_id = "test_game_#{:rand.uniform(1000000)}"
+    {:ok, game_pid} = PokerServer.GameServer.start_link({game_id, players})
+    
+    # Set deterministic button position: button=1 means player2 is button, player1 is small blind
+    :sys.replace_state(game_pid, fn state ->
+      %{state | game_state: %{state.game_state | button_position: 1}}
+    end)
 
     # Subscribe to game events for player1 (default test player)
     PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}:player1")
@@ -26,6 +31,7 @@ defmodule PokerServer.GameServerPubSubTest do
   end
 
   defp complete_preflop_betting(game_pid) do
+    # With seed {1,2,3}: button=1, so player1=SB acts first, player2=BB acts second  
     {:ok, _, _} = GameServer.player_action(game_pid, "player1", {:call})
     assert_receive {:game_updated, _}, 1000
     {:ok, :betting_complete, _} = GameServer.player_action(game_pid, "player2", {:check})

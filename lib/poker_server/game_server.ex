@@ -56,19 +56,7 @@ defmodule PokerServer.GameServer do
         %Player{id: id, chips: chips, position: position, hole_cards: []}
       end)
 
-    # In test environment, use deterministic button placement for predictable tests
-    # In production, maintain proper poker randomness for fairness
-    game_state = 
-      if Mix.env() == :test do
-        # Deterministic: Set initial button to last position so it advances to 0 on first hand
-        # This ensures player at position 0 becomes button after start_hand() is called
-        player_count = length(players)
-        initial_button = player_count - 1
-        GameState.new(players, button_position: initial_button)
-      else
-        # Random: authentic poker behavior for production
-        GameState.new(players)
-      end
+    game_state = GameState.new(players)
 
     state = %{
       game_id: game_id,
