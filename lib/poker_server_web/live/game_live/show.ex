@@ -387,8 +387,8 @@ defmodule PokerServerWeb.GameLive.Show do
             </.button>
           </div>
 
-          <!-- Play Again button when only one player has chips (tournament complete) -->
-          <div :if={@player_view.players && length(Enum.filter(@player_view.players, &(&1.chips > 0))) == 1}>
+          <!-- Play Again button when only one player has chips AND game is complete -->
+          <div :if={@player_view.players && @player_view.phase == :hand_complete && length(Enum.filter(@player_view.players, &(&1.chips > 0))) == 1}>
             <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
               <h3 class="text-xl font-semibold mb-4 text-green-800">Game Complete!</h3>
               <p class="mb-4 text-green-700">Ready for another game?</p>

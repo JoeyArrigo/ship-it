@@ -260,8 +260,12 @@ defmodule PokerServer.UIAdapter do
   end
 
   defp can_start_hand?(game_state) do
+    # Can only start a new hand if the game isn't complete (more than 1 player has chips)
+    players_with_chips = Enum.count(game_state.players, & &1.chips > 0)
+    
     (game_state.phase == :waiting_for_players or game_state.phase == :hand_complete) and
-      length(game_state.players) >= 2
+      length(game_state.players) >= 2 and
+      players_with_chips > 1
   end
 
   # Get the set of players who folded during the current hand.
