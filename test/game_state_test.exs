@@ -354,7 +354,7 @@ defmodule PokerServer.GameStateTest do
         big_blind: 20
       }
 
-      updated_state = GameState.showdown(game_state)
+      updated_state = GameState.showdown(game_state, MapSet.new())
 
       assert updated_state.phase == :hand_complete
 
@@ -405,7 +405,7 @@ defmodule PokerServer.GameStateTest do
         big_blind: 20
       }
 
-      updated_state = GameState.showdown(game_state)
+      updated_state = GameState.showdown(game_state, MapSet.new())
 
       # Both players should get equal share
       for player <- updated_state.players do

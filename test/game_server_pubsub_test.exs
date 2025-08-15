@@ -379,9 +379,8 @@ defmodule PokerServer.GameServerPubSubTest do
     assert_receive {:game_updated, broadcasted_state}, 1000
 
     assert broadcasted_state.game_id == game_id
-    # When one player folds in heads-up preflop, betting completes and advances to flop
-    # (The hand doesn't end immediately - it continues through all streets)
-    assert broadcasted_state.phase == :flop_betting
+    # When one player folds in heads-up, hand ends immediately with other player winning
+    assert broadcasted_state.phase == :hand_complete
   end
 
   test "player fold creates single active player scenario", %{game_pid: game_pid} do
@@ -390,6 +389,7 @@ defmodule PokerServer.GameServerPubSubTest do
     # Get active player and initial state
     initial_state = GameServer.get_state(game_pid)
     active_player = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
+    other_player = Enum.find(initial_state.game_state.players, fn p -> p.id != active_player.id end)
 
     # Player folds, leaving other player as only active
     {:ok, :betting_complete, final_state} =
@@ -397,16 +397,18 @@ defmodule PokerServer.GameServerPubSubTest do
 
     assert_receive {:game_updated, broadcasted_state}, 1000
 
-    # Betting completes and advances to next phase (flop_betting)
-    assert final_state.phase == :flop_betting
-    assert broadcasted_state.phase == :flop_betting
-    assert not is_nil(final_state.betting_round)
+    # Hand ends immediately when only one player remains
+    assert final_state.phase == :hand_complete
+    assert broadcasted_state.phase == :hand_complete
+    assert is_nil(final_state.betting_round)
 
-    # Game continues through all streets even with one folded player
-    assert length(final_state.game_state.community_cards) == 3
+    # Pot should be awarded to the remaining player
+    assert final_state.game_state.pot == 0
+    winning_player = Enum.find(final_state.game_state.players, fn p -> p.id == other_player.id end)
+    assert winning_player.chips > other_player.chips
   end
 
-  test "fold during flop betting continues to turn", %{game_pid: game_pid} do
+  test "fold during flop betting ends hand immediately", %{game_pid: game_pid} do
     advance_to_flop_betting(game_pid)
 
     # Get active player for flop betting
@@ -419,14 +421,14 @@ defmodule PokerServer.GameServerPubSubTest do
 
     assert_receive {:game_updated, broadcasted_state}, 1000
 
-    # Game continues to turn_betting (doesn't end immediately)
-    assert final_state.phase == :turn_betting
-    assert broadcasted_state.phase == :turn_betting
-    # Turn card dealt
-    assert length(final_state.game_state.community_cards) == 4
+    # Hand ends immediately when only one player remains
+    assert final_state.phase == :hand_complete
+    assert broadcasted_state.phase == :hand_complete
+    assert is_nil(final_state.betting_round)
+    assert final_state.game_state.pot == 0
   end
 
-  test "fold during turn betting continues to river", %{game_pid: game_pid} do
+  test "fold during turn betting ends hand immediately", %{game_pid: game_pid} do
     advance_to_turn_betting(game_pid)
 
     # Get active player for turn betting
@@ -439,11 +441,11 @@ defmodule PokerServer.GameServerPubSubTest do
 
     assert_receive {:game_updated, broadcasted_state}, 1000
 
-    # Game continues to river_betting (doesn't end immediately)
-    assert final_state.phase == :river_betting
-    assert broadcasted_state.phase == :river_betting
-    # River card dealt
-    assert length(final_state.game_state.community_cards) == 5
+    # Hand ends immediately when only one player remains
+    assert final_state.phase == :hand_complete
+    assert broadcasted_state.phase == :hand_complete
+    assert is_nil(final_state.betting_round)
+    assert final_state.game_state.pot == 0
   end
 
   test "fold during river betting ends hand", %{game_pid: game_pid} do

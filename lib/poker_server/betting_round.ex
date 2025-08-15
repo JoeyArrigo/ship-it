@@ -22,10 +22,10 @@ defmodule PokerServer.BettingRound do
           current_bet: number(),
           player_bets: map(),
           active_player_index: non_neg_integer(),
-          folded_players: MapSet.t(),
-          all_in_players: MapSet.t(),
+          folded_players: MapSet.t(String.t()),
+          all_in_players: MapSet.t(String.t()),
           last_raise_size: number() | nil,
-          players_who_can_act: MapSet.t(),
+          players_who_can_act: MapSet.t(String.t()),
           last_raiser: String.t() | nil
         }
 
@@ -191,8 +191,8 @@ defmodule PokerServer.BettingRound do
   def valid_actions(betting_round) do
     active_player = get_active_player(betting_round)
 
-    # Return empty actions if no active player
-    if is_nil(active_player) do
+    # Return empty actions if no active player or if player has folded
+    if is_nil(active_player) || active_player.id in betting_round.folded_players do
       []
     else
       player_current_bet = betting_round.player_bets[active_player.id] || 0
@@ -329,6 +329,9 @@ defmodule PokerServer.BettingRound do
 
       active_player.id != player_id ->
         {:error, Types.error_not_your_turn()}
+
+      player_id in betting_round.folded_players ->
+        {:error, "player_already_folded"}
 
       true ->
         # Validate the action is allowed
@@ -488,9 +491,25 @@ defmodule PokerServer.BettingRound do
   end
 
   defp next_active_player_index(betting_round) do
-    # Simple implementation - just move to next player, wrapping around
+    # Find next player who can act (not folded, not all-in)
     player_count = length(betting_round.players)
-    rem(betting_round.active_player_index + 1, player_count)
+    current_index = betting_round.active_player_index
+    
+    # Try each position starting from current + 1
+    1..player_count
+    |> Enum.reduce_while(current_index, fn _offset, check_index ->
+      next_index = rem(check_index + 1, player_count)
+      next_player = Enum.at(betting_round.players, next_index)
+      
+      # Check if this player can act
+      if next_player && 
+         next_player.id not in betting_round.folded_players && 
+         next_player.id not in betting_round.all_in_players do
+        {:halt, next_index}
+      else
+        {:cont, next_index}
+      end
+    end)
   end
 
   @doc """

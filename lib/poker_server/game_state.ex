@@ -288,6 +288,7 @@ defmodule PokerServer.GameState do
     }
   end
 
+
   @doc """
   Evaluate all player hands and determine winners.
 
@@ -297,6 +298,7 @@ defmodule PokerServer.GameState do
 
   ## Parameters  
   - game_state: Current game state with community cards dealt
+  - folded_players: MapSet of player IDs who have folded
 
   ## Returns
   Updated game state with:
@@ -307,14 +309,16 @@ defmodule PokerServer.GameState do
   ## Notes
   Uses short deck hand evaluation where flush beats full house.
   Handles ties by splitting pot equally among winners.
+  Folded players are excluded from hand evaluation and cannot win.
   """
-  @spec showdown(t()) :: t()
-  def showdown(game_state) do
+  @spec showdown(t(), MapSet.t(String.t())) :: t()
+  def showdown(game_state, folded_players) do
     alias PokerServer.HandEvaluator
 
-    # Evaluate each player's hand
+    # Evaluate each player's hand, excluding folded players
     player_hands =
       game_state.players
+      |> Enum.reject(fn player -> player.id in folded_players end)
       |> Enum.map(fn player ->
         hand = HandEvaluator.evaluate_hand(player.hole_cards, game_state.community_cards)
         {player.id, hand}
@@ -338,4 +342,36 @@ defmodule PokerServer.GameState do
 
     %{game_state | players: updated_players, pot: 0, phase: :hand_complete}
   end
+
+  @doc """
+  Award pot to the last remaining player when all others have folded.
+
+  This function handles the case where only one player remains active
+  after all others have folded, eliminating the need for a showdown.
+
+  ## Parameters
+  - game_state: Current game state
+  - winner_id: ID of the player who should win the pot
+
+  ## Returns
+  Updated game state with:
+  - Pot awarded to the winner
+  - Phase set to :hand_complete
+  - Pot set to 0
+  """
+  @spec award_pot_to_winner(t(), String.t()) :: t()
+  def award_pot_to_winner(game_state, winner_id) do
+    updated_players =
+      game_state.players
+      |> Enum.map(fn player ->
+        if player.id == winner_id do
+          %{player | chips: player.chips + game_state.pot}
+        else
+          player
+        end
+      end)
+
+    %{game_state | players: updated_players, pot: 0, phase: :hand_complete}
+  end
+
 end
