@@ -24,7 +24,7 @@ defmodule PokerServer.FoldBehaviorTest do
   end
 
   describe "folded players cannot win hands" do
-    test "folded player excluded from showdown", %{game_pid: game_pid} do
+    test "folded player excluded from showdown", %{game_pid: _game_pid} do
       # Test the showdown function directly with folded players
       players = [
         %Player{id: "player1", chips: 1000, position: 0, hole_cards: []},
@@ -106,7 +106,7 @@ defmodule PokerServer.FoldBehaviorTest do
       assert final_state.phase == :hand_complete  # Hand ended
     end
 
-    test "folded player cannot take actions", %{game_pid: game_pid} do
+    test "folded player cannot take actions", %{game_pid: _game_pid} do
       # Create a 3-player game to test folded player trying to act
       players = [{"player1", 1000}, {"player2", 1000}, {"player3", 1000}]
       {:ok, game_id} = PokerServer.GameManager.create_game(players)
@@ -118,14 +118,14 @@ defmodule PokerServer.FoldBehaviorTest do
       active_player = BettingRound.get_active_player(initial_state.betting_round)
       
       # First player folds
-      {:ok, :action_processed, state_after_fold} = GameServer.player_action(game_pid, active_player.id, {:fold})
+      {:ok, :action_processed, _state_after_fold} = GameServer.player_action(game_pid, active_player.id, {:fold})
       
       # Try to have the folded player act again - should fail
       result = GameServer.player_action(game_pid, active_player.id, {:call})
       assert match?({:error, _}, result)
     end
 
-    test "betting skips folded players", %{game_pid: game_pid} do
+    test "betting skips folded players", %{game_pid: _game_pid} do
       # Create a 3-player game
       players = [{"player1", 1000}, {"player2", 1000}, {"player3", 1000}]
       {:ok, game_id} = PokerServer.GameManager.create_game(players)
@@ -228,9 +228,6 @@ defmodule PokerServer.FoldBehaviorTest do
       # Play a hand where poor player folds (doesn't go all-in)
       {:ok, _} = GameServer.start_hand(game_pid)
       initial_state = GameServer.get_state(game_pid)
-      
-      poor_player = Enum.find(initial_state.game_state.players, fn p -> p.id == "poor_player" end)
-      rich_player = Enum.find(initial_state.game_state.players, fn p -> p.id == "rich_player" end)
       
       # Determine who acts first and have them fold
       active_player = BettingRound.get_active_player(initial_state.betting_round)
