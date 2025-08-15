@@ -33,3 +33,10 @@ poker_server-*.tar
 
 # Dialyzer PLT cache files
 /priv/plts/
+
+# Fly.io deployment files - prefer manual deployment
+fly.toml
+Dockerfile
+.dockerignore
+.github/workflows/fly-deploy.yml
+rel/
