@@ -121,30 +121,43 @@ defmodule PokerServerWeb.GameLive.Show do
 
   @impl true
   def handle_event("play_again", _params, socket) do
-    # Get current player name
     current_player = socket.assigns.current_player
     
-    if current_player do
-      # Subscribe to personal notifications BEFORE joining queue
-      if connected?(socket) do
-        PubSub.subscribe(PokerServer.PubSub, "player:#{current_player}")
-      end
+    if current_player && socket.assigns.player_view do
+      # Get all players from the current game
+      players = socket.assigns.player_view.players
       
-      case PokerServer.GameQueue.join_queue(current_player) do
-        :ok ->
-          {:noreply,
-           socket
-           |> put_flash(:info, "Joined queue for next game!")
-           |> push_navigate(to: ~p"/")}
-        
-        {:error, :already_in_queue} ->
-          {:noreply, put_flash(socket, :error, "You are already in the queue.")}
+      # Create player list with 1500 starting chips each (tournament format)
+      player_list = Enum.map(players, fn player -> {player.id, 1500} end)
+      
+      case PokerServer.GameManager.create_game(player_list) do
+        {:ok, new_game_id} ->
+          # Auto-start the first hand
+          case PokerServer.GameManager.lookup_game(new_game_id) do
+            {:ok, game_pid} ->
+              PokerServer.GameServer.start_hand(game_pid)
+              
+              # Broadcast new game URL to all players in the current game
+              Enum.each(players, fn player ->
+                PubSub.broadcast(PokerServer.PubSub, "game:#{socket.assigns.game_id}:#{player.id}", 
+                  {:redirect_to_new_game, new_game_id})
+              end)
+              
+              # Redirect current player to the new game
+              {:noreply, 
+               socket
+               |> put_flash(:info, "New game started!")
+               |> push_navigate(to: ~p"/game/#{new_game_id}?player=#{current_player}")}
+            
+            {:error, :game_not_found} ->
+              {:noreply, put_flash(socket, :error, "Failed to start new game")}
+          end
         
         {:error, reason} ->
-          {:noreply, put_flash(socket, :error, "Failed to join queue: #{reason}")}
+          {:noreply, put_flash(socket, :error, "Failed to create new game: #{inspect(reason)}")}
       end
     else
-      {:noreply, put_flash(socket, :error, "Player name not found")}
+      {:noreply, put_flash(socket, :error, "Unable to restart game")}
     end
   end
 
@@ -152,6 +165,16 @@ defmodule PokerServerWeb.GameLive.Show do
   def handle_info({:game_updated, filtered_player_view}, socket) do
     # Receive pre-filtered player view from GameServer (no need to re-filter)
     {:noreply, assign(socket, :player_view, filtered_player_view)}
+  end
+
+  @impl true
+  def handle_info({:redirect_to_new_game, new_game_id}, socket) do
+    # Redirect to the new game when another player starts it
+    current_player = socket.assigns.current_player
+    {:noreply, 
+     socket
+     |> put_flash(:info, "New game started!")
+     |> push_navigate(to: ~p"/game/#{new_game_id}?player=#{current_player}")}
   end
 
   # Helper function to make player actions via the service
