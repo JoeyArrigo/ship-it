@@ -288,6 +288,7 @@ defmodule PokerServer.GameState do
     }
   end
 
+
   @doc """
   Evaluate all player hands and determine winners.
 
@@ -297,7 +298,7 @@ defmodule PokerServer.GameState do
 
   ## Parameters  
   - game_state: Current game state with community cards dealt
-  - folded_players: MapSet of player IDs who have folded (optional, defaults to empty)
+  - folded_players: MapSet of player IDs who have folded
 
   ## Returns
   Updated game state with:
@@ -310,8 +311,8 @@ defmodule PokerServer.GameState do
   Handles ties by splitting pot equally among winners.
   Folded players are excluded from hand evaluation and cannot win.
   """
-  @spec showdown(t(), MapSet.t()) :: t()
-  def showdown(game_state, folded_players \\ MapSet.new()) do
+  @spec showdown(t(), MapSet.t(String.t())) :: t()
+  def showdown(game_state, folded_players) do
     alias PokerServer.HandEvaluator
 
     # Evaluate each player's hand, excluding folded players
@@ -372,4 +373,5 @@ defmodule PokerServer.GameState do
 
     %{game_state | players: updated_players, pot: 0, phase: :hand_complete}
   end
+
 end

@@ -22,10 +22,10 @@ defmodule PokerServer.BettingRound do
           current_bet: number(),
           player_bets: map(),
           active_player_index: non_neg_integer(),
-          folded_players: MapSet.t(),
-          all_in_players: MapSet.t(),
+          folded_players: MapSet.t(String.t()),
+          all_in_players: MapSet.t(String.t()),
           last_raise_size: number() | nil,
-          players_who_can_act: MapSet.t(),
+          players_who_can_act: MapSet.t(String.t()),
           last_raiser: String.t() | nil
         }
 

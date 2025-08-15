@@ -9,7 +9,7 @@ defmodule PokerServer.GameServer do
           game_state: GameState.t(),
           betting_round: BettingRound.t() | nil,
           phase: Types.server_phase(),
-          folded_players: MapSet.t()
+          folded_players: MapSet.t(String.t())
         }
 
   # Client API
@@ -170,7 +170,8 @@ defmodule PokerServer.GameServer do
       state,
       player_id,
       action,
-      &GameState.showdown/1,
+      # This function is never called for showdown due to special handling in process_betting_phase_action
+      fn _game_state -> raise "This should never be called for showdown" end,
       nil,
       :hand_complete
     )
