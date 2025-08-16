@@ -120,9 +120,61 @@ defmodule PokerServerWeb.GameLive.Show do
   end
 
   @impl true
+  def handle_event("play_again", _params, socket) do
+    current_player = socket.assigns.current_player
+    
+    if current_player && socket.assigns.player_view do
+      # Get all players from the current game
+      players = socket.assigns.player_view.players
+      
+      # Create player list with 1500 starting chips each (tournament format)
+      player_list = Enum.map(players, fn player -> {player.id, 1500} end)
+      
+      case PokerServer.GameManager.create_game(player_list) do
+        {:ok, new_game_id} ->
+          # Auto-start the first hand
+          case PokerServer.GameManager.lookup_game(new_game_id) do
+            {:ok, game_pid} ->
+              PokerServer.GameServer.start_hand(game_pid)
+              
+              # Broadcast new game URL to all players in the current game
+              Enum.each(players, fn player ->
+                PubSub.broadcast(PokerServer.PubSub, "game:#{socket.assigns.game_id}:#{player.id}", 
+                  {:redirect_to_new_game, new_game_id})
+              end)
+              
+              # Redirect current player to the new game
+              {:noreply, 
+               socket
+               |> put_flash(:info, "New game started!")
+               |> push_navigate(to: ~p"/game/#{new_game_id}?player=#{current_player}")}
+            
+            {:error, :game_not_found} ->
+              {:noreply, put_flash(socket, :error, "Failed to start new game")}
+          end
+        
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, "Failed to create new game: #{inspect(reason)}")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "Unable to restart game")}
+    end
+  end
+
+  @impl true
   def handle_info({:game_updated, filtered_player_view}, socket) do
     # Receive pre-filtered player view from GameServer (no need to re-filter)
     {:noreply, assign(socket, :player_view, filtered_player_view)}
+  end
+
+  @impl true
+  def handle_info({:redirect_to_new_game, new_game_id}, socket) do
+    # Redirect to the new game when another player starts it
+    current_player = socket.assigns.current_player
+    {:noreply, 
+     socket
+     |> put_flash(:info, "New game started!")
+     |> push_navigate(to: ~p"/game/#{new_game_id}?player=#{current_player}")}
   end
 
   # Helper function to make player actions via the service
@@ -356,6 +408,19 @@ defmodule PokerServerWeb.GameLive.Show do
               class="bg-green-600 hover:bg-green-700">
               Start New Hand
             </.button>
+          </div>
+
+          <!-- Play Again button when only one player has chips AND game is complete -->
+          <div :if={@player_view.players && @player_view.phase == :hand_complete && length(Enum.filter(@player_view.players, &(&1.chips > 0))) == 1}>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+              <h3 class="text-xl font-semibold mb-4 text-green-800">Game Complete!</h3>
+              <p class="mb-4 text-green-700">Ready for another game?</p>
+              <.button 
+                phx-click="play_again" 
+                class="bg-green-600 hover:bg-green-700 text-lg py-3 px-6">
+                Play Again
+              </.button>
+            </div>
           </div>
 
           <div :if={not @player_view.can_act and not @player_view.can_start_hand and not @player_view.is_waiting_for_players}>
