@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ship-it Poker - Neo Wave Brand Identity</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700&display=swap');
+        
+        body {
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #F0F4FF;
+            color: #0A0E27;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 80px 20px;
+            background: linear-gradient(180deg, #F0F4FF 0%, #FFE8F5 50%, #E8F5FF 100%);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 60px;
+        }
+        
+        header::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 107, 237, 0.03) 10px,
+                rgba(255, 107, 237, 0.03) 20px
+            );
+            animation: drift 20s linear infinite;
+        }
+        
+        @keyframes drift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .logo-main {
+            display: inline-block;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo-text {
+            font-size: 64px;
+            font-weight: 700;
+            letter-spacing: -3px;
+            background: linear-gradient(135deg, #FF6BED, #00D4FF, #FFD93D, #6BFF8F);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            animation: chromatic 8s ease-in-out infinite;
+        }
+        
+        @keyframes chromatic {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(30deg); }
+        }
+        
+        .suit-constellation {
+            position: absolute;
+            top: -20px;
+            right: -40px;
+            width: 100px;
+            height: 100px;
+            animation: orbit 10s linear infinite;
+        }
+        
+        @keyframes orbit {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .suit-orbital {
+            position: absolute;
+            font-size: 24px;
+            animation: counter-orbit 10s linear infinite;
+        }
+        
+        @keyframes counter-orbit {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
+        }
+        
+        .suit-orbital:nth-child(1) { top: 0; left: 40px; }
+        .suit-orbital:nth-child(2) { top: 40px; right: 0; }
+        .suit-orbital:nth-child(3) { bottom: 0; left: 40px; }
+        .suit-orbital:nth-child(4) { top: 40px; left: 0; }
+        
+        .neo-club { color: #FFD93D; text-shadow: 0 0 20px rgba(255, 217, 61, 0.6); }
+        .neo-diamond { color: #00D4FF; text-shadow: 0 0 20px rgba(0, 212, 255, 0.6); }
+        .neo-heart { color: #FF6BED; text-shadow: 0 0 20px rgba(255, 107, 237, 0.6); }
+        .neo-spade { color: #6BFF8F; text-shadow: 0 0 20px rgba(107, 255, 143, 0.6); }
+        
+        .tagline {
+            margin-top: 30px;
+            font-size: 16px;
+            font-weight: 300;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            color: #667799;
+            opacity: 0.8;
+        }
+        
+        .section {
+            margin-bottom: 80px;
+            background: white;
+            border-radius: 32px;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05);
+        }
+        
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #FF6BED, #00D4FF, #FFD93D, #6BFF8F);
+        }
+        
+        h2 {
+            font-size: 36px;
+            margin-bottom: 40px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #0A0E27, #667799);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+            margin-top: 40px;
+        }
+        
+        .color-card {
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .color-card:hover {
+            transform: translateY(-8px) scale(1.02);
+        }
+        
+        .color-swatch {
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            position: relative;
+            background: linear-gradient(135deg, var(--color) 0%, var(--color-light) 100%);
+        }
+        
+        .color-swatch::after {
+            content: attr(data-glow);
+            position: absolute;
+            font-size: 120px;
+            opacity: 0.2;
+            filter: blur(30px);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .color-info {
+            padding: 20px;
+            background: white;
+            border: 2px solid #F0F4FF;
+        }
+        
+        .color-name {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .color-codes {
+            display: flex;
+            gap: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #667799;
+        }
+        
+        .typography-showcase {
+            margin-top: 40px;
+        }
+        
+        .type-example {
+            margin-bottom: 40px;
+            padding: 32px;
+            background: linear-gradient(135deg, #FAFBFF, #F0F4FF);
+            border-radius: 20px;
+            border: 1px solid #E8F5FF;
+            position: relative;
+        }
+        
+        .type-example::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 60%;
+            border-radius: 2px;
+        }
+        
+        .type-example:nth-child(1)::before { background: linear-gradient(180deg, #FF6BED, #FF6BED80); }
+        .type-example:nth-child(2)::before { background: linear-gradient(180deg, #00D4FF, #00D4FF80); }
+        .type-example:nth-child(3)::before { background: linear-gradient(180deg, #FFD93D, #FFD93D80); }
+        .type-example:nth-child(4)::before { background: linear-gradient(180deg, #6BFF8F, #6BFF8F80); }
+        
+        .glitch-logo {
+            font-size: 48px;
+            font-weight: 700;
+            position: relative;
+            animation: glitch 3s infinite;
+        }
+        
+        .glitch-logo::before,
+        .glitch-logo::after {
+            content: 'SHIP•IT';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .glitch-logo::before {
+            animation: glitch-1 0.5s infinite;
+            color: #FF6BED;
+            z-index: -1;
+        }
+        
+        .glitch-logo::after {
+            animation: glitch-2 0.5s infinite;
+            color: #00D4FF;
+            z-index: -2;
+        }
+        
+        @keyframes glitch {
+            0%, 100% { text-shadow: none; }
+            95% { text-shadow: -2px 0 #FF6BED, 2px 0 #00D4FF; }
+        }
+        
+        @keyframes glitch-1 {
+            0%, 100% { clip: rect(0, 900px, 0, 0); }
+            25% { clip: rect(0, 900px, 50px, 0); }
+            50% { clip: rect(50px, 900px, 100px, 0); }
+            75% { clip: rect(100px, 900px, 150px, 0); }
+        }
+        
+        @keyframes glitch-2 {
+            0%, 100% { clip: rect(0, 900px, 0, 0); }
+            25% { clip: rect(100px, 900px, 150px, 0); }
+            50% { clip: rect(0, 900px, 50px, 0); }
+            75% { clip: rect(50px, 900px, 100px, 0); }
+        }
+        
+        .logo-variations {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 32px;
+            margin-top: 40px;
+        }
+        
+        .logo-variant {
+            padding: 40px;
+            background: linear-gradient(135deg, #FFFFFF, #F0F4FF);
+            border-radius: 24px;
+            text-align: center;
+            border: 1px solid #E8F5FF;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo-variant::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 107, 237, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+            opacity: 0;
+        }
+        
+        .logo-variant:hover::after {
+            opacity: 1;
+            animation: sweep 0.5s ease;
+        }
+        
+        @keyframes sweep {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .card-design {
+            width: 140px;
+            height: 200px;
+            background: linear-gradient(135deg, #0A0E27, #1A1E37);
+            border-radius: 16px;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card-design:hover {
+            transform: rotateY(180deg);
+        }
+        
+        .card-front {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 16px;
+            border: 3px solid;
+        }
+        
+        .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            transform: rotateY(180deg);
+            background: linear-gradient(135deg, #FF6BED, #00D4FF, #FFD93D, #6BFF8F);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .card-back::before {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.1) 10px,
+                rgba(255, 255, 255, 0.1) 20px
+            );
+            animation: slide 10s linear infinite;
+        }
+        
+        @keyframes slide {
+            0% { transform: translate(-50%, -50%); }
+            100% { transform: translate(0, 0); }
+        }
+        
+        .holographic-chip {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF6BED, #00D4FF, #FFD93D, #6BFF8F);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 18px;
+            position: relative;
+            margin: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .holographic-chip::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            padding: 3px;
+            background: linear-gradient(135deg, #FF6BED, #00D4FF, #FFD93D, #6BFF8F);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: rotate 3s linear infinite;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .neo-button {
+            display: inline-block;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #FF6BED, #00D4FF);
+            color: white;
+            border-radius: 100px;
+            font-weight: 700;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 14px;
+        }
+        
+        .neo-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .neo-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 107, 237, 0.3);
+        }
+        
+        .neo-button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .neon-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 107, 237, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .app-showcase {
+            width: 320px;
+            height: 640px;
+            background: #0A0E27;
+            border-radius: 40px;
+            margin: 40px auto;
+            padding: 20px;
+            position: relative;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, #FF6BED, #00D4FF);
+            margin: -20px -20px 30px -20px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .floating-suits {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            height: 100px;
+            overflow: hidden;
+        }
+        
+        .floating-suit {
+            position: absolute;
+            font-size: 24px;
+            opacity: 0.3;
+            animation: float-up 10s linear infinite;
+        }
+        
+        @keyframes float-up {
+            0% { transform: translateY(100px) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.3; }
+            90% { opacity: 0.3; }
+            100% { transform: translateY(-200px) rotate(360deg); opacity: 0; }
+        }
+        
+        .floating-suit:nth-child(1) { left: 20%; animation-delay: 0s; }
+        .floating-suit:nth-child(2) { left: 40%; animation-delay: 2.5s; }
+        .floating-suit:nth-child(3) { left: 60%; animation-delay: 5s; }
+        .floating-suit:nth-child(4) { left: 80%; animation-delay: 7.5s; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-main">
+            <div class="logo-text">SHIP•IT</div>
+            <div class="suit-constellation">
+                <div class="suit-orbital neo-club">♣</div>
+                <div class="suit-orbital neo-diamond">♦</div>
+                <div class="suit-orbital neo-heart">♥</div>
+                <div class="suit-orbital neo-spade">♠</div>
+            </div>
+        </div>
+        <div class="tagline">Poker Reimagined</div>
+    </header>
+
+    <div class="container">
+        <!-- Color Palette -->
+        <section class="section">
+            <h2>Neo Wave Color System</h2>
+            <p style="color: #667799; margin-bottom: 20px;">A radical four-color deck system inspired by vaporwave aesthetics and digital art</p>
+            <div class="color-palette">
+                <div class="color-card">
+                    <div class="color-swatch" style="--color: #FFD93D; --color-light: #FFE885;" data-glow="♣">
+                        <span style="color: rgba(0,0,0,0.8);">♣</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Solar Yellow</div>
+                        <div class="color-codes">
+                            <span>#FFD93D</span>
+                            <span>RGB(255,217,61)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="--color: #00D4FF; --color-light: #66E5FF;" data-glow="♦">
+                        <span style="color: white;">♦</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Electric Cyan</div>
+                        <div class="color-codes">
+                            <span>#00D4FF</span>
+                            <span>RGB(0,212,255)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="--color: #FF6BED; --color-light: #FFB3F5;" data-glow="♥">
+                        <span style="color: white;">♥</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Cyber Pink</div>
+                        <div class="color-codes">
+                            <span>#FF6BED</span>
+                            <span>RGB(255,107,237)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="--color: #6BFF8F; --color-light: #A8FFB9;" data-glow="♠">
+                        <span style="color: rgba(0,0,0,0.8);">♠</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Matrix Green</div>
+                        <div class="color-codes">
+                            <span>#6BFF8F</span>
+                            <span>RGB(107,255,143)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="--color: #0A0E27; --color-light: #1A1E37;" data-glow="">
+                        <span style="color: white; font-size: 24px; font-weight: 300;">DARK</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Deep Space</div>
+                        <div class="color-codes">
+                            <span>#0A0E27</span>
+                            <span>RGB(10,14,39)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="--color: #F0F4FF; --color-light: #FFFFFF;" data-glow="">
+                        <span style="color: #0A0E27; font-size: 24px; font-weight: 300;">LIGHT</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Dream White</div>
+                        <div class="color-codes">
+                            <span>#F0F4FF</span>
+                            <span>RGB(240,244,255)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography -->
+        <section class="section">
+            <h2>Typography System</h2>
+            <div class="typography-showcase">
+                <div class="type-example">
+                    <div class="glitch-logo">SHIP•IT</div>
+                    <p style="color: #667799; margin-top: 16px;">Display: Space Grotesk Bold / 48-72px / Glitch effects for hero text</p>
+                </div>
+                <div class="type-example">
+                    <h3 style="font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #FF6BED, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">GRADIENT HEADERS</h3>
+                    <p style="color: #667799; margin-top: 16px;">Headers: Space Grotesk Bold / 24-32px / Gradient treatments</p>
+                </div>
+                <div class="type-example">
+                    <p style="font-size: 18px; font-weight: 400; line-height: 1.7;">Ship-it Poker brings next-generation gameplay to your fingertips. Experience the thrill of poker in a whole new dimension.</p>
+                    <p style="color: #667799; margin-top: 16px;">Body: Space Grotesk Regular / 16-18px / Excellent readability</p>
+                </div>
+                <div class="type-example">
+                    <p style="font-family: 'Courier New', monospace; font-size: 14px; color: #00D4FF;">PLAYER_ID: 0xF4B2C9<br/>BALANCE: ₿ 10,000<br/>WIN_RATE: 72.8%</p>
+                    <p style="color: #667799; margin-top: 16px;">Data: Courier New / 12-14px / Game stats & technical info</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logo Variations -->
+        <section class="section">
+            <div class="neon-grid"></div>
+            <h2>Logo Variations</h2>
+            <div class="logo-variations">
+                <div class="logo-variant">
+                    <div style="font-size: 32px; font-weight: 700;">
+                        <span style="background: linear-gradient(135deg, #FF6BED, #00D4FF, #FFD93D, #6BFF8F); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SHIP•IT</span>
+                        <div style="margin-top: 10px;">
+                            <span class="neo-club">♣</span>
+                            <span class="neo-diamond">♦</span>
+                            <span class="neo-heart">♥</span>
+                            <span class="neo-spade">♠</span>
+                        </div>
+                    </div>
+                    <p style="margin-top: 20px; color: #667799;">Primary Mark</p>
+                </div>
+                <div class="logo-variant">
+                    <div style="font-size: 28px; font-weight: 700;">
+                        <span style="color: #0A0E27;">S</span>
+                        <span class="neo-club">♣</span>
+                        <span style="color: #0A0E27;">I</span>
+                        <span class="neo-diamond">♦</span>
+                        <span style="color: #0A0E27;">P</span>
+                    </div>
+                    <p style="margin-top: 20px; color: #667799;">Compact Version</p>
+                </div>
+                <div class="logo-variant">
+                    <div style="position: relative; width: 80px; height: 80px; margin: 0 auto;">
+                        <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-size: 28px;" class="neo-club">♣</div>
+                        <div style="position: absolute; top: 50%; right: 0; transform: translateY(-50%); font-size: 28px;" class="neo-diamond">♦</div>
+                        <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: 28px;" class="neo-heart">♥</div>
+                        <div style="position: absolute; top: 50%; left: 0; transform: translateY(-50%); font-size: 28px;" class="neo-spade">♠</div>
+                    </div>
+                    <p style="margin-top: 20px; color: #667799;">Icon System</p>
+                </div>
+                <div class="logo-variant">
+                    <div style="width: 80px; height: 80px; margin: 0 auto; background: linear-gradient(135deg, #FF6BED, #00D4FF, #FFD93D, #6BFF8F); border-radius: 20px; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 32px; font-weight: 700;">S</span>
+                    </div>
+                    <p style="margin-top: 20px; color: #667799;">App Icon</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Playing Cards -->
+        <section class="section">
+            <h2>Card Design System</h2>
+            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 40px;">
+                <div class="card-design">
+                    <div class="card-front" style="border-color: #FFD93D;">
+                        <span style="color: #FFD93D; font-weight: 700;">A♣</span>
+                    </div>
+                    <div class="card-back">
+                        <span style="font-size: 24px; color: white; font-weight: 700; z-index: 1; position: relative;">S•I•P</span>
+                    </div>
+                </div>
+                <div class="card-design">
+                    <div class="card-front" style="border-color: #00D4FF;">
+                        <span style="color: #00D4FF; font-weight: 700;">K♦</span>
+                    </div>
+                    <div class="card-back">
+                        <span style="font-size: 24px; color: white; font-weight: 700; z-index: 1; position: relative;">S•I•P</span>
+                    </div>
+                </div>
+                <div class="card-design">
+                    <div class="card-front" style="border-color: #FF6BED;">
+                        <span style="color: #FF6BED; font-weight: 700;">Q♥</span>
+                    </div>
+                    <div class="card-back">
+                        <span style="font-size: 24px; color: white; font-weight: 700; z-index: 1; position: relative;">S•I•P</span>
+                    </div>
+                </div>
+                <div class="card-design">
+                    <div class="card-front" style="border-color: #6BFF8F;">
+                        <span style="color: #6BFF8F; font-weight: 700;">J♠</span>
+                    </div>
+                    <div class="card-back">
+                        <span style="font-size: 24px; color: white; font-weight: 700; z-index: 1; position: relative;">S•I•P</span>
+                    </div>
+                </div>
+            </div>
+            <p style="text-align: center; color: #667799; margin-top: 30px;">Hover over cards to see holographic backs</p>
+        </section>
+
+        <!-- Digital Applications -->
+        <section class="section">
+            <h2>Digital Experience</h2>
+            <div class="app-showcase">
+                <div class="app-header">
+                    <div style="color: white; font-size: 24px; font-weight: 700;">SHIP•IT</div>
+                    <div style="margin-top: 10px; font-size: 14px; opacity: 0.9;">Welcome Back, Player</div>
+                </div>
+                <div class="floating-suits">
+                    <div class="floating-suit neo-club">♣</div>
+                    <div class="floating-suit neo-diamond">♦</div>
+                    <div class="floating-suit neo-heart">♥</div>
+                    <div class="floating-suit neo-spade">♠</div>
+                </div>
+                <div style="text-align: center; color: white; padding: 20px;">
+                    <div class="glass-card" style="margin-bottom: 20px;">
+                        <p style="font-size: 14px; color: #667799;">Current Balance</p>
+                        <p style="font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #FF6BED, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">₿ 25,000</p>
+                    </div>
+                    <a href="#" class="neo-button">Quick Match</a>
+                    <a href="#" class="neo-button" style="background: linear-gradient(135deg, #FFD93D, #6BFF8F);">Tournaments</a>
+                    <div style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
+                        <div class="holographic-chip">5K</div>
+                        <div class="holographic-chip">10K</div>
+                        <div class="holographic-chip">25K</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Merchandise & Physical -->
+        <section class="section">
+            <h2>Physical Applications</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 40px; margin-top: 40px;">
+                <div style="text-align: center;">
+                    <div style="width: 200px; height: 240px; background: #0A0E27; border-radius: 20px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+                        <div class="neon-grid"></div>
+                        <div style="position: relative; z-index: 1;">
+                            <div style="font-size: 32px; font-weight: 700; color: white;">SHIP•IT</div>
+                            <div style="margin-top: 10px;">
+                                <span class="neo-club">♣</span>
+                                <span class="neo-diamond">♦</span>
+                                <span class="neo-heart">♥</span>
+                                <span class="neo-spade">♠</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="color: #667799;">Apparel Design</p>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 200px; height: 100px; background: linear-gradient(135deg, #FF6BED, #00D4FF, #FFD93D, #6BFF8F); border-radius: 16px; margin: 70px auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                        <span style="color: white; font-size: 20px; font-weight: 700;">VIP PASS</span>
+                    </div>
+                    <p style="color: #667799;">Tournament Badge</p>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 200px; height: 240px; background: white; border: 3px solid #F0F4FF; border-radius: 20px; margin: 0 auto 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #FF6BED, #00D4FF, #FFD93D, #6BFF8F); border-radius: 50%; margin-bottom: 20px;"></div>
+                        <div style="font-size: 18px; font-weight: 700; color: #0A0E27;">SHIP•IT</div>
+                        <div style="font-size: 12px; color: #667799; margin-top: 5px;">POKER CHIPS</div>
+                    </div>
+                    <p style="color: #667799;">Chip Case Design</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Brand Guidelines -->
+        <section class="section">
+            <h2>Brand Guidelines</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-top: 40px;">
+                <div class="glass-card">
+                    <h4 style="color: #6BFF8F; margin-bottom: 16px;">✓ DO</h4>
+                    <ul style="color: #667799; padding-left: 20px; line-height: 2;">
+                        <li>Embrace the neon aesthetic</li>
+                        <li>Use gradient overlays liberally</li>
+                        <li>Apply glow effects to suit symbols</li>
+                        <li>Maintain high contrast ratios</li>
+                        <li>Animate and add motion</li>
+                    </ul>
+                </div>
+                <div class="glass-card">
+                    <h4 style="color: #FF6BED; margin-bottom: 16px;">✗ DON'T</h4>
+                    <ul style="color: #667799; padding-left: 20px; line-height: 2;">
+                        <li>Use traditional poker colors</li>
+                        <li>Apply flat, static designs</li>
+                        <li>Mix with classic casino aesthetics</li>
+                        <li>Reduce color vibrancy</li>
+                        <li>Use serif or traditional fonts</li>
+                    </ul>
+                </div>
+                <div class="glass-card">
+                    <h4 style="margin-bottom: 16px; background: linear-gradient(135deg, #00D4FF, #FFD93D); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Voice & Tone</h4>
+                    <ul style="color: #667799; padding-left: 20px; line-height: 2;">
+                        <li>Futuristic and bold</li>
+                        <li>Inclusive and welcoming</li>
+                        <li>High-energy gameplay focused</li>
+                        <li>Tech-savvy and modern</li>
+                        <li>Playfully competitive</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Summary -->
+        <section class="section" style="background: linear-gradient(135deg, #0A0E27, #1A1E37); color: white; position: relative; overflow: hidden;">
+            <div class="neon-grid"></div>
+            <div style="position: relative; z-index: 1;">
+                <h2 style="color: white; background: none;">The Future of Poker</h2>
+                <p style="font-size: 18px; line-height: 1.8; opacity: 0.9; margin-bottom: 30px;">
+                    Ship-it Poker breaks every convention with its Neo Wave aesthetic. The revolutionary four-color system—Solar Yellow clubs, Electric Cyan diamonds, Cyber Pink hearts, and Matrix Green spades—creates an unforgettable visual identity that resonates with digital natives and next-generation players. This isn't just poker; it's poker reimagined for the metaverse era.
+                </p>
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; letter-spacing: 15px;">
+                        <span class="neo-club">♣</span>
+                        <span class="neo-diamond">♦</span>
+                        <span class="neo-heart">♥</span>
+                        <span class="neo-spade">♠</span>
+                    </div>
+                    <p style="margin-top: 20px; font-size: 14px; text-transform: uppercase; letter-spacing: 4px; opacity: 0.7;">All In • All New • All Future</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
+                    </div>
+                    <div class="card-back
