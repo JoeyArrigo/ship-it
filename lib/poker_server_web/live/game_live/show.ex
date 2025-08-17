@@ -410,24 +410,54 @@ defmodule PokerServerWeb.GameLive.Show do
                     </div>
                   </div>
 
-                  <!-- Custom raise form -->
-                  <form phx-submit="player_action" class="space-y-3">
-                    <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-                      <input 
-                        id="raise-amount"
-                        name="amount"
-                        type="number" 
-                        placeholder="Custom Amount" 
-                        min={@player_view.betting_info.min_raise}
-                        max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
-                        class="w-full sm:flex-1 text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
-                        required
-                      />
-                      <button type="submit" class="w-full sm:w-auto neo-btn neo-btn-secondary text-sm sm:text-lg py-2 sm:py-3 px-6 sm:px-8">
-                        <span>RAISE</span>
-                      </button>
+                  <!-- Custom raise form with slider -->
+                  <form phx-submit="player_action" class="space-y-4">
+                    <!-- Bet size slider -->
+                    <div class="space-y-3">
+                      <div class="flex justify-between items-center">
+                        <label class="text-xs font-medium text-gray-600 uppercase tracking-wider">Bet Size</label>
+                        <div class="flex items-center gap-2">
+                          <span class="neo-bitcoin text-sm">₿</span>
+                          <input 
+                            id="raise-amount"
+                            name="amount"
+                            type="number" 
+                            min={@player_view.betting_info.min_raise}
+                            max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
+                            value={@player_view.betting_info.min_raise}
+                            class="w-20 text-center text-sm font-bold bg-white/90 border border-cyan-400/50 rounded-lg px-2 py-1 focus:border-pink-500 focus:outline-none transition-colors"
+                            oninput="document.getElementById('raise-slider').value = this.value"
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <!-- Neo Wave Slider -->
+                      <div class="relative">
+                        <input 
+                          id="raise-slider"
+                          type="range" 
+                          min={@player_view.betting_info.min_raise}
+                          max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
+                          value={@player_view.betting_info.min_raise}
+                          class="w-full h-2 bg-gradient-to-r from-cyan-200 to-pink-200 rounded-lg appearance-none cursor-pointer slider-neo"
+                          oninput="document.getElementById('raise-amount').value = this.value"
+                          onchange="document.getElementById('raise-amount').value = this.value"
+                        />
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>MIN</span>
+                          <span class="opacity-60">→ Drag to adjust bet size ←</span>
+                          <span>MAX</span>
+                        </div>
+                      </div>
                     </div>
-                    <div class="flex justify-between text-xs sm:text-sm text-gray-600 font-medium">
+
+                    <!-- Raise button -->
+                    <button type="submit" class="w-full neo-btn neo-btn-secondary text-sm sm:text-lg py-3 px-6">
+                      <span>RAISE</span>
+                    </button>
+                    
+                    <div class="flex justify-between text-xs text-gray-600 font-medium">
                       <span>MIN: <span class="neo-bitcoin">₿</span><%= @player_view.betting_info.min_raise %></span>
                       <span>MAX: <span class="neo-bitcoin">₿</span><%= @player_view.current_player.chips + (@player_view.betting_info.call_amount || 0) %></span>
                     </div>
