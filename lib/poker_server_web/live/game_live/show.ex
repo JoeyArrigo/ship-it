@@ -202,196 +202,236 @@ defmodule PokerServerWeb.GameLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-6xl mx-auto">
-      <!-- Game Display using UIAdapter -->
-      <div :if={@player_view} class="mt-2 bg-white rounded-lg shadow-md p-4 md:p-6">
+    <div class="max-w-6xl mx-auto relative">
+      <!-- Neo Wave Game Interface -->
+      <div :if={@player_view} class="mt-2 neo-table relative overflow-hidden">
         
-        <!-- 2-Player Opponent Display -->
+        <!-- Neo Wave Opponent Display -->
         <%= if length(@player_view.players) == 2 do %>
           <% opponent = Enum.find(@player_view.players, &(not &1.is_current_player)) %>
-          <div :if={opponent} class="mb-6 p-4 rounded-lg border-2 border-gray-200 bg-gray-50">
+          <div :if={opponent} class="mb-8 neo-player-pos relative">
             <div class="flex justify-between items-center">
-              <div class="flex items-center gap-3">
-                <span class="text-lg font-semibold text-gray-900"><%= opponent.id %></span>
-                <span class="text-sm px-2 py-1 rounded-full bg-blue-100 text-blue-800">
-                  <%= if @player_view.can_act do %>
-                    Waiting
-                  <% else %>
-                    <%= if not @player_view.can_start_hand and not @player_view.is_waiting_for_players do %>
-                      Thinking...
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                  <%= String.first(opponent.id) |> String.upcase() %>
+                </div>
+                <div>
+                  <span class="text-xl font-bold text-white"><%= opponent.id %></span>
+                  <div class={["neo-status", cond do
+                    @player_view.can_act -> "waiting"
+                    not @player_view.can_start_hand and not @player_view.is_waiting_for_players -> "thinking"
+                    true -> "active"
+                  end]}>
+                    <%= if @player_view.can_act do %>
+                      Waiting
                     <% else %>
-                      <%= if @player_view.can_start_hand, do: "Ready", else: "Waiting" %>
+                      <%= if not @player_view.can_start_hand and not @player_view.is_waiting_for_players do %>
+                        Thinking...
+                      <% else %>
+                        <%= if @player_view.can_start_hand, do: "Ready", else: "Waiting" %>
+                      <% end %>
                     <% end %>
-                  <% end %>
-                </span>
+                  </div>
+                </div>
               </div>
-              <div class="text-lg font-bold text-green-600">
-                $<%= opponent.chips %>
+              <div class="neo-chips text-xl">
+                <span class="text-2xl">₿</span> <%= opponent.chips %>
               </div>
             </div>
           </div>
         <% end %>
 
-        <!-- Prominent Pot Display -->
-        <div class="text-center mb-6">
-          <div class="text-3xl font-bold text-green-600 mb-1">$<%= @player_view.pot %></div>
-          <div class="text-sm text-gray-600">Pot</div>
+        <!-- Neo Wave Pot Display -->
+        <div class="neo-pot">
+          <div class="neo-pot-amount">₿<%= @player_view.pot %></div>
+          <div class="neo-pot-label">Total Pot</div>
         </div>
         
-        <!-- Simplified Game info -->
-        <div class="flex justify-between items-center mb-6 text-sm text-gray-600">
-          <div>Hand #<%= @player_view.hand_number || 0 %></div>
-          <div>Your Chips: <span class="font-semibold text-gray-900">$<%= @player_view.current_player.chips %></span></div>
+        <!-- Neo Wave Game Info -->
+        <div class="flex justify-between items-center mb-8 glass-neo p-4">
+          <div class="text-white font-semibold">
+            <span class="text-cyan-400">HAND</span> #<%= @player_view.hand_number || 0 %>
+          </div>
+          <div class="neo-chips">
+            <span class="text-lg">₿</span> <%= @player_view.current_player.chips %>
+          </div>
         </div>
 
-        <!-- Community Cards -->
-        <div :if={length(@player_view.community_cards) > 0} class="mb-6">
-          <h3 class="text-lg font-medium mb-2">Community Cards</h3>
-          <div class="flex gap-2">
-            <span 
+        <!-- Neo Wave Community Cards -->
+        <div :if={length(@player_view.community_cards) > 0} class="neo-community mb-8">
+          <h3 class="text-xl font-bold text-white mb-4 gradient-text">COMMUNITY BOARD</h3>
+          <div class="flex gap-3 justify-center flex-wrap">
+            <div 
               :for={card <- @player_view.community_cards} 
-              class={"px-2 py-1 rounded border bg-white " <> 
+              class={"neo-card " <> 
                 case card.color do
-                  "red-600" -> "text-red-600"
-                  "blue-600" -> "text-blue-600" 
-                  "green-600" -> "text-green-600"
-                  "gray-900" -> "text-gray-900"
-                  _ -> "text-gray-900"
+                  "red-600" -> "pink-suit"
+                  "blue-600" -> "cyan-suit" 
+                  "green-600" -> "green-suit"
+                  "gray-900" -> "yellow-suit"
+                  _ -> "yellow-suit"
                 end}>
               <%= card.display %>
-            </span>
+            </div>
           </div>
         </div>
 
-        <!-- Your Cards -->
-        <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-6">
-          <h3 class="text-lg font-medium mb-2">Your Cards</h3>
-          <div class="flex gap-2">
-            <span 
-              :for={card <- @player_view.current_player.hole_cards} 
-              class={"px-2 py-1 rounded border bg-white " <> 
-                case card.color do
-                  "red-600" -> "text-red-600"
-                  "blue-600" -> "text-blue-600" 
-                  "green-600" -> "text-green-600"
-                  "gray-900" -> "text-gray-900"
-                  _ -> "text-gray-900"
-                end}>
-              <%= card.display %>
-            </span>
+        <!-- Neo Wave Player Cards -->
+        <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-8">
+          <div class="glass-neo p-6 text-center">
+            <h3 class="text-xl font-bold text-white mb-4">
+              <span class="gradient-text">YOUR HAND</span>
+            </h3>
+            <div class="flex gap-4 justify-center">
+              <div 
+                :for={card <- @player_view.current_player.hole_cards} 
+                class={"neo-card transform hover:scale-110 transition-transform " <> 
+                  case card.color do
+                    "red-600" -> "pink-suit"
+                    "blue-600" -> "cyan-suit" 
+                    "green-600" -> "green-suit"
+                    "gray-900" -> "yellow-suit"
+                    _ -> "yellow-suit"
+                  end}>
+                <%= card.display %>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Action Buttons -->
+        <!-- Neo Wave Action Interface -->
         <div class="text-center">
 
           <div :if={@player_view.can_act}>
-            <p class="mb-4">Your turn to act</p>
-            
-            <!-- Mobile-optimized action buttons -->
-            <div class="grid grid-cols-2 gap-3 mb-4">
-              <.button 
-                :if={:fold in @player_view.valid_actions}
-                phx-click="player_action" 
-                phx-value-action="fold" 
-                class="bg-red-600 hover:bg-red-700 text-lg py-3">
-                Fold
-              </.button>
-              <.button 
-                :if={:call in @player_view.valid_actions}
-                phx-click="player_action" 
-                phx-value-action="call" 
-                class="bg-blue-600 hover:bg-blue-700 text-lg py-3">
-                Call $<%= @player_view.betting_info.call_amount %>
-              </.button>
-              <.button 
-                :if={:check in @player_view.valid_actions}
-                phx-click="player_action" 
-                phx-value-action="check" 
-                class="bg-gray-600 hover:bg-gray-700 text-lg py-3 col-span-2">
-                Check
-              </.button>
-              <.button 
-                :if={:all_in in @player_view.valid_actions}
-                phx-click="player_action" 
-                phx-value-action="all_in" 
-                class="bg-purple-600 hover:bg-purple-700 text-lg py-3 col-span-2">
-                All-In ($<%= @player_view.current_player.chips %>)
-              </.button>
-            </div>
+            <div class="glass-neo p-6 mb-6">
+              <p class="mb-6 text-xl font-bold text-white">
+                <span class="gradient-text">YOUR TURN</span>
+              </p>
+              
+              <!-- Neo Wave action buttons -->
+              <div class="grid grid-cols-2 gap-4 mb-6">
+                <button 
+                  :if={:fold in @player_view.valid_actions}
+                  phx-click="player_action" 
+                  phx-value-action="fold" 
+                  class="neo-btn neo-btn-danger text-lg py-4 px-6">
+                  <span>FOLD</span>
+                </button>
+                <button 
+                  :if={:call in @player_view.valid_actions}
+                  phx-click="player_action" 
+                  phx-value-action="call" 
+                  class="neo-btn neo-btn-primary text-lg py-4 px-6">
+                  <span>CALL ₿<%= @player_view.betting_info.call_amount %></span>
+                </button>
+                <button 
+                  :if={:check in @player_view.valid_actions}
+                  phx-click="player_action" 
+                  phx-value-action="check" 
+                  class="neo-btn neo-btn-secondary text-lg py-4 px-6 col-span-2">
+                  <span>CHECK</span>
+                </button>
+                <button 
+                  :if={:all_in in @player_view.valid_actions}
+                  phx-click="player_action" 
+                  phx-value-action="all_in" 
+                  class="neo-btn neo-btn-primary text-lg py-4 px-6 col-span-2 relative overflow-hidden">
+                  <span>ALL-IN (₿<%= @player_view.current_player.chips %>)</span>
+                  <div class="absolute inset-0 bg-gradient-to-r from-pink-500 to-yellow-500 opacity-0 hover:opacity-20 transition-opacity"></div>
+                </button>
+              </div>
 
-            <!-- Mobile-optimized raise controls -->
-            <div :if={:raise in @player_view.valid_actions} class="bg-gray-50 rounded-lg p-3">
-              <form phx-submit="player_action" class="space-y-3">
-                <div class="flex items-center gap-3">
-                  <input 
-                    name="amount"
-                    type="number" 
-                    placeholder="Amount" 
-                    min={@player_view.betting_info.min_raise}
-                    max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
-                    class="flex-1 text-center border border-gray-300 rounded-lg px-3 py-2 text-lg"
-                    required
-                  />
-                  <.button type="submit" class="bg-orange-600 hover:bg-orange-700 text-lg py-2 px-6">
-                    Raise
-                  </.button>
-                </div>
-                <div class="text-sm text-gray-600 text-center">
-                  Min: $<%= @player_view.betting_info.min_raise %>
-                </div>
-                <input type="hidden" name="action" value="raise" />
-              </form>
+              <!-- Neo Wave raise controls -->
+              <div :if={:raise in @player_view.valid_actions} class="glass-neo p-4 mt-4">
+                <form phx-submit="player_action" class="space-y-4">
+                  <div class="flex items-center gap-4">
+                    <input 
+                      name="amount"
+                      type="number" 
+                      placeholder="Raise Amount" 
+                      min={@player_view.betting_info.min_raise}
+                      max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
+                      class="flex-1 text-center bg-white/90 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 text-lg font-bold text-gray-900 placeholder-gray-500 focus:border-pink-400 focus:outline-none transition-colors"
+                      required
+                    />
+                    <button type="submit" class="neo-btn neo-btn-secondary text-lg py-3 px-8">
+                      <span>RAISE</span>
+                    </button>
+                  </div>
+                  <div class="text-sm text-white/70 text-center font-medium">
+                    MIN: ₿<%= @player_view.betting_info.min_raise %>
+                  </div>
+                  <input type="hidden" name="action" value="raise" />
+                </form>
+              </div>
             </div>
           </div>
 
-          <!-- Showdown Results -->
-          <div :if={@player_view.showdown_results} class="mb-6">
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h3 class="text-lg font-semibold mb-3 text-center">Showdown Results</h3>
+          <!-- Neo Wave Showdown Results -->
+          <div :if={@player_view.showdown_results} class="mb-8">
+            <div class="glass-neo p-6 border-2 border-yellow-400/50">
+              <h3 class="text-2xl font-bold mb-6 text-center gradient-text">SHOWDOWN RESULTS</h3>
               
-              <!-- Winner Announcement -->
+              <!-- Neo Wave Winner Announcement -->
               <%= for winner_id <- @player_view.showdown_results.winners do %>
-                <div class="text-center mb-4">
-                  <div class="text-xl font-bold text-green-600">
-                    <%= if winner_id == @current_player, do: "You Win!", else: "#{winner_id} Wins!" %>
+                <div class="text-center mb-6">
+                  <div class="text-3xl font-bold mb-2">
+                    <span class="gradient-text">
+                      <%= if winner_id == @current_player, do: "YOU WIN!", else: "#{String.upcase(winner_id)} WINS!" %>
+                    </span>
                   </div>
-                  <div class="text-sm text-gray-600">
+                  <div class="text-lg text-white/80 font-medium">
                     <%= @player_view.showdown_results.hand_descriptions[winner_id] %>
+                  </div>
+                  <div class="flex justify-center mt-3">
+                    <span class="neo-club text-3xl">♣</span>
+                    <span class="neo-diamond text-3xl">♦</span>
+                    <span class="neo-heart text-3xl">♥</span>
+                    <span class="neo-spade text-3xl">♠</span>
                   </div>
                 </div>
               <% end %>
               
-              <!-- All Player Hands -->
-              <div class="space-y-3">
+              <!-- Neo Wave Player Hands Display -->
+              <div class="space-y-4">
                 <%= for player <- @player_view.players do %>
                   <%= if length(player.hole_cards) > 0 do %>
-                    <div class={"flex justify-between items-center p-3 rounded-lg " <>
+                    <div class={"flex justify-between items-center p-4 rounded-2xl backdrop-blur " <>
                       if player.id in @player_view.showdown_results.winners do
-                        "bg-green-100 border border-green-300"
+                        "bg-green-500/20 border-2 border-green-400/50 shadow-lg shadow-green-400/20"
                       else
-                        "bg-gray-100"
+                        "bg-white/10 border border-white/30"
                       end}>
-                      <div class="flex items-center gap-3">
-                        <span class="font-medium">
-                          <%= if player.is_current_player, do: "You", else: player.id %>
-                        </span>
-                        <div class="flex gap-1">
+                      <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-3">
+                          <div class={"w-10 h-10 rounded-full flex items-center justify-center text-white font-bold " <>
+                            if player.id in @player_view.showdown_results.winners do
+                              "bg-gradient-to-br from-green-400 to-green-600"
+                            else
+                              "bg-gradient-to-br from-gray-400 to-gray-600"
+                            end}>
+                            <%= if player.is_current_player, do: "Y", else: String.first(player.id) |> String.upcase() %>
+                          </div>
+                          <span class="font-bold text-white text-lg">
+                            <%= if player.is_current_player, do: "YOU", else: String.upcase(player.id) %>
+                          </span>
+                        </div>
+                        <div class="flex gap-2">
                           <%= for card <- player.hole_cards do %>
-                            <span class={"px-2 py-1 rounded border bg-white text-sm " <> 
+                            <div class={"neo-card text-sm " <> 
                               case card.color do
-                                "red-600" -> "text-red-600"
-                                "blue-600" -> "text-blue-600" 
-                                "green-600" -> "text-green-600"
-                                "gray-900" -> "text-gray-900"
-                                _ -> "text-gray-900"
+                                "red-600" -> "pink-suit"
+                                "blue-600" -> "cyan-suit" 
+                                "green-600" -> "green-suit"
+                                "gray-900" -> "yellow-suit"
+                                _ -> "yellow-suit"
                               end}>
                               <%= card.display %>
-                            </span>
+                            </div>
                           <% end %>
                         </div>
                       </div>
-                      <div class="text-sm text-gray-600">
+                      <div class="text-white/80 font-medium text-right">
                         <%= @player_view.showdown_results.hand_descriptions[player.id] %>
                       </div>
                     </div>
@@ -402,45 +442,68 @@ defmodule PokerServerWeb.GameLive.Show do
           </div>
 
           <div :if={@player_view.can_start_hand}>
-            <p class="mb-4">Hand complete! Ready to start next hand?</p>
-            <.button 
-              phx-click="start_hand" 
-              class="bg-green-600 hover:bg-green-700">
-              Start New Hand
-            </.button>
+            <div class="glass-neo p-6 text-center">
+              <p class="mb-6 text-xl font-bold text-white">
+                <span class="gradient-text">HAND COMPLETE!</span>
+              </p>
+              <p class="mb-6 text-white/80">Ready to deal the next hand?</p>
+              <button 
+                phx-click="start_hand" 
+                class="neo-btn neo-btn-secondary text-lg py-4 px-8">
+                <span>DEAL NEXT HAND</span>
+              </button>
+            </div>
           </div>
 
-          <!-- Play Again button when only one player has chips AND game is complete -->
+          <!-- Neo Wave Game Complete Interface -->
           <div :if={@player_view.players && @player_view.phase == :hand_complete && length(Enum.filter(@player_view.players, &(&1.chips > 0))) == 1}>
-            <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-              <h3 class="text-xl font-semibold mb-4 text-green-800">Game Complete!</h3>
-              <p class="mb-4 text-green-700">Ready for another game?</p>
-              <.button 
-                phx-click="play_again" 
-                class="bg-green-600 hover:bg-green-700 text-lg py-3 px-6">
-                Play Again
-              </.button>
+            <div class="glass-neo p-8 text-center border-2 border-green-400/50 relative overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-br from-green-400/10 to-cyan-400/10"></div>
+              <div class="relative z-10">
+                <h3 class="text-3xl font-bold mb-6">
+                  <span class="gradient-text">GAME COMPLETE!</span>
+                </h3>
+                <div class="flex justify-center mb-6">
+                  <span class="neo-club text-4xl">♣</span>
+                  <span class="neo-diamond text-4xl">♦</span>
+                  <span class="neo-heart text-4xl">♥</span>
+                  <span class="neo-spade text-4xl">♠</span>
+                </div>
+                <p class="mb-8 text-xl text-white/90">Ready for another round?</p>
+                <button 
+                  phx-click="play_again" 
+                  class="neo-btn neo-btn-primary text-xl py-4 px-10">
+                  <span>PLAY AGAIN</span>
+                </button>
+              </div>
             </div>
           </div>
 
           <div :if={not @player_view.can_act and not @player_view.can_start_hand and not @player_view.is_waiting_for_players}>
             <% opponent = if length(@player_view.players) == 2, do: Enum.find(@player_view.players, &(not &1.is_current_player)) %>
-            <p class="text-gray-600">
-              <%= if opponent do %>
-                Waiting for <%= opponent.id %>...
-              <% else %>
-                Waiting for other players...
-              <% end %>
-            </p>
+            <div class="glass-neo p-6 text-center">
+              <div class="animate-pulse">
+                <div class="flex justify-center mb-4">
+                  <div class="w-8 h-8 bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full animate-spin"></div>
+                </div>
+                <p class="text-white text-lg font-medium">
+                  <%= if opponent do %>
+                    Waiting for <span class="gradient-text font-bold"><%= String.upcase(opponent.id) %></span>...
+                  <% else %>
+                    Waiting for other players...
+                  <% end %>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Debug Info (toggleable via environment variable) -->
-      <div :if={@player_view != nil and show_debug?()} class="mt-4 bg-gray-100 rounded-lg p-4">
+      <!-- Neo Wave Debug Info -->
+      <div :if={@player_view != nil and show_debug?()} class="mt-6 glass-neo p-4">
         <details>
-          <summary class="cursor-pointer font-medium">Debug: Player View</summary>
-          <pre class="mt-2 text-xs overflow-auto"><%= inspect(@player_view, pretty: true) %></pre>
+          <summary class="cursor-pointer font-bold text-white hover:text-cyan-400 transition-colors">DEBUG: Player View</summary>
+          <pre class="mt-4 text-xs overflow-auto bg-gray-900/50 p-4 rounded-lg text-green-400 font-mono"><%= inspect(@player_view, pretty: true) %></pre>
         </details>
       </div>
     </div>

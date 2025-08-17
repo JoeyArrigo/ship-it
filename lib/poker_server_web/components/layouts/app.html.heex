@@ -1,20 +1,36 @@
-<header class="px-4 sm:px-6 lg:px-8">
-  <div class="flex items-center justify-between border-b border-zinc-100 py-3 text-sm">
+<header class="px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-r from-pink-500/10 via-cyan-500/10 to-yellow-500/10"></div>
+  <div class="flex items-center justify-between border-b border-white/20 py-4 text-sm relative z-10">
     <div class="flex items-center gap-4">
-      <a href="/">
-        <h1 class="text-2xl font-bold text-green-700">♠️ Poker Server ♥️</h1>
+      <a href="/" class="flex items-center gap-3">
+        <div class="logo-glitch text-3xl font-bold gradient-text" data-text="SHIP•IT">SHIP•IT</div>
+        <div class="flex text-2xl gap-1">
+          <span class="neo-club">♣</span>
+          <span class="neo-diamond">♦</span>
+          <span class="neo-heart">♥</span>
+          <span class="neo-spade">♠</span>
+        </div>
       </a>
     </div>
-    <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900">
-      <a href="/dev/dashboard" class="hover:text-zinc-700">
-        Dashboard
+    <div class="flex items-center gap-4 font-semibold leading-6">
+      <a href="/dev/dashboard" class="neo-btn neo-btn-secondary px-4 py-2 text-sm">
+        <span>Dashboard</span>
       </a>
     </div>
   </div>
+  <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-cyan-500 via-yellow-500 to-green-500"></div>
 </header>
-<main class="px-4 py-20 sm:px-6 lg:px-8">
-  <div class="mx-auto max-w-2xl">
+<main class="px-4 py-10 sm:px-6 lg:px-8 relative">
+  <div class="mx-auto max-w-6xl">
     <.flash_group flash={@flash} />
     <%= @inner_content %>
+  </div>
+  
+  <!-- Floating suit animations -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute top-20 left-20 text-4xl neo-club float-animation" style="animation-delay: 0s;">♣</div>
+    <div class="absolute top-40 right-40 text-4xl neo-diamond float-animation" style="animation-delay: 2.5s;">♦</div>
+    <div class="absolute top-60 left-60 text-4xl neo-heart float-animation" style="animation-delay: 5s;">♥</div>
+    <div class="absolute top-80 right-80 text-4xl neo-spade float-animation" style="animation-delay: 7.5s;">♠</div>
   </div>
 </main>
