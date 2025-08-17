@@ -273,11 +273,12 @@ defmodule PokerServer.GameServer do
       end
 
     # Create betting round for next phase (or nil for hand_complete)
-    next_betting_round = create_next_betting_round(
-      next_betting_round_type,
-      updated_game_state,
-      updated_betting_round.folded_players
-    )
+    next_betting_round =
+      create_next_betting_round(
+        next_betting_round_type,
+        updated_game_state,
+        updated_betting_round.folded_players
+      )
 
     final_state = %{
       state

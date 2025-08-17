@@ -825,7 +825,6 @@ defmodule PokerServer.GameServerPubSubTest do
     total_initial = player1_initial + player2_initial
     total_final = player1_final.chips + player2_final.chips
     assert total_final == total_initial
-
   end
 
   test "showdown handles chip distribution accurately", %{game_pid: game_pid} do
