@@ -925,6 +925,42 @@ body::before {
   .neo-particle:nth-child(n+4) {
     display: none;
   }
+  
+  /* Mobile player layout enhancements */
+  .neo-player-pos {
+    text-align: center;
+  }
+  
+  /* Mobile showdown layout improvements */
+  .neo-showdown-player {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  
+  /* Enhanced mobile card layout */
+  .neo-card {
+    width: 36px;
+    height: 52px;
+    font-size: 11px;
+    border-radius: 8px;
+  }
+  
+  /* Mobile stacked layout improvements */
+  .mobile-player-stack {
+    gap: 8px;
+  }
+  
+  .mobile-centered {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  /* Mobile avatar spacing */
+  .neo-avatar {
+    margin-bottom: 8px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -940,9 +976,9 @@ body::before {
   }
   
   .neo-card {
-    width: 42px;
-    height: 60px;
-    font-size: 12px;
+    width: 32px;
+    height: 46px;
+    font-size: 10px;
   }
   
   .neo-avatar {

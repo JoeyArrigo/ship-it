@@ -219,14 +219,18 @@ defmodule PokerServerWeb.GameLive.Show do
         <%= if length(@player_view.players) == 2 do %>
           <% opponent = Enum.find(@player_view.players, &(not &1.is_current_player)) %>
           <div :if={opponent} class="mb-4 sm:mb-8 neo-player-pos relative">
-            <div class="flex justify-between items-center">
-              <div class="flex items-center gap-2 sm:gap-4">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full neo-avatar flex items-center justify-center text-white font-bold">
+            <!-- Mobile: Stack layout, Desktop: Horizontal layout -->
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+              <!-- Player info section -->
+              <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                <!-- Avatar centered on mobile -->
+                <div class="w-12 h-12 sm:w-12 sm:h-12 rounded-full neo-avatar flex items-center justify-center text-white font-bold">
                   <%= String.first(opponent.id) |> String.upcase() %>
                 </div>
-                <div>
-                  <span class="text-lg sm:text-xl font-bold text-gray-900"><%= opponent.id %></span>
-                  <div class={["neo-status", cond do
+                <!-- Text content below avatar on mobile, beside on desktop -->
+                <div class="text-center sm:text-left">
+                  <span class="text-lg sm:text-xl font-bold text-gray-900 block"><%= opponent.id %></span>
+                  <div class={["neo-status inline-block mt-1 sm:mt-0", cond do
                     @player_view.can_act -> "waiting"
                     not @player_view.can_start_hand and not @player_view.is_waiting_for_players -> "thinking"
                     true -> "active"
@@ -243,7 +247,8 @@ defmodule PokerServerWeb.GameLive.Show do
                   </div>
                 </div>
               </div>
-              <div class="neo-chips text-lg sm:text-xl">
+              <!-- Chips - centered on mobile, right on desktop -->
+              <div class="neo-chips text-lg sm:text-xl mt-2 sm:mt-0 self-center sm:self-auto">
                 <span class="text-xl sm:text-2xl neo-bitcoin">₿</span> <%= opponent.chips %>
               </div>
             </div>
@@ -405,43 +410,50 @@ defmodule PokerServerWeb.GameLive.Show do
               <div class="space-y-4">
                 <%= for player <- @player_view.players do %>
                   <%= if length(player.hole_cards) > 0 do %>
-                    <div class={"flex justify-between items-center p-4 rounded-2xl backdrop-blur " <>
+                    <div class={"p-3 sm:p-4 rounded-2xl backdrop-blur " <>
                       if player.id in @player_view.showdown_results.winners do
                         "bg-green-500/20 border-2 border-green-400/50 shadow-lg shadow-green-400/20"
                       else
                         "bg-white/10 border border-white/30"
                       end}>
-                      <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-3">
-                          <div class={"w-10 h-10 rounded-full flex items-center justify-center text-white font-bold " <>
-                            if player.id in @player_view.showdown_results.winners do
-                              "bg-gradient-to-br from-green-400 to-green-600"
-                            else
-                              "bg-gradient-to-br from-gray-400 to-gray-600"
-                            end}>
-                            <%= if player.is_current_player, do: "Y", else: String.first(player.id) |> String.upcase() %>
-                          </div>
-                          <span class="font-bold text-gray-900 text-lg">
-                            <%= if player.is_current_player, do: "YOU", else: String.upcase(player.id) %>
-                          </span>
-                        </div>
-                        <div class="flex gap-2">
-                          <%= for card <- player.hole_cards do %>
-                            <div class={"neo-card text-sm " <> 
-                              case card.color do
-                                "red-600" -> "pink-suit"
-                                "blue-600" -> "cyan-suit" 
-                                "green-600" -> "green-suit"
-                                "gray-900" -> "yellow-suit"
-                                _ -> "yellow-suit"
+                      <!-- Mobile: Stack layout, Desktop: Side-by-side layout -->
+                      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                        <!-- Player and cards section -->
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                          <!-- Player info -->
+                          <div class="flex items-center gap-2 sm:gap-3 justify-center sm:justify-start">
+                            <div class={"w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base " <>
+                              if player.id in @player_view.showdown_results.winners do
+                                "bg-gradient-to-br from-green-400 to-green-600"
+                              else
+                                "bg-gradient-to-br from-gray-400 to-gray-600"
                               end}>
-                              <%= card.display %>
+                              <%= if player.is_current_player, do: "Y", else: String.first(player.id) |> String.upcase() %>
                             </div>
-                          <% end %>
+                            <span class="font-bold text-gray-900 text-base sm:text-lg">
+                              <%= if player.is_current_player, do: "YOU", else: String.upcase(player.id) %>
+                            </span>
+                          </div>
+                          <!-- Cards centered on mobile -->
+                          <div class="flex gap-2 justify-center sm:justify-start">
+                            <%= for card <- player.hole_cards do %>
+                              <div class={"neo-card text-xs sm:text-sm " <> 
+                                case card.color do
+                                  "red-600" -> "pink-suit"
+                                  "blue-600" -> "cyan-suit" 
+                                  "green-600" -> "green-suit"
+                                  "gray-900" -> "yellow-suit"
+                                  _ -> "yellow-suit"
+                                end}>
+                                <%= card.display %>
+                              </div>
+                            <% end %>
+                          </div>
                         </div>
-                      </div>
-                      <div class="text-gray-700 font-medium text-right">
-                        <%= @player_view.showdown_results.hand_descriptions[player.id] %>
+                        <!-- Hand evaluation below cards on mobile, right side on desktop -->
+                        <div class="text-gray-700 font-medium text-center sm:text-right text-sm sm:text-base mt-2 sm:mt-0">
+                          <%= @player_view.showdown_results.hand_descriptions[player.id] %>
+                        </div>
                       </div>
                     </div>
                   <% end %>
@@ -451,14 +463,14 @@ defmodule PokerServerWeb.GameLive.Show do
           </div>
 
           <div :if={@player_view.can_start_hand}>
-            <div class="glass-neo p-6 text-center">
-              <p class="mb-6 text-xl font-bold">
+            <div class="glass-neo p-4 sm:p-6 text-center">
+              <p class="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">
                 <span class="gradient-text">HAND COMPLETE!</span>
               </p>
-              <p class="mb-6 text-gray-700">Ready to deal the next hand?</p>
+              <p class="mb-4 sm:mb-6 text-gray-700 text-sm sm:text-base">Ready to deal the next hand?</p>
               <button 
                 phx-click="start_hand" 
-                class="neo-btn neo-btn-secondary text-lg py-4 px-8">
+                class="neo-btn neo-btn-secondary text-sm sm:text-lg py-3 sm:py-4 px-6 sm:px-8">
                 <span>DEAL NEXT HAND</span>
               </button>
             </div>
@@ -466,22 +478,22 @@ defmodule PokerServerWeb.GameLive.Show do
 
           <!-- Neo Wave Game Complete Interface -->
           <div :if={@player_view.players && @player_view.phase == :hand_complete && length(Enum.filter(@player_view.players, &(&1.chips > 0))) == 1}>
-            <div class="glass-neo p-8 text-center border-2 border-green-400/50 relative overflow-hidden">
+            <div class="glass-neo p-4 sm:p-8 text-center border-2 border-green-400/50 relative overflow-hidden">
               <div class="absolute inset-0 bg-gradient-to-br from-green-400/10 to-cyan-400/10"></div>
               <div class="relative z-10">
-                <h3 class="text-3xl font-bold mb-6">
+                <h3 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">
                   <span class="gradient-text">GAME COMPLETE!</span>
                 </h3>
-                <div class="flex justify-center mb-6">
-                  <span class="neo-club text-4xl">♣</span>
-                  <span class="neo-diamond text-4xl">♦</span>
-                  <span class="neo-heart text-4xl">♥</span>
-                  <span class="neo-spade text-4xl">♠</span>
+                <div class="flex justify-center mb-4 sm:mb-6 gap-1 sm:gap-2">
+                  <span class="neo-club text-2xl sm:text-4xl">♣</span>
+                  <span class="neo-diamond text-2xl sm:text-4xl">♦</span>
+                  <span class="neo-heart text-2xl sm:text-4xl">♥</span>
+                  <span class="neo-spade text-2xl sm:text-4xl">♠</span>
                 </div>
-                <p class="mb-8 text-xl text-gray-700">Ready for another round?</p>
+                <p class="mb-6 sm:mb-8 text-lg sm:text-xl text-gray-700">Ready for another round?</p>
                 <button 
                   phx-click="play_again" 
-                  class="neo-btn neo-btn-primary text-xl py-4 px-10">
+                  class="neo-btn neo-btn-primary text-lg sm:text-xl py-3 sm:py-4 px-8 sm:px-10">
                   <span>PLAY AGAIN</span>
                 </button>
               </div>
@@ -490,12 +502,12 @@ defmodule PokerServerWeb.GameLive.Show do
 
           <div :if={not @player_view.can_act and not @player_view.can_start_hand and not @player_view.is_waiting_for_players}>
             <% opponent = if length(@player_view.players) == 2, do: Enum.find(@player_view.players, &(not &1.is_current_player)) %>
-            <div class="glass-neo p-6 text-center">
+            <div class="glass-neo p-4 sm:p-6 text-center">
               <div class="animate-pulse">
-                <div class="flex justify-center mb-4">
-                  <div class="w-8 h-8 bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full animate-spin"></div>
+                <div class="flex justify-center mb-3 sm:mb-4">
+                  <div class="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full animate-spin"></div>
                 </div>
-                <p class="text-gray-700 text-lg font-medium">
+                <p class="text-gray-700 text-base sm:text-lg font-medium">
                   <%= if opponent do %>
                     Waiting for <span class="gradient-text font-bold"><%= String.upcase(opponent.id) %></span>...
                   <% else %>
