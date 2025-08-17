@@ -43,21 +43,39 @@ defmodule PokerServerWeb.CoreComponents do
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
       class={[
-        "fixed top-2 right-2 mr-2 w-80 sm:w-96 z-50 rounded-lg p-3 ring-1",
-        @kind == :info && "bg-emerald-50 text-emerald-800 ring-emerald-500 fill-cyan-900",
-        @kind == :error && "bg-rose-50 text-rose-900 shadow-md ring-rose-500 fill-rose-900"
+        "fixed top-4 right-4 w-80 sm:w-96 z-50 p-4 backdrop-filter backdrop-blur-lg border rounded-2xl shadow-2xl transform transition-all duration-300 ease-out",
+        @kind == :info && "bg-gradient-to-br from-cyan-500/90 to-green-500/90 border-cyan-400/50 text-white shadow-cyan-500/25",
+        @kind == :error && "bg-gradient-to-br from-pink-500/90 to-red-500/90 border-pink-400/50 text-white shadow-pink-500/25"
       ]}
       {@rest}
     >
-      <p :if={@title} class="flex items-center gap-1.5 text-sm font-semibold leading-6">
-        <.icon :if={@kind == :info} name="hero-information-circle-mini" class="h-4 w-4" />
-        <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" />
-        <%= @title %>
-      </p>
-      <p class="mt-2 text-sm leading-5"><%= msg %></p>
-      <button type="button" class="group absolute top-1 right-1 p-2" aria-label={gettext("close")}>
-        <.icon name="hero-x-mark-solid" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
-      </button>
+      <div class="relative z-10">
+        <div :if={@title} class="flex items-center gap-2 mb-2">
+          <div :if={@kind == :info} class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+            <span class="text-lg neo-diamond">♦</span>
+          </div>
+          <div :if={@kind == :error} class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+            <span class="text-lg neo-heart">♥</span>
+          </div>
+          <span class="font-bold text-sm uppercase tracking-wider"><%= @title %></span>
+        </div>
+        <p class="text-sm font-medium leading-relaxed"><%= msg %></p>
+        <button 
+          type="button" 
+          class="absolute top-0 right-0 w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center group" 
+          aria-label={gettext("close")}>
+          <span class="text-white/70 group-hover:text-white text-sm font-bold">×</span>
+        </button>
+      </div>
+      
+      <!-- Neo Wave glowing border effect -->
+      <div class="absolute inset-0 rounded-2xl opacity-30 pointer-events-none">
+        <div class={[
+          "absolute inset-0 rounded-2xl bg-gradient-to-r animate-pulse",
+          @kind == :info && "from-cyan-400 to-green-400",
+          @kind == :error && "from-pink-400 to-red-400"
+        ]}></div>
+      </div>
     </div>
     """
   end
@@ -75,8 +93,8 @@ defmodule PokerServerWeb.CoreComponents do
   def flash_group(assigns) do
     ~H"""
     <div id={@id}>
-      <.flash kind={:info} title={gettext("Success!")} flash={@flash} />
-      <.flash kind={:error} title={gettext("Error!")} flash={@flash} />
+      <.flash kind={:info} title="SHIP•IT SUCCESS!" flash={@flash} />
+      <.flash kind={:error} title="SYSTEM ERROR!" flash={@flash} />
     </div>
     """
   end
