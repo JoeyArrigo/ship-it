@@ -336,7 +336,7 @@ defmodule PokerServer.BettingRound do
       iex> BettingRound.process_action(betting_round, "player1", {:call})
       {:ok, %BettingRound{...}}
   """
-  @spec process_action(t(), String.t(), tuple()) :: {:ok, t()} | {:error, atom()}
+  @spec process_action(t(), String.t(), tuple()) :: {:ok, t()} | {:error, String.t()}
   def process_action(betting_round, player_id, action) do
     # Validate it's the correct player's turn
     active_player = get_active_player(betting_round)
