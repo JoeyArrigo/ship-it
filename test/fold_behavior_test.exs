@@ -52,7 +52,7 @@ defmodule PokerServer.FoldBehaviorTest do
       betting_round = BettingRound.new_from_existing(game_state.players, game_state.pot, 0, :river)
       # Set folded players in the betting round
       betting_round_with_folds = %{betting_round | folded_players: folded_players}
-      
+
       # Call showdown with betting round containing folded players
       result = GameState.showdown(game_state, betting_round_with_folds)
 
