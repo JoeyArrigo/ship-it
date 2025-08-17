@@ -205,6 +205,15 @@ defmodule PokerServerWeb.GameLive.Show do
     <div class="max-w-6xl mx-auto relative">
       <!-- Neo Wave Game Interface -->
       <div :if={@player_view} class="mt-2 neo-table relative overflow-hidden">
+        <!-- Floating particle effects -->
+        <div class="neo-particles">
+          <div class="neo-particle" style="left: 10%; animation-delay: 0s;"></div>
+          <div class="neo-particle" style="left: 20%; animation-delay: 2s;"></div>
+          <div class="neo-particle" style="left: 30%; animation-delay: 4s;"></div>
+          <div class="neo-particle" style="left: 70%; animation-delay: 6s;"></div>
+          <div class="neo-particle" style="left: 80%; animation-delay: 8s;"></div>
+          <div class="neo-particle" style="left: 90%; animation-delay: 1s;"></div>
+        </div>
         
         <!-- Neo Wave Opponent Display -->
         <%= if length(@player_view.players) == 2 do %>
@@ -212,7 +221,7 @@ defmodule PokerServerWeb.GameLive.Show do
           <div :if={opponent} class="mb-8 neo-player-pos relative">
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                <div class="w-12 h-12 rounded-full neo-avatar flex items-center justify-center text-white font-bold">
                   <%= String.first(opponent.id) |> String.upcase() %>
                 </div>
                 <div>
@@ -235,7 +244,7 @@ defmodule PokerServerWeb.GameLive.Show do
                 </div>
               </div>
               <div class="neo-chips text-xl">
-                <span class="text-2xl">₿</span> <%= opponent.chips %>
+                <span class="text-2xl neo-bitcoin">₿</span> <%= opponent.chips %>
               </div>
             </div>
           </div>
@@ -243,7 +252,7 @@ defmodule PokerServerWeb.GameLive.Show do
 
         <!-- Neo Wave Pot Display -->
         <div class="neo-pot">
-          <div class="neo-pot-amount">₿<%= @player_view.pot %></div>
+          <div class="neo-pot-amount"><span class="neo-bitcoin">₿</span><%= @player_view.pot %></div>
           <div class="neo-pot-label">Total Pot</div>
         </div>
         
@@ -253,7 +262,7 @@ defmodule PokerServerWeb.GameLive.Show do
             <span class="text-cyan-600 font-bold">HAND</span> #<%= @player_view.hand_number || 0 %>
           </div>
           <div class="neo-chips">
-            <span class="text-lg">₿</span> <%= @player_view.current_player.chips %>
+            <span class="text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
           </div>
         </div>
 
