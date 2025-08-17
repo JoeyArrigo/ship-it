@@ -112,7 +112,7 @@ defmodule PokerServerWeb.GameLive.Index do
             <span class="neo-spade">♠</span>
           </div>
           <p class="text-lg sm:text-xl text-gray-600 font-medium tracking-wider uppercase letter-spacing-2">
-            Poker Reimagined for the Metaverse Era
+            ALL IN • ALL NEW • ALL FUTURE
           </p>
         </div>
       </div>
@@ -242,7 +242,7 @@ defmodule PokerServerWeb.GameLive.Index do
         <div class="glass-neo p-4 sm:p-6 text-center sm:col-span-2 lg:col-span-1">
           <div class="text-3xl sm:text-4xl mb-3 neo-heart">♥</div>
           <h3 class="font-bold text-gray-900 mb-2">Next-Gen UX</h3>
-          <p class="text-sm text-gray-600">Metaverse-ready poker experience</p>
+          <p class="text-sm text-gray-600">Future-ready poker experience</p>
         </div>
       </div>
 
