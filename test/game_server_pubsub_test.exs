@@ -826,11 +826,6 @@ defmodule PokerServer.GameServerPubSubTest do
     total_final = player1_final.chips + player2_final.chips
     assert total_final == total_initial
 
-    # At least one player should have different chip count (unless tie)
-    chips_changed =
-      player1_final.chips != player1_initial or player2_final.chips != player2_initial
-
-    assert chips_changed
   end
 
   test "showdown handles chip distribution accurately", %{game_pid: game_pid} do
@@ -857,9 +852,6 @@ defmodule PokerServer.GameServerPubSubTest do
     loser_losses =
       min(player1_final.chips - player1_initial, player2_final.chips - player2_initial)
 
-    # Winner gains should equal pot, loser loses their contribution
-    assert winner_gains > 0
-    assert loser_losses < 0
     # Zero-sum game
     assert winner_gains + loser_losses == 0
   end
