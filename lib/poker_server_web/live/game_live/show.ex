@@ -216,7 +216,7 @@ defmodule PokerServerWeb.GameLive.Show do
                   <%= String.first(opponent.id) |> String.upcase() %>
                 </div>
                 <div>
-                  <span class="text-xl font-bold text-white"><%= opponent.id %></span>
+                  <span class="text-xl font-bold text-gray-900"><%= opponent.id %></span>
                   <div class={["neo-status", cond do
                     @player_view.can_act -> "waiting"
                     not @player_view.can_start_hand and not @player_view.is_waiting_for_players -> "thinking"
@@ -249,8 +249,8 @@ defmodule PokerServerWeb.GameLive.Show do
         
         <!-- Neo Wave Game Info -->
         <div class="flex justify-between items-center mb-8 glass-neo p-4">
-          <div class="text-white font-semibold">
-            <span class="text-cyan-400">HAND</span> #<%= @player_view.hand_number || 0 %>
+          <div class="text-gray-900 font-semibold">
+            <span class="text-cyan-600 font-bold">HAND</span> #<%= @player_view.hand_number || 0 %>
           </div>
           <div class="neo-chips">
             <span class="text-lg">₿</span> <%= @player_view.current_player.chips %>
@@ -259,7 +259,7 @@ defmodule PokerServerWeb.GameLive.Show do
 
         <!-- Neo Wave Community Cards -->
         <div :if={length(@player_view.community_cards) > 0} class="neo-community mb-8">
-          <h3 class="text-xl font-bold text-white mb-4 gradient-text">COMMUNITY BOARD</h3>
+          <h3 class="text-xl font-bold mb-4 gradient-text">COMMUNITY BOARD</h3>
           <div class="flex gap-3 justify-center flex-wrap">
             <div 
               :for={card <- @player_view.community_cards} 
@@ -279,7 +279,7 @@ defmodule PokerServerWeb.GameLive.Show do
         <!-- Neo Wave Player Cards -->
         <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-8">
           <div class="glass-neo p-6 text-center">
-            <h3 class="text-xl font-bold text-white mb-4">
+            <h3 class="text-xl font-bold mb-4">
               <span class="gradient-text">YOUR HAND</span>
             </h3>
             <div class="flex gap-4 justify-center">
@@ -304,7 +304,7 @@ defmodule PokerServerWeb.GameLive.Show do
 
           <div :if={@player_view.can_act}>
             <div class="glass-neo p-6 mb-6">
-              <p class="mb-6 text-xl font-bold text-white">
+              <p class="mb-6 text-xl font-bold">
                 <span class="gradient-text">YOUR TURN</span>
               </p>
               
@@ -351,14 +351,14 @@ defmodule PokerServerWeb.GameLive.Show do
                       placeholder="Raise Amount" 
                       min={@player_view.betting_info.min_raise}
                       max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
-                      class="flex-1 text-center bg-white/90 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 text-lg font-bold text-gray-900 placeholder-gray-500 focus:border-pink-400 focus:outline-none transition-colors"
+                      class="flex-1 text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 text-lg font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
                       required
                     />
                     <button type="submit" class="neo-btn neo-btn-secondary text-lg py-3 px-8">
                       <span>RAISE</span>
                     </button>
                   </div>
-                  <div class="text-sm text-white/70 text-center font-medium">
+                  <div class="text-sm text-gray-600 text-center font-medium">
                     MIN: ₿<%= @player_view.betting_info.min_raise %>
                   </div>
                   <input type="hidden" name="action" value="raise" />
@@ -380,7 +380,7 @@ defmodule PokerServerWeb.GameLive.Show do
                       <%= if winner_id == @current_player, do: "YOU WIN!", else: "#{String.upcase(winner_id)} WINS!" %>
                     </span>
                   </div>
-                  <div class="text-lg text-white/80 font-medium">
+                  <div class="text-lg text-gray-700 font-medium">
                     <%= @player_view.showdown_results.hand_descriptions[winner_id] %>
                   </div>
                   <div class="flex justify-center mt-3">
@@ -412,7 +412,7 @@ defmodule PokerServerWeb.GameLive.Show do
                             end}>
                             <%= if player.is_current_player, do: "Y", else: String.first(player.id) |> String.upcase() %>
                           </div>
-                          <span class="font-bold text-white text-lg">
+                          <span class="font-bold text-gray-900 text-lg">
                             <%= if player.is_current_player, do: "YOU", else: String.upcase(player.id) %>
                           </span>
                         </div>
@@ -431,7 +431,7 @@ defmodule PokerServerWeb.GameLive.Show do
                           <% end %>
                         </div>
                       </div>
-                      <div class="text-white/80 font-medium text-right">
+                      <div class="text-gray-700 font-medium text-right">
                         <%= @player_view.showdown_results.hand_descriptions[player.id] %>
                       </div>
                     </div>
@@ -443,10 +443,10 @@ defmodule PokerServerWeb.GameLive.Show do
 
           <div :if={@player_view.can_start_hand}>
             <div class="glass-neo p-6 text-center">
-              <p class="mb-6 text-xl font-bold text-white">
+              <p class="mb-6 text-xl font-bold">
                 <span class="gradient-text">HAND COMPLETE!</span>
               </p>
-              <p class="mb-6 text-white/80">Ready to deal the next hand?</p>
+              <p class="mb-6 text-gray-700">Ready to deal the next hand?</p>
               <button 
                 phx-click="start_hand" 
                 class="neo-btn neo-btn-secondary text-lg py-4 px-8">
@@ -469,7 +469,7 @@ defmodule PokerServerWeb.GameLive.Show do
                   <span class="neo-heart text-4xl">♥</span>
                   <span class="neo-spade text-4xl">♠</span>
                 </div>
-                <p class="mb-8 text-xl text-white/90">Ready for another round?</p>
+                <p class="mb-8 text-xl text-gray-700">Ready for another round?</p>
                 <button 
                   phx-click="play_again" 
                   class="neo-btn neo-btn-primary text-xl py-4 px-10">
@@ -486,7 +486,7 @@ defmodule PokerServerWeb.GameLive.Show do
                 <div class="flex justify-center mb-4">
                   <div class="w-8 h-8 bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full animate-spin"></div>
                 </div>
-                <p class="text-white text-lg font-medium">
+                <p class="text-gray-700 text-lg font-medium">
                   <%= if opponent do %>
                     Waiting for <span class="gradient-text font-bold"><%= String.upcase(opponent.id) %></span>...
                   <% else %>
@@ -502,7 +502,7 @@ defmodule PokerServerWeb.GameLive.Show do
       <!-- Neo Wave Debug Info -->
       <div :if={@player_view != nil and show_debug?()} class="mt-6 glass-neo p-4">
         <details>
-          <summary class="cursor-pointer font-bold text-white hover:text-cyan-400 transition-colors">DEBUG: Player View</summary>
+          <summary class="cursor-pointer font-bold text-gray-900 hover:text-cyan-600 transition-colors">DEBUG: Player View</summary>
           <pre class="mt-4 text-xs overflow-auto bg-gray-900/50 p-4 rounded-lg text-green-400 font-mono"><%= inspect(@player_view, pretty: true) %></pre>
         </details>
       </div>

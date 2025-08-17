@@ -431,13 +431,14 @@ body::before {
 
 /* Neo poker table */
 .neo-table {
-  background: linear-gradient(135deg, var(--neo-dark), #1A1E37);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 244, 255, 0.8));
+  backdrop-filter: blur(20px);
   border-radius: 50px;
   border: 8px solid transparent;
   background-clip: padding-box;
   position: relative;
   padding: 30px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(255, 107, 237, 0.15);
 }
 
 .neo-table::before {
