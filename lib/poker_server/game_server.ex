@@ -93,7 +93,11 @@ defmodule PokerServer.GameServer do
       )
 
     # Sync player chips from betting round back to game state (blinds are posted in BettingRound.new)
-    synced_game_state = %{updated_game_state | players: betting_round.players, pot: betting_round.pot}
+    synced_game_state = %{
+      updated_game_state
+      | players: betting_round.players,
+        pot: betting_round.pot
+    }
 
     new_state = %{
       state
@@ -217,18 +221,24 @@ defmodule PokerServer.GameServer do
           # Check if betting round is complete
           if BettingRound.betting_complete?(updated_betting_round) do
             # Check if only one player remains (others folded) - hand ends immediately
-            active_players = length(updated_betting_round.players) - MapSet.size(updated_betting_round.folded_players)
-            
+            active_players =
+              length(updated_betting_round.players) -
+                MapSet.size(updated_betting_round.folded_players)
+
             if active_players <= 1 do
               # Hand ends immediately, award pot to remaining player
-              remaining_player_id = 
+              remaining_player_id =
                 updated_betting_round.players
-                |> Enum.find(fn player -> player.id not in updated_betting_round.folded_players end)
+                |> Enum.find(fn player ->
+                  player.id not in updated_betting_round.folded_players
+                end)
                 |> Map.get(:id)
-              
+
               game_state_with_pot = %{synced_game_state | pot: updated_betting_round.pot}
-              final_game_state = GameState.award_pot_to_winner(game_state_with_pot, remaining_player_id)
-              
+
+              final_game_state =
+                GameState.award_pot_to_winner(game_state_with_pot, remaining_player_id)
+
               final_state = %{
                 new_state
                 | game_state: final_game_state,
@@ -236,15 +246,15 @@ defmodule PokerServer.GameServer do
                   phase: :hand_complete,
                   folded_players: updated_betting_round.folded_players
               }
-              
+
               GameBroadcaster.broadcast_state_change(state.game_id, final_state)
               {:reply, {:ok, :betting_complete, final_state}, final_state}
             else
               # Continue to next phase
               game_state_with_pot = %{synced_game_state | pot: updated_betting_round.pot}
-              
+
               # Handle showdown specially to pass folded players
-              updated_game_state = 
+              updated_game_state =
                 if next_phase == :hand_complete do
                   # This is showdown - pass folded players
                   GameState.showdown(game_state_with_pot, updated_betting_round.folded_players)
@@ -258,13 +268,15 @@ defmodule PokerServer.GameServer do
                 if next_betting_round_type do
                   # Use new constructor that preserves existing pot without reposting blinds
                   # Also need to pass folded players to prevent them from acting
-                  new_round = BettingRound.new_from_existing(
-                    updated_game_state.players,
-                    updated_game_state.pot,
-                    0,
-                    next_betting_round_type,
-                    updated_game_state.button_position
-                  )
+                  new_round =
+                    BettingRound.new_from_existing(
+                      updated_game_state.players,
+                      updated_game_state.pot,
+                      0,
+                      next_betting_round_type,
+                      updated_game_state.button_position
+                    )
+
                   # Preserve folded players from previous round
                   %{new_round | folded_players: updated_betting_round.folded_players}
                 else
@@ -294,5 +306,4 @@ defmodule PokerServer.GameServer do
         {:reply, {:error, {:invalid_input, validation_error}}, state}
     end
   end
-
 end

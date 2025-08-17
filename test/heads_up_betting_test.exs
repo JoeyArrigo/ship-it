@@ -146,12 +146,14 @@ defmodule PokerServer.HeadsUpBettingTest do
     test "button rotation: lower position is small blind" do
       # Test hand 1: Player at position 0 is button/small blind
       players_hand1 = [
-        player("alice", 1000, 0),  # Button/Small blind
-        player("bob", 1000, 1)     # Big blind
+        # Button/Small blind
+        player("alice", 1000, 0),
+        # Big blind
+        player("bob", 1000, 1)
       ]
 
       betting_round1 = BettingRound.new(players_hand1, 10, 20, :preflop)
-      
+
       # Alice (position 0) should have posted small blind
       assert betting_round1.player_bets["alice"] == 10
       # Bob (position 1) should have posted big blind  
@@ -159,12 +161,14 @@ defmodule PokerServer.HeadsUpBettingTest do
 
       # Test hand 2: After button rotation, player at lower position is still button/small blind
       players_hand2 = [
-        player("alice", 1000, 1),  # Big blind now
-        player("bob", 1000, 0)     # Button/Small blind now
+        # Big blind now
+        player("alice", 1000, 1),
+        # Button/Small blind now
+        player("bob", 1000, 0)
       ]
 
       betting_round2 = BettingRound.new(players_hand2, 10, 20, :preflop)
-      
+
       # Bob (position 0) should have posted small blind
       assert betting_round2.player_bets["bob"] == 10
       # Alice (position 1) should have posted big blind

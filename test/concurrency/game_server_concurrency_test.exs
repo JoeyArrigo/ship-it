@@ -292,5 +292,4 @@ defmodule PokerServer.GameServerConcurrencyTest do
       assert final_server_state.game_state.hand_number >= 1
     end
   end
-
 end

@@ -6,11 +6,11 @@ defmodule PokerServer.GameServerPubSubTest do
   setup do
     # Create test players  
     players = [{"player1", 1000}, {"player2", 1000}]
-    
+
     # Start game directly with deterministic button position
-    game_id = "test_game_#{:rand.uniform(1000000)}"
+    game_id = "test_game_#{:rand.uniform(1_000_000)}"
     {:ok, game_pid} = PokerServer.GameServer.start_link({game_id, players})
-    
+
     # Set deterministic button position: button=1 means player2 is button, player1 is small blind
     :sys.replace_state(game_pid, fn state ->
       %{state | game_state: %{state.game_state | button_position: 1}}
@@ -389,7 +389,9 @@ defmodule PokerServer.GameServerPubSubTest do
     # Get active player and initial state
     initial_state = GameServer.get_state(game_pid)
     active_player = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
-    other_player = Enum.find(initial_state.game_state.players, fn p -> p.id != active_player.id end)
+
+    other_player =
+      Enum.find(initial_state.game_state.players, fn p -> p.id != active_player.id end)
 
     # Player folds, leaving other player as only active
     {:ok, :betting_complete, final_state} =
@@ -404,7 +406,10 @@ defmodule PokerServer.GameServerPubSubTest do
 
     # Pot should be awarded to the remaining player
     assert final_state.game_state.pot == 0
-    winning_player = Enum.find(final_state.game_state.players, fn p -> p.id == other_player.id end)
+
+    winning_player =
+      Enum.find(final_state.game_state.players, fn p -> p.id == other_player.id end)
+
     assert winning_player.chips > other_player.chips
   end
 

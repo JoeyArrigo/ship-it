@@ -1,7 +1,7 @@
 defmodule PokerServer.GameBroadcaster do
   @moduledoc """
   Service responsible for broadcasting game state changes to connected players.
-  
+
   Handles player-specific filtering and PubSub communication, removing the
   architectural dependency between GameServer (business logic) and UIAdapter
   (presentation layer).
@@ -12,7 +12,7 @@ defmodule PokerServer.GameBroadcaster do
 
   @doc """
   Broadcast game state change to all players with appropriate filtering.
-  
+
   Each player receives a filtered view that hides other players' hole cards
   and includes only the information they should see.
   """
