@@ -1,7 +1,6 @@
 defmodule PokerServer.GameServer do
   use GenServer
-  alias PokerServer.{GameState, BettingRound, Player, InputValidator, UIAdapter, Types}
-  alias Phoenix.PubSub
+  alias PokerServer.{GameState, BettingRound, Player, InputValidator, GameBroadcaster, Types}
   require Logger
 
   @type state :: %{
@@ -104,7 +103,7 @@ defmodule PokerServer.GameServer do
         folded_players: MapSet.new()
     }
 
-    broadcast_state_change(state.game_id, new_state)
+    GameBroadcaster.broadcast_state_change(state.game_id, new_state)
     {:reply, {:ok, new_state}, new_state}
   end
 
@@ -238,7 +237,7 @@ defmodule PokerServer.GameServer do
                   folded_players: updated_betting_round.folded_players
               }
               
-              broadcast_state_change(state.game_id, final_state)
+              GameBroadcaster.broadcast_state_change(state.game_id, final_state)
               {:reply, {:ok, :betting_complete, final_state}, final_state}
             else
               # Continue to next phase
@@ -279,11 +278,11 @@ defmodule PokerServer.GameServer do
                   phase: next_phase
               }
 
-              broadcast_state_change(state.game_id, final_state)
+              GameBroadcaster.broadcast_state_change(state.game_id, final_state)
               {:reply, {:ok, :betting_complete, final_state}, final_state}
             end
           else
-            broadcast_state_change(state.game_id, new_state)
+            GameBroadcaster.broadcast_state_change(state.game_id, new_state)
             {:reply, {:ok, :action_processed, new_state}, new_state}
           end
 
@@ -296,19 +295,4 @@ defmodule PokerServer.GameServer do
     end
   end
 
-  # TODO: Architectural smell - GameServer should not depend on UIAdapter (presentation layer)
-  # This creates proper per-player filtering to prevent hole card leakage but violates separation of concerns
-  # Future refactor: Move to dedicated GameBroadcaster service or event-based approach
-  defp broadcast_state_change(game_id, new_state) do
-    new_state.game_state.players
-    |> Enum.each(fn player ->
-      filtered_view = UIAdapter.get_broadcast_player_view(new_state, player.id)
-
-      PubSub.broadcast(
-        PokerServer.PubSub,
-        "game:#{game_id}:#{player.id}",
-        {:game_updated, filtered_view}
-      )
-    end)
-  end
 end
