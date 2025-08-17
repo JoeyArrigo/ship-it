@@ -202,7 +202,7 @@ defmodule PokerServerWeb.GameLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-6xl mx-auto relative">
+    <div class="max-w-6xl mx-auto relative px-2 sm:px-4">
       <!-- Neo Wave Game Interface -->
       <div :if={@player_view} class="mt-2 neo-table relative overflow-hidden">
         <!-- Floating particle effects -->
@@ -218,14 +218,14 @@ defmodule PokerServerWeb.GameLive.Show do
         <!-- Neo Wave Opponent Display -->
         <%= if length(@player_view.players) == 2 do %>
           <% opponent = Enum.find(@player_view.players, &(not &1.is_current_player)) %>
-          <div :if={opponent} class="mb-8 neo-player-pos relative">
+          <div :if={opponent} class="mb-4 sm:mb-8 neo-player-pos relative">
             <div class="flex justify-between items-center">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full neo-avatar flex items-center justify-center text-white font-bold">
+              <div class="flex items-center gap-2 sm:gap-4">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full neo-avatar flex items-center justify-center text-white font-bold">
                   <%= String.first(opponent.id) |> String.upcase() %>
                 </div>
                 <div>
-                  <span class="text-xl font-bold text-gray-900"><%= opponent.id %></span>
+                  <span class="text-lg sm:text-xl font-bold text-gray-900"><%= opponent.id %></span>
                   <div class={["neo-status", cond do
                     @player_view.can_act -> "waiting"
                     not @player_view.can_start_hand and not @player_view.is_waiting_for_players -> "thinking"
@@ -243,8 +243,8 @@ defmodule PokerServerWeb.GameLive.Show do
                   </div>
                 </div>
               </div>
-              <div class="neo-chips text-xl">
-                <span class="text-2xl neo-bitcoin">₿</span> <%= opponent.chips %>
+              <div class="neo-chips text-lg sm:text-xl">
+                <span class="text-xl sm:text-2xl neo-bitcoin">₿</span> <%= opponent.chips %>
               </div>
             </div>
           </div>
@@ -257,19 +257,19 @@ defmodule PokerServerWeb.GameLive.Show do
         </div>
         
         <!-- Neo Wave Game Info -->
-        <div class="flex justify-between items-center mb-8 glass-neo p-4">
-          <div class="text-gray-900 font-semibold">
+        <div class="flex justify-between items-center mb-4 sm:mb-8 glass-neo p-3 sm:p-4">
+          <div class="text-gray-900 font-semibold text-sm sm:text-base">
             <span class="text-cyan-600 font-bold">HAND</span> #<%= @player_view.hand_number || 0 %>
           </div>
-          <div class="neo-chips">
-            <span class="text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
+          <div class="neo-chips text-sm sm:text-base">
+            <span class="text-base sm:text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
           </div>
         </div>
 
         <!-- Neo Wave Community Cards -->
-        <div :if={length(@player_view.community_cards) > 0} class="neo-community mb-8">
-          <h3 class="text-xl font-bold mb-4 gradient-text">COMMUNITY BOARD</h3>
-          <div class="flex gap-3 justify-center flex-wrap">
+        <div :if={length(@player_view.community_cards) > 0} class="neo-community mb-4 sm:mb-8">
+          <h3 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4 gradient-text">COMMUNITY BOARD</h3>
+          <div class="flex gap-2 sm:gap-3 justify-center flex-wrap">
             <div 
               :for={card <- @player_view.community_cards} 
               class={"neo-card " <> 
@@ -286,12 +286,12 @@ defmodule PokerServerWeb.GameLive.Show do
         </div>
 
         <!-- Neo Wave Player Cards -->
-        <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-8">
-          <div class="glass-neo p-6 text-center">
-            <h3 class="text-xl font-bold mb-4">
+        <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-4 sm:mb-8">
+          <div class="glass-neo p-4 sm:p-6 text-center">
+            <h3 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4">
               <span class="gradient-text">YOUR HAND</span>
             </h3>
-            <div class="flex gap-4 justify-center">
+            <div class="flex gap-3 sm:gap-4 justify-center">
               <div 
                 :for={card <- @player_view.current_player.hole_cards} 
                 class={"neo-card transform hover:scale-110 transition-transform " <> 
@@ -312,63 +312,63 @@ defmodule PokerServerWeb.GameLive.Show do
         <div class="text-center">
 
           <div :if={@player_view.can_act}>
-            <div class="glass-neo p-6 mb-6">
-              <p class="mb-6 text-xl font-bold">
+            <div class="glass-neo p-4 sm:p-6 mb-4 sm:mb-6">
+              <p class="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">
                 <span class="gradient-text">YOUR TURN</span>
               </p>
               
               <!-- Neo Wave action buttons -->
-              <div class="grid grid-cols-2 gap-4 mb-6">
+              <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <button 
                   :if={:fold in @player_view.valid_actions}
                   phx-click="player_action" 
                   phx-value-action="fold" 
-                  class="neo-btn neo-btn-danger text-lg py-4 px-6">
+                  class="neo-btn neo-btn-danger text-sm sm:text-lg py-3 sm:py-4 px-4 sm:px-6">
                   <span>FOLD</span>
                 </button>
                 <button 
                   :if={:call in @player_view.valid_actions}
                   phx-click="player_action" 
                   phx-value-action="call" 
-                  class="neo-btn neo-btn-primary text-lg py-4 px-6">
-                  <span>CALL ₿<%= @player_view.betting_info.call_amount %></span>
+                  class="neo-btn neo-btn-primary text-sm sm:text-lg py-3 sm:py-4 px-4 sm:px-6">
+                  <span>CALL <span class="neo-bitcoin">₿</span><%= @player_view.betting_info.call_amount %></span>
                 </button>
                 <button 
                   :if={:check in @player_view.valid_actions}
                   phx-click="player_action" 
                   phx-value-action="check" 
-                  class="neo-btn neo-btn-secondary text-lg py-4 px-6 col-span-2">
+                  class="neo-btn neo-btn-secondary text-sm sm:text-lg py-3 sm:py-4 px-4 sm:px-6 col-span-2">
                   <span>CHECK</span>
                 </button>
                 <button 
                   :if={:all_in in @player_view.valid_actions}
                   phx-click="player_action" 
                   phx-value-action="all_in" 
-                  class="neo-btn neo-btn-primary text-lg py-4 px-6 col-span-2 relative overflow-hidden">
-                  <span>ALL-IN (₿<%= @player_view.current_player.chips %>)</span>
+                  class="neo-btn neo-btn-primary text-sm sm:text-lg py-3 sm:py-4 px-4 sm:px-6 col-span-2 relative overflow-hidden">
+                  <span>ALL-IN (<span class="neo-bitcoin">₿</span><%= @player_view.current_player.chips %>)</span>
                   <div class="absolute inset-0 bg-gradient-to-r from-pink-500 to-yellow-500 opacity-0 hover:opacity-20 transition-opacity"></div>
                 </button>
               </div>
 
               <!-- Neo Wave raise controls -->
-              <div :if={:raise in @player_view.valid_actions} class="glass-neo p-4 mt-4">
-                <form phx-submit="player_action" class="space-y-4">
-                  <div class="flex items-center gap-4">
+              <div :if={:raise in @player_view.valid_actions} class="glass-neo p-3 sm:p-4 mt-3 sm:mt-4">
+                <form phx-submit="player_action" class="space-y-3 sm:space-y-4">
+                  <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
                     <input 
                       name="amount"
                       type="number" 
                       placeholder="Raise Amount" 
                       min={@player_view.betting_info.min_raise}
                       max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
-                      class="flex-1 text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 text-lg font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
+                      class="w-full sm:flex-1 text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
                       required
                     />
-                    <button type="submit" class="neo-btn neo-btn-secondary text-lg py-3 px-8">
+                    <button type="submit" class="w-full sm:w-auto neo-btn neo-btn-secondary text-sm sm:text-lg py-2 sm:py-3 px-6 sm:px-8">
                       <span>RAISE</span>
                     </button>
                   </div>
-                  <div class="text-sm text-gray-600 text-center font-medium">
-                    MIN: ₿<%= @player_view.betting_info.min_raise %>
+                  <div class="text-xs sm:text-sm text-gray-600 text-center font-medium">
+                    MIN: <span class="neo-bitcoin">₿</span><%= @player_view.betting_info.min_raise %>
                   </div>
                   <input type="hidden" name="action" value="raise" />
                 </form>
