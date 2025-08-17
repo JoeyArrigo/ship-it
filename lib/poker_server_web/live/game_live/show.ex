@@ -97,6 +97,7 @@ defmodule PokerServerWeb.GameLive.Show do
     make_player_action(socket, {:all_in})
   end
 
+
   @impl true
   def handle_event("start_hand", _params, socket) do
     case GameManager.lookup_game(socket.assigns.game_id) do
@@ -259,6 +260,12 @@ defmodule PokerServerWeb.GameLive.Show do
         <div class="neo-pot">
           <div class="neo-pot-amount"><span class="neo-bitcoin">₿</span><%= @player_view.pot %></div>
           <div class="neo-pot-label">Total Pot</div>
+          <!-- Pot odds information for betting decisions -->
+          <div :if={@player_view.can_act and :call in @player_view.valid_actions} class="mt-2 text-xs text-gray-600">
+            <% call_amount = @player_view.betting_info.call_amount %>
+            <% pot_odds = if call_amount > 0, do: trunc(@player_view.pot / call_amount * 100), else: 0 %>
+            <span class="font-medium">Pot Odds: <%= pot_odds %>% • Call to Win <%= @player_view.pot + call_amount %></span>
+          </div>
         </div>
         
         <!-- Neo Wave Game Info -->
@@ -357,26 +364,70 @@ defmodule PokerServerWeb.GameLive.Show do
 
               <!-- Neo Wave raise controls -->
               <div :if={:raise in @player_view.valid_actions} class="glass-neo p-3 sm:p-4 mt-3 sm:mt-4">
-                <form phx-submit="player_action" class="space-y-3 sm:space-y-4">
-                  <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-                    <input 
-                      name="amount"
-                      type="number" 
-                      placeholder="Raise Amount" 
-                      min={@player_view.betting_info.min_raise}
-                      max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
-                      class="w-full sm:flex-1 text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
-                      required
-                    />
-                    <button type="submit" class="w-full sm:w-auto neo-btn neo-btn-secondary text-sm sm:text-lg py-2 sm:py-3 px-6 sm:px-8">
-                      <span>RAISE</span>
-                    </button>
+                <div class="space-y-4">
+                  <!-- Quick bet amount buttons -->
+                  <div class="mb-4">
+                    <p class="text-xs sm:text-sm text-gray-600 text-center font-medium mb-3 uppercase tracking-wider">Quick Bets</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <button 
+                        phx-click="player_action" 
+                        phx-value-action="raise" 
+                        phx-value-amount={div(@player_view.pot, 2)}
+                        class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
+                        <span>½ POT</span>
+                        <div class="text-xs opacity-75">₿<%= div(@player_view.pot, 2) %></div>
+                      </button>
+                      <button 
+                        phx-click="player_action" 
+                        phx-value-action="raise" 
+                        phx-value-amount={div(@player_view.pot * 3, 4)}
+                        class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
+                        <span>¾ POT</span>
+                        <div class="text-xs opacity-75">₿<%= div(@player_view.pot * 3, 4) %></div>
+                      </button>
+                      <button 
+                        phx-click="player_action" 
+                        phx-value-action="raise" 
+                        phx-value-amount={@player_view.pot}
+                        class="neo-btn neo-btn-primary text-xs sm:text-sm py-2 px-3 relative group">
+                        <span>POT</span>
+                        <div class="text-xs opacity-75">₿<%= @player_view.pot %></div>
+                      </button>
+                      <button 
+                        phx-click="player_action" 
+                        phx-value-action="raise" 
+                        phx-value-amount={@player_view.pot * 2}
+                        class="neo-btn neo-btn-primary text-xs sm:text-sm py-2 px-3 relative group">
+                        <span>2× POT</span>
+                        <div class="text-xs opacity-75">₿<%= @player_view.pot * 2 %></div>
+                      </button>
+                    </div>
                   </div>
-                  <div class="text-xs sm:text-sm text-gray-600 text-center font-medium">
-                    MIN: <span class="neo-bitcoin">₿</span><%= @player_view.betting_info.min_raise %>
-                  </div>
-                  <input type="hidden" name="action" value="raise" />
-                </form>
+
+                  <!-- Custom raise form -->
+                  <form phx-submit="player_action" class="space-y-3">
+                    <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+                      <input 
+                        id="raise-amount"
+                        name="amount"
+                        type="number" 
+                        placeholder="Custom Amount" 
+                        min={@player_view.betting_info.min_raise}
+                        max={@player_view.current_player.chips + (@player_view.betting_info.call_amount || 0)}
+                        class="w-full sm:flex-1 text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
+                        required
+                      />
+                      <button type="submit" class="w-full sm:w-auto neo-btn neo-btn-secondary text-sm sm:text-lg py-2 sm:py-3 px-6 sm:px-8">
+                        <span>RAISE</span>
+                      </button>
+                    </div>
+                    <div class="flex justify-between text-xs sm:text-sm text-gray-600 font-medium">
+                      <span>MIN: <span class="neo-bitcoin">₿</span><%= @player_view.betting_info.min_raise %></span>
+                      <span>MAX: <span class="neo-bitcoin">₿</span><%= @player_view.current_player.chips + (@player_view.betting_info.call_amount || 0) %></span>
+                    </div>
+                    <input type="hidden" name="action" value="raise" />
+                  </form>
+                </div>
               </div>
             </div>
           </div>
