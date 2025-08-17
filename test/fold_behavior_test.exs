@@ -47,8 +47,14 @@ defmodule PokerServer.FoldBehaviorTest do
       # player1 has folded
       folded_players = MapSet.new(["player1"])
 
-      # Call showdown with folded players
-      result = GameState.showdown(game_state, folded_players)
+      # Create betting round with folded players for testing
+      alias PokerServer.BettingRound
+      betting_round = BettingRound.new_from_existing(game_state.players, game_state.pot, 0, :river)
+      # Set folded players in the betting round
+      betting_round_with_folds = %{betting_round | folded_players: folded_players}
+      
+      # Call showdown with betting round containing folded players
+      result = GameState.showdown(game_state, betting_round_with_folds)
 
       # Should only evaluate player2 and player3, not player1
       assert result.phase == :hand_complete

@@ -354,7 +354,10 @@ defmodule PokerServer.GameStateTest do
         big_blind: 20
       }
 
-      updated_state = GameState.showdown(game_state, MapSet.new())
+      # Create a simple betting round with no folded players for testing
+      alias PokerServer.BettingRound
+      betting_round = BettingRound.new_from_existing(game_state.players, game_state.pot, 0, :river)
+      updated_state = GameState.showdown(game_state, betting_round)
 
       assert updated_state.phase == :hand_complete
 
@@ -405,7 +408,10 @@ defmodule PokerServer.GameStateTest do
         big_blind: 20
       }
 
-      updated_state = GameState.showdown(game_state, MapSet.new())
+      # Create a simple betting round with no folded players for testing
+      alias PokerServer.BettingRound
+      betting_round = BettingRound.new_from_existing(game_state.players, game_state.pot, 0, :river)
+      updated_state = GameState.showdown(game_state, betting_round)
 
       # Both players should get equal share
       for player <- updated_state.players do

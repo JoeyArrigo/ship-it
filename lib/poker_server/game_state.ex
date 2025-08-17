@@ -289,7 +289,7 @@ defmodule PokerServer.GameState do
   end
 
   @doc """
-  Evaluate all player hands and determine winners.
+  Evaluate all player hands and determine winners with proper side pot distribution.
 
   Compares all remaining players' hole cards against community cards
   using short deck poker hand rankings. Awards pot to winner(s) and
@@ -297,22 +297,26 @@ defmodule PokerServer.GameState do
 
   ## Parameters  
   - game_state: Current game state with community cards dealt
-  - folded_players: MapSet of player IDs who have folded
+  - betting_round: BettingRound with bet amounts for side pot calculation
 
   ## Returns
   Updated game state with:
   - Winners determined and chips awarded
   - Phase set to :hand_complete
-  - Pot distributed to winning player(s)
+  - Pot distributed to winning player(s) with proper side pot handling
 
   ## Notes
   Uses short deck hand evaluation where flush beats full house.
   Handles ties by splitting pot equally among winners.
   Folded players are excluded from hand evaluation and cannot win.
+  Uses BettingRound.side_pots/1 for accurate side pot distribution.
   """
-  @spec showdown(t(), MapSet.t(String.t())) :: t()
-  def showdown(game_state, folded_players) do
-    alias PokerServer.HandEvaluator
+  @spec showdown(t(), PokerServer.BettingRound.t()) :: t()
+  def showdown(game_state, betting_round) do
+    alias PokerServer.{HandEvaluator, BettingRound}
+
+    # Get folded players from betting round
+    folded_players = betting_round.folded_players
 
     # Evaluate each player's hand, excluding folded players
     player_hands =
@@ -323,19 +327,33 @@ defmodule PokerServer.GameState do
         {player.id, hand}
       end)
 
-    # Determine winners
+    # Determine winners for all eligible players
     winners = HandEvaluator.determine_winners(player_hands)
 
-    # Distribute pot among winners
-    pot_per_winner = div(game_state.pot, length(winners))
+    # Get side pots with correct bet amounts
+    side_pots = BettingRound.side_pots(betting_round)
 
+    # Distribute each side pot to eligible winners
     updated_players =
-      game_state.players
-      |> Enum.map(fn player ->
-        if player.id in winners do
-          %{player | chips: player.chips + pot_per_winner}
+      Enum.reduce(side_pots, game_state.players, fn side_pot, players ->
+        # Find winners who are eligible for this side pot
+        eligible_winners = 
+          winners
+          |> Enum.filter(fn winner_id -> winner_id in side_pot.eligible_players end)
+
+        if length(eligible_winners) > 0 do
+          # Split the side pot among eligible winners
+          pot_per_winner = div(side_pot.amount, length(eligible_winners))
+          
+          Enum.map(players, fn player ->
+            if player.id in eligible_winners do
+              %{player | chips: player.chips + pot_per_winner}
+            else
+              player
+            end
+          end)
         else
-          player
+          players
         end
       end)
 
