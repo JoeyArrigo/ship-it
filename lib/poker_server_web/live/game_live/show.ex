@@ -329,37 +329,43 @@ defmodule PokerServerWeb.GameLive.Show do
                 <span class="gradient-text">YOUR TURN</span>
               </p>
               
-              <!-- Neo Wave action buttons -->
-              <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                <button 
-                  :if={:fold in @player_view.valid_actions}
-                  phx-click="player_action" 
-                  phx-value-action="fold" 
-                  class="neo-btn neo-btn-danger text-sm sm:text-lg py-3 sm:py-4 px-4 sm:px-6">
-                  <span>FOLD</span>
-                </button>
-                <button 
-                  :if={:call in @player_view.valid_actions}
-                  phx-click="player_action" 
-                  phx-value-action="call" 
-                  class="neo-btn neo-btn-primary text-sm sm:text-lg py-3 sm:py-4 px-4 sm:px-6">
-                  <span>CALL <span class="neo-bitcoin">₿</span><%= @player_view.betting_info.call_amount %></span>
-                </button>
-                <button 
-                  :if={:check in @player_view.valid_actions}
-                  phx-click="player_action" 
-                  phx-value-action="check" 
-                  class="neo-btn neo-btn-secondary text-sm sm:text-lg py-3 sm:py-4 px-4 sm:px-6 col-span-2">
-                  <span>CHECK</span>
-                </button>
-                <button 
-                  :if={:all_in in @player_view.valid_actions}
-                  phx-click="player_action" 
-                  phx-value-action="all_in" 
-                  class="neo-btn neo-btn-primary text-sm sm:text-lg py-3 sm:py-4 px-4 sm:px-6 col-span-2 relative overflow-hidden">
-                  <span>ALL-IN (<span class="neo-bitcoin">₿</span><%= @player_view.current_player.chips %>)</span>
-                  <div class="absolute inset-0 bg-gradient-to-r from-pink-500 to-yellow-500 opacity-0 hover:opacity-20 transition-opacity"></div>
-                </button>
+              <!-- Neo Wave action buttons - Prioritize safe actions -->
+              <div class="space-y-3 mb-4 sm:mb-6">
+                <!-- Primary safe actions - prominent and full width -->
+                <div class="space-y-2">
+                  <button 
+                    :if={:check in @player_view.valid_actions}
+                    phx-click="player_action" 
+                    phx-value-action="check" 
+                    class="w-full neo-btn neo-btn-primary text-lg sm:text-xl py-4 sm:py-5 px-6">
+                    <span>CHECK</span>
+                  </button>
+                  <button 
+                    :if={:call in @player_view.valid_actions}
+                    phx-click="player_action" 
+                    phx-value-action="call" 
+                    class="w-full neo-btn neo-btn-primary text-lg sm:text-xl py-4 sm:py-5 px-6">
+                    <span>CALL <span class="neo-bitcoin">₿</span><%= @player_view.betting_info.call_amount %></span>
+                  </button>
+                </div>
+
+                <!-- Dangerous actions - smaller and less prominent -->
+                <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200/30">
+                  <button 
+                    :if={:fold in @player_view.valid_actions}
+                    phx-click="player_action" 
+                    phx-value-action="fold" 
+                    class="neo-btn text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4 bg-gray-400/20 hover:bg-gray-400/30 text-gray-600 hover:text-gray-800 border border-gray-400/50">
+                    <span>Fold</span>
+                  </button>
+                  <button 
+                    :if={:all_in in @player_view.valid_actions}
+                    phx-click="player_action" 
+                    phx-value-action="all_in" 
+                    class="neo-btn text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4 bg-gray-400/20 hover:bg-gray-400/30 text-gray-600 hover:text-gray-800 border border-gray-400/50">
+                    <span>All-in</span>
+                  </button>
+                </div>
               </div>
 
               <!-- Neo Wave raise controls -->
