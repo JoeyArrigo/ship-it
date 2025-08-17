@@ -1,11 +1,279 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
-/* This file is for your main application CSS */
+/* Ship-it Poker Neo Wave CSS */
+
+/* CSS Custom Properties for Neo Wave Brand */
+:root {
+  --neo-pink: #FF6BED;
+  --neo-cyan: #00D4FF;
+  --neo-yellow: #FFD93D;
+  --neo-green: #6BFF8F;
+  --neo-dark: #0A0E27;
+  --neo-light: #F0F4FF;
+  --neo-glass: rgba(255, 255, 255, 0.7);
+  --font-neo: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Base body styles */
+body {
+  font-family: var(--font-neo);
+  background: linear-gradient(180deg, var(--neo-light) 0%, #FFE8F5 50%, #E8F5FF 100%);
+  color: var(--neo-dark);
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Animated neon grid background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(255, 107, 237, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: -1;
+  animation: grid-drift 20s linear infinite;
+}
+
+@keyframes grid-drift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(25px, 25px); }
+}
+
+/* Holographic card suits */
+.neo-club { color: var(--neo-yellow); text-shadow: 0 0 20px rgba(255, 217, 61, 0.6); }
+.neo-diamond { color: var(--neo-cyan); text-shadow: 0 0 20px rgba(0, 212, 255, 0.6); }
+.neo-heart { color: var(--neo-pink); text-shadow: 0 0 20px rgba(255, 107, 237, 0.6); }
+.neo-spade { color: var(--neo-green); text-shadow: 0 0 20px rgba(107, 255, 143, 0.6); }
+
+/* Animated glow effect for suits */
+@keyframes suit-glow {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 10px currentColor); }
+  50% { filter: brightness(1.2) drop-shadow(0 0 20px currentColor); }
+}
+
+.neo-club, .neo-diamond, .neo-heart, .neo-spade {
+  animation: suit-glow 3s ease-in-out infinite;
+}
+
+/* Glass morphism utility class */
+.glass-neo {
+  background: var(--neo-glass);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan), var(--neo-yellow), var(--neo-green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Neo button base styles */
+.neo-btn {
+  position: relative;
+  overflow: hidden;
+  border-radius: 100px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: none;
+  cursor: pointer;
+}
+
+.neo-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+  z-index: 0;
+}
+
+.neo-btn:hover {
+  transform: translateY(-3px);
+}
+
+.neo-btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.neo-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+/* Primary action button */
+.neo-btn-primary {
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan));
+  color: white;
+  box-shadow: 0 5px 20px rgba(255, 107, 237, 0.3);
+}
+
+.neo-btn-primary:hover {
+  box-shadow: 0 10px 30px rgba(255, 107, 237, 0.4);
+}
+
+/* Secondary action button */
+.neo-btn-secondary {
+  background: linear-gradient(135deg, var(--neo-yellow), var(--neo-green));
+  color: var(--neo-dark);
+  box-shadow: 0 5px 20px rgba(255, 217, 61, 0.3);
+}
+
+.neo-btn-secondary:hover {
+  box-shadow: 0 10px 30px rgba(255, 217, 61, 0.4);
+}
+
+/* Danger action button */
+.neo-btn-danger {
+  background: linear-gradient(135deg, #FF6B6B, var(--neo-pink));
+  color: white;
+  box-shadow: 0 5px 20px rgba(255, 107, 107, 0.3);
+}
+
+.neo-btn-danger:hover {
+  box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+}
+
+/* Holographic chip design */
+.holo-chip {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan), var(--neo-yellow), var(--neo-green));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  position: relative;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.holo-chip::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan), var(--neo-yellow), var(--neo-green));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: chip-rotate 3s linear infinite;
+}
+
+@keyframes chip-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Floating animations */
+.float-animation {
+  animation: float-up 10s linear infinite;
+}
+
+@keyframes float-up {
+  0% { transform: translateY(100px) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.3; }
+  90% { opacity: 0.3; }
+  100% { transform: translateY(-200px) rotate(360deg); opacity: 0; }
+}
+
+/* Logo glitch effect */
+.logo-glitch {
+  position: relative;
+  animation: glitch 3s infinite;
+}
+
+.logo-glitch::before,
+.logo-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.logo-glitch::before {
+  animation: glitch-1 0.5s infinite;
+  color: var(--neo-pink);
+  z-index: -1;
+}
+
+.logo-glitch::after {
+  animation: glitch-2 0.5s infinite;
+  color: var(--neo-cyan);
+  z-index: -2;
+}
+
+@keyframes glitch {
+  0%, 100% { text-shadow: none; }
+  95% { text-shadow: -2px 0 var(--neo-pink), 2px 0 var(--neo-cyan); }
+}
+
+@keyframes glitch-1 {
+  0%, 100% { clip: rect(0, 900px, 0, 0); }
+  25% { clip: rect(0, 900px, 50px, 0); }
+  50% { clip: rect(50px, 900px, 100px, 0); }
+  75% { clip: rect(100px, 900px, 150px, 0); }
+}
+
+@keyframes glitch-2 {
+  0%, 100% { clip: rect(0, 900px, 0, 0); }
+  25% { clip: rect(100px, 900px, 150px, 0); }
+  50% { clip: rect(0, 900px, 50px, 0); }
+  75% { clip: rect(50px, 900px, 100px, 0); }
+}
+/* Phoenix Live View styling updates */
 .phx-no-feedback.invalid-feedback,
 .phx-no-feedback .invalid-feedback {
   display: none;
+}
+
+/* Flash messages with Neo Wave styling */
+.flash {
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+}
+
+.flash.flash-info {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.9), rgba(0, 212, 255, 0.7));
+  color: white;
+  border: 1px solid var(--neo-cyan);
+  box-shadow: 0 8px 25px rgba(0, 212, 255, 0.2);
+}
+
+.flash.flash-error {
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.9), rgba(255, 107, 237, 0.7));
+  color: white;
+  border: 1px solid var(--neo-pink);
+  box-shadow: 0 8px 25px rgba(255, 107, 237, 0.2);
 }
 
 .phx-click-loading {
@@ -86,90 +354,241 @@
   100% { opacity: 0; }
 }
 
-/* Poker specific styles */
-.poker-card {
-  width: 60px;
-  height: 84px;
-  border-radius: 8px;
-  border: 2px solid #333;
+/* Neo Wave Playing Cards */
+.neo-card {
+  width: 64px;
+  height: 90px;
+  border-radius: 16px;
   background: white;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
-  margin: 2px;
+  margin: 3px;
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border: 3px solid transparent;
 }
 
-.poker-card.red {
-  color: #dc2626;
+.neo-card:hover {
+  transform: translateY(-5px) scale(1.05);
 }
 
-.poker-card.black {
-  color: #1f2937;
+/* Neo Wave four-color system */
+.neo-card.yellow-suit {
+  border-color: var(--neo-yellow);
+  color: var(--neo-yellow);
+  text-shadow: 0 0 10px rgba(255, 217, 61, 0.3);
 }
 
-/* Four-color deck uses Tailwind classes: text-red-600, text-blue-600, text-green-600, text-gray-900 */
+.neo-card.cyan-suit {
+  border-color: var(--neo-cyan);
+  color: var(--neo-cyan);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
 
-.poker-table {
-  background: #0f5132;
+.neo-card.pink-suit {
+  border-color: var(--neo-pink);
+  color: var(--neo-pink);
+  text-shadow: 0 0 10px rgba(255, 107, 237, 0.3);
+}
+
+.neo-card.green-suit {
+  border-color: var(--neo-green);
+  color: var(--neo-green);
+  text-shadow: 0 0 10px rgba(107, 255, 143, 0.3);
+}
+
+/* Card back design */
+.neo-card-back {
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan), var(--neo-yellow), var(--neo-green));
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.neo-card-back::before {
+  content: '';
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.1) 10px,
+    rgba(255, 255, 255, 0.1) 20px
+  );
+  animation: card-slide 10s linear infinite;
+}
+
+@keyframes card-slide {
+  0% { transform: translate(-50%, -50%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Neo poker table */
+.neo-table {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 244, 255, 0.8));
+  backdrop-filter: blur(20px);
   border-radius: 50px;
-  border: 8px solid #8b4513;
+  border: 8px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+  padding: 30px;
+  box-shadow: 0 20px 60px rgba(255, 107, 237, 0.15);
+}
+
+.neo-table::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 8px;
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan), var(--neo-yellow), var(--neo-green));
+  border-radius: inherit;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Player position with glass effect */
+.neo-player-pos {
+  border-radius: 20px;
+  padding: 16px;
+  background: var(--neo-glass);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Pot display with holographic effect */
+.neo-pot {
+  text-align: center;
   padding: 20px;
+  background: var(--neo-glass);
+  backdrop-filter: blur(15px);
+  border-radius: 24px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+  margin: 20px 0;
 }
 
-.player-position {
-  border-radius: 10px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.neo-pot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan), var(--neo-yellow), var(--neo-green));
+  border-radius: inherit;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: pot-glow 3s ease-in-out infinite;
 }
 
-.action-button {
-  padding: 8px 16px;
-  margin: 4px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.2s ease;
+@keyframes pot-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
-.action-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+.neo-pot-amount {
+  font-size: 3rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
 }
 
-.action-button.fold {
-  background: #dc2626;
-  color: white;
+.neo-pot-label {
+  font-size: 0.875rem;
+  color: rgba(10, 14, 39, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 600;
 }
 
-.action-button.call {
-  background: #16a34a;
-  color: white;
-}
-
-.action-button.raise {
-  background: #2563eb;
-  color: white;
-}
-
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.chip-stack {
+/* Chips display */
+.neo-chips {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: #fbbf24;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--neo-yellow), #FFE885);
+  border-radius: 25px;
+  font-weight: 700;
+  color: var(--neo-dark);
+  font-size: 16px;
+  box-shadow: 0 4px 15px rgba(255, 217, 61, 0.3);
+}
+
+/* Status indicator */
+.neo-status {
+  padding: 6px 12px;
   border-radius: 20px;
-  font-weight: bold;
-  color: #1f2937;
-  font-size: 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.neo-status.active {
+  background: linear-gradient(135deg, var(--neo-green), #A8FFB9);
+  color: var(--neo-dark);
+  box-shadow: 0 0 20px rgba(107, 255, 143, 0.4);
+}
+
+.neo-status.waiting {
+  background: linear-gradient(135deg, var(--neo-cyan), #66E5FF);
+  color: white;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+}
+
+.neo-status.thinking {
+  background: linear-gradient(135deg, var(--neo-pink), #FFB3F5);
+  color: white;
+  box-shadow: 0 0 20px rgba(255, 107, 237, 0.4);
+  animation: thinking-pulse 2s ease-in-out infinite;
+}
+
+@keyframes thinking-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Community cards section */
+.neo-community {
+  background: var(--neo-glass);
+  backdrop-filter: blur(15px);
+  border-radius: 20px;
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Hand strength indicator */
+.neo-hand-strength {
+  background: var(--neo-dark);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 20px;
+  text-align: center;
+  font-weight: 600;
+  margin: 10px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.neo-hand-strength::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--neo-pink), var(--neo-cyan), var(--neo-yellow), var(--neo-green));
 }
