@@ -59,7 +59,7 @@ defmodule PokerServer.GameState do
       |> Enum.with_index()
       |> Enum.map(fn {player, index} -> %{player | position: index} end)
 
-    button_position = 
+    button_position =
       case Keyword.get(opts, :button_position) do
         nil -> Enum.random(0..(length(players) - 1))
         pos when is_integer(pos) and pos >= 0 and pos < length(players) -> pos
@@ -199,7 +199,7 @@ defmodule PokerServer.GameState do
     new_button_position = rem(game_state.button_position + 1, player_count)
 
     # Determine blind positions based on player count
-    {small_blind_position, big_blind_position} = 
+    {small_blind_position, big_blind_position} =
       if player_count == 2 do
         # Heads-up: button is small blind, other player is big blind
         big_blind_position = rem(new_button_position + 1, player_count)
@@ -288,7 +288,6 @@ defmodule PokerServer.GameState do
     }
   end
 
-
   @doc """
   Evaluate all player hands and determine winners.
 
@@ -373,5 +372,4 @@ defmodule PokerServer.GameState do
 
     %{game_state | players: updated_players, pot: 0, phase: :hand_complete}
   end
-
 end

@@ -24,33 +24,6 @@ defmodule PokerServer.UIAdapter do
   end
 
   @doc """
-  Get filtered game state for a specific player from existing state.
-  This version accepts the game_server_state directly to avoid circular dependencies.
-  Returns only the data this player should see.
-  """
-  def get_player_view_from_state(game_server_state, player_id) do
-    # Filter the game_state.players to hide other players' hole cards
-    filtered_players =
-      Enum.map(game_server_state.game_state.players, fn player ->
-        if player.id == player_id do
-          # Current player can see their own cards
-          player
-        else
-          # Other players' hole cards are hidden
-          %{player | hole_cards: []}
-        end
-      end)
-
-    # Create filtered game state
-    filtered_game_state = %{game_server_state.game_state | players: filtered_players}
-
-    # Return the same structure as GameServer state, but with filtered players
-    filtered_state = %{game_server_state | game_state: filtered_game_state}
-
-    {:ok, filtered_state}
-  end
-
-  @doc """
   Get UI-optimized player view from existing state for broadcasts.
   Returns flattened structure suitable for LiveView consumption while maintaining
   backward compatibility with existing broadcast expectations.
@@ -108,12 +81,13 @@ defmodule PokerServer.UIAdapter do
 
     %{
       display: "#{rank_str}#{suit_symbol}",
-      color: case suit do
-        :hearts -> "red-600"
-        :diamonds -> "blue-600" 
-        :clubs -> "green-600"
-        :spades -> "gray-900"
-      end
+      color:
+        case suit do
+          :hearts -> "red-600"
+          :diamonds -> "blue-600"
+          :clubs -> "green-600"
+          :spades -> "gray-900"
+        end
     }
   end
 
@@ -174,18 +148,20 @@ defmodule PokerServer.UIAdapter do
     # Show cards only during true showdown (not when hand ended due to folds)
     is_hand_complete = game_state.phase == :hand_complete
     folded_players = get_folded_players(game_server_state)
-    
+
     # Determine if this was a true showdown vs fold win
     # If hand is complete and there are folded players, check if only 1 player remains
-    is_fold_win = is_hand_complete and 
-                  MapSet.size(folded_players) > 0 and
-                  (length(game_state.players) - MapSet.size(folded_players)) <= 1
-    
+    is_fold_win =
+      is_hand_complete and
+        MapSet.size(folded_players) > 0 and
+        length(game_state.players) - MapSet.size(folded_players) <= 1
+
     filtered_players =
       Enum.map(game_state.players, fn player ->
-        can_see_cards = player.id == player_id or 
-          (is_hand_complete and not is_fold_win and player.id not in folded_players)
-        
+        can_see_cards =
+          player.id == player_id or
+            (is_hand_complete and not is_fold_win and player.id not in folded_players)
+
         %{
           id: player.id,
           chips: get_effective_chips(game_server_state, player),
@@ -225,7 +201,7 @@ defmodule PokerServer.UIAdapter do
       # UI helpers
       can_start_hand: can_start_hand?(game_state),
       is_waiting_for_players: game_state.phase == :waiting_for_players,
-      
+
       # Showdown information
       showdown_results: get_showdown_results(game_server_state, filtered_players)
     }
@@ -261,8 +237,8 @@ defmodule PokerServer.UIAdapter do
 
   defp can_start_hand?(game_state) do
     # Can only start a new hand if the game isn't complete (more than 1 player has chips)
-    players_with_chips = Enum.count(game_state.players, & &1.chips > 0)
-    
+    players_with_chips = Enum.count(game_state.players, &(&1.chips > 0))
+
     (game_state.phase == :waiting_for_players or game_state.phase == :hand_complete) and
       length(game_state.players) >= 2 and
       players_with_chips > 1
@@ -275,11 +251,11 @@ defmodule PokerServer.UIAdapter do
       # If we have an active betting round, use its folded players
       %{betting_round: betting_round} when not is_nil(betting_round) ->
         betting_round.folded_players
-      
+
       # If no betting round but we have preserved folded players (hand ended early)
       %{folded_players: folded_players} when not is_nil(folded_players) ->
         folded_players
-        
+
       # Fallback to empty set
       _ ->
         MapSet.new()
@@ -304,28 +280,33 @@ defmodule PokerServer.UIAdapter do
   # Get showdown results for display during hand_complete phase.
   defp get_showdown_results(game_server_state, filtered_players) do
     game_state = game_server_state.game_state
+
     if game_state.phase == :hand_complete do
       # Check if this was a fold win - if so, don't show hand analysis
-      current_player = Enum.find(filtered_players, &(&1.is_current_player))
+      current_player = Enum.find(filtered_players, & &1.is_current_player)
       current_player_id = if current_player, do: current_player.id, else: nil
-      
-      folded_players_count = Enum.count(filtered_players, fn player -> 
-        Enum.empty?(player.hole_cards) and player.id != current_player_id
-      end)
+
+      folded_players_count =
+        Enum.count(filtered_players, fn player ->
+          Enum.empty?(player.hole_cards) and player.id != current_player_id
+        end)
+
       active_players_count = length(filtered_players) - folded_players_count
-      
+
       is_fold_win = folded_players_count > 0 and active_players_count <= 1
-      
+
       if is_fold_win do
         # For fold wins, the winner is the player who didn't fold
         # Find the player who is not in the folded players set
         folded_players = get_folded_players(game_server_state)
-        winner_id = Enum.find(game_state.players, fn player -> 
-          player.id not in folded_players
-        end)
-        
+
+        winner_id =
+          Enum.find(game_state.players, fn player ->
+            player.id not in folded_players
+          end)
+
         winner_ids = if winner_id, do: [winner_id.id], else: []
-        
+
         %{
           winners: winner_ids,
           hand_descriptions: %{},
@@ -335,7 +316,7 @@ defmodule PokerServer.UIAdapter do
       else
         # True showdown - evaluate hands normally
         # Get non-folded players with their original hole cards
-        non_folded_players = 
+        non_folded_players =
           game_state.players
           |> Enum.reject(fn player ->
             # Player is folded if they have no hole cards visible in filtered view
@@ -344,10 +325,12 @@ defmodule PokerServer.UIAdapter do
           end)
 
         # Evaluate hands for all non-folded players
-        player_hands = 
+        player_hands =
           non_folded_players
           |> Enum.map(fn player ->
-            hand_result = HandEvaluator.evaluate_hand(player.hole_cards, game_state.community_cards)
+            hand_result =
+              HandEvaluator.evaluate_hand(player.hole_cards, game_state.community_cards)
+
             {player.id, hand_result}
           end)
 
@@ -355,7 +338,7 @@ defmodule PokerServer.UIAdapter do
         winners = HandEvaluator.determine_winners(player_hands)
 
         # Create hand descriptions
-        hand_descriptions = 
+        hand_descriptions =
           player_hands
           |> Enum.into(%{}, fn {player_id, {hand_type, _cards}} ->
             {player_id, format_hand_description(hand_type)}

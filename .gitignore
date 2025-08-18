@@ -40,3 +40,6 @@ Dockerfile
 .dockerignore
 .github/workflows/fly-deploy.yml
 rel/
+# Xref analysis files
+*.dot
+xref_*.png
