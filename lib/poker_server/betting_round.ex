@@ -147,14 +147,78 @@ defmodule PokerServer.BettingRound do
       iex> BettingRound.new_from_existing(players, 30, 0, :flop)
       %BettingRound{pot: 30, current_bet: 0, ...}
   """
+  def new_from_existing(players, existing_pot, current_bet, round_type) do
+    new_from_existing(players, existing_pot, current_bet, round_type, nil)
+  end
+  def new_from_existing(players, existing_pot, current_bet, round_type, button_position) do
+    # Validate betting round type
+    Types.validate_betting_round_type!(round_type)
+
+    # Calculate blind positions from button position for correct action order
+    {small_blind_position, big_blind_position} =
+      if button_position != nil do
+        determine_blind_positions(players, button_position)
+      else
+        # Fallback to old logic if no button position provided
+        {0, 1}
+      end
+
+    # Initialize player bets map - all start at 0 for post-preflop rounds
+    player_bets =
+      players
+      |> Enum.map(&{&1.id, 0})
+      |> Enum.into(%{})
+
+    # All active players need to act in post-preflop rounds (no folded/all-in players for this overload)
+    active_player_ids =
+      players
+      |> Enum.map(& &1.id)
+      |> MapSet.new()
+
+    initial_index =
+      get_initial_active_player_index(
+        players,
+        round_type,
+        small_blind_position,
+        big_blind_position
+      )
+
+    %__MODULE__{
+      players: players,
+      # Not applicable for post-preflop rounds
+      small_blind: 0,
+      # Not applicable for post-preflop rounds
+      big_blind: 0,
+      round_type: round_type,
+      pot: existing_pot,
+      current_bet: current_bet,
+      player_bets: player_bets,
+      active_player_index: initial_index,
+      folded_players: MapSet.new(),
+      all_in_players: MapSet.new(),
+      last_raise_size: nil,
+      players_who_can_act: active_player_ids,
+      last_raiser: nil
+    }
+  end
+
+  @spec new_from_existing(
+          list(Player.t()),
+          number(),
+          number(),
+          Types.betting_round_type(),
+          non_neg_integer() | nil,
+          MapSet.t(String.t()),
+          MapSet.t(String.t())
+        ) :: t()
   def new_from_existing(
         players,
         existing_pot,
         current_bet,
         round_type,
-        button_position \\ nil,
-        folded_players \\ MapSet.new(),
-        all_in_players \\ MapSet.new()
+        button_position,
+        folded_players,
+        all_in_players
       ) do
     # Validate betting round type
     Types.validate_betting_round_type!(round_type)
@@ -704,4 +768,5 @@ defmodule PokerServer.BettingRound do
         {0, 1}
     end
   end
+
 end
