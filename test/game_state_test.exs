@@ -354,7 +354,24 @@ defmodule PokerServer.GameStateTest do
         big_blind: 20
       }
 
-      updated_state = GameState.showdown(game_state, MapSet.new())
+      # Create a mock betting round for showdown
+      betting_round = %PokerServer.BettingRound{
+        players: game_state.players,
+        player_bets: %{1 => 0, 2 => 0},
+        folded_players: MapSet.new(),
+        all_in_players: MapSet.new(),
+        pot: game_state.pot,
+        current_bet: 0,
+        small_blind: 0,
+        big_blind: 0,
+        round_type: :river,
+        active_player_index: 0,
+        last_raise_size: nil,
+        players_who_can_act: MapSet.new(),
+        last_raiser: nil
+      }
+      
+      updated_state = GameState.showdown(game_state, betting_round)
 
       assert updated_state.phase == :hand_complete
 
@@ -405,7 +422,24 @@ defmodule PokerServer.GameStateTest do
         big_blind: 20
       }
 
-      updated_state = GameState.showdown(game_state, MapSet.new())
+      # Create a mock betting round for showdown
+      betting_round = %PokerServer.BettingRound{
+        players: game_state.players,
+        player_bets: %{1 => 0, 2 => 0},
+        folded_players: MapSet.new(),
+        all_in_players: MapSet.new(),
+        pot: game_state.pot,
+        current_bet: 0,
+        small_blind: 0,
+        big_blind: 0,
+        round_type: :river,
+        active_player_index: 0,
+        last_raise_size: nil,
+        players_who_can_act: MapSet.new(),
+        last_raiser: nil
+      }
+      
+      updated_state = GameState.showdown(game_state, betting_round)
 
       # Both players should get equal share
       for player <- updated_state.players do

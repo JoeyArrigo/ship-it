@@ -117,11 +117,11 @@ defmodule PokerServer.AllInMultiRoundTest do
     test "unequal stack all-in should handle side pots correctly when B wins" do
       # Player A: 1600 chips, Player B: 1400 chips
       # Expected side pot behavior:
-      # - A bets 1590 after small blind (10)
-      # - B bets 1380 after big blind (20) 
-      # - Contested: 1380 × 2 = 2760 chips (main pot)
-      # - Uncalled: 210 chips returned to A (side pot)
-      # - If B wins: B gets 2760, A gets 210
+      # - A bets 1600 total
+      # - B bets 1400 total
+      # - Contested: 1400 × 2 = 2800 chips (main pot)
+      # - Uncalled: 200 chips returned to A (side pot)
+      # - If B wins: B gets 2800, A gets 200
       
       # Force a scenario where B wins by giving B better hole cards
       players = [{"player_a", 1600}, {"player_b", 1400}]
@@ -161,10 +161,10 @@ defmodule PokerServer.AllInMultiRoundTest do
       # Test proper side pot logic (this will fail with current implementation)
       # We can't control who wins due to random cards, so test both scenarios
       if final_player_b.chips > final_player_a.chips do
-        # B won - should get contested amount (2760), A gets uncalled portion (210)
-        assert final_player_b.chips == 2760, 
+        # B won - should get contested amount (2800), A gets uncalled portion (200)
+        assert final_player_b.chips == 2800, 
           "Player B should get contested pot amount, got #{final_player_b.chips}"
-        assert final_player_a.chips == 240,  # 210 uncalled + 30 from blinds difference
+        assert final_player_a.chips == 200,
           "Player A should get uncalled bet back, got #{final_player_a.chips}"
       else
         # A won - should get everything (A can win their own uncalled bet)
@@ -178,13 +178,13 @@ defmodule PokerServer.AllInMultiRoundTest do
     test "unequal stack all-in tie should split contested pot correctly" do
       # Player A: 1600 chips, Player B: 1400 chips, tie scenario
       # Expected side pot behavior for ties:
-      # - A bets 1590 after small blind (10)
-      # - B bets 1380 after big blind (20)
-      # - Contested: 1380 × 2 = 2760 chips (main pot) - split between A and B
-      # - Uncalled: 210 chips returned to A (side pot - not split)
-      # - Final: A gets 1380 (half contested) + 210 (uncalled) = 1590
-      # - Final: B gets 1380 (half contested) = 1380
-      # - Total check: 1590 + 1380 + 30 (blinds) = 3000 ✓
+      # - A bets 1600 total
+      # - B bets 1400 total
+      # - Contested: 1400 × 2 = 2800 chips (main pot) - split between A and B
+      # - Uncalled: 200 chips returned to A (side pot - not split)
+      # - Final: A gets 1400 (half contested) + 200 (uncalled) = 1600
+      # - Final: B gets 1400 (half contested) = 1400
+      # - Total check: 1600 + 1400 = 3000 ✓
       
       players = [{"player_a", 1600}, {"player_b", 1400}]
       {:ok, game_id} = GameManager.create_game(players)
@@ -225,11 +225,11 @@ defmodule PokerServer.AllInMultiRoundTest do
       if final_player_a.chips == final_player_b.chips do
         # Current implementation likely gives 1500 to each (wrong)
         # Correct implementation should give:
-        # A: 1380 (half contested) + 240 (uncalled + blind diff) = 1620
-        # B: 1380 (half contested) = 1380
-        assert final_player_a.chips == 1620,
+        # A: 1400 (half contested) + 200 (uncalled) = 1600
+        # B: 1400 (half contested) = 1400
+        assert final_player_a.chips == 1600,
           "In a tie, Player A should get half contested pot plus uncalled bet, got #{final_player_a.chips}"
-        assert final_player_b.chips == 1380,
+        assert final_player_b.chips == 1400,
           "In a tie, Player B should get half contested pot only, got #{final_player_b.chips}"
       else
         # Not a tie - document what should happen for reference
@@ -238,10 +238,10 @@ defmodule PokerServer.AllInMultiRoundTest do
           assert final_player_a.chips == 3000
           assert final_player_b.chips == 0
         else
-          # B won - should get contested pot (2760), A gets uncalled portion (240)
-          assert final_player_b.chips == 2760,
+          # B won - should get contested pot (2800), A gets uncalled portion (200)
+          assert final_player_b.chips == 2800,
             "Player B should get contested pot amount, got #{final_player_b.chips}"
-          assert final_player_a.chips == 240,
+          assert final_player_a.chips == 200,
             "Player A should get uncalled bet back, got #{final_player_a.chips}"
         end
       end

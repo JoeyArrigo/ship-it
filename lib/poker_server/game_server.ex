@@ -7,6 +7,7 @@ defmodule PokerServer.GameServer do
           game_id: String.t(),
           game_state: GameState.t(),
           betting_round: BettingRound.t() | nil,
+          original_betting_round: BettingRound.t() | nil,
           phase: Types.server_phase(),
           folded_players: MapSet.t(String.t()),
           all_in_players: MapSet.t(String.t())
@@ -63,6 +64,7 @@ defmodule PokerServer.GameServer do
       game_id: game_id,
       game_state: game_state,
       betting_round: nil,
+      original_betting_round: nil,
       phase: :waiting_to_start,
       folded_players: MapSet.new(),
       all_in_players: MapSet.new()
@@ -105,6 +107,7 @@ defmodule PokerServer.GameServer do
       state
       | game_state: synced_game_state,
         betting_round: betting_round,
+        original_betting_round: nil,
         phase: :preflop_betting,
         folded_players: MapSet.new(),
         all_in_players: MapSet.new()
@@ -265,11 +268,13 @@ defmodule PokerServer.GameServer do
        ) do
     game_state_with_pot = %{synced_game_state | pot: updated_betting_round.pot}
 
-    # Handle showdown specially to pass folded players
+    # Handle showdown specially to pass betting round for side pot calculation
     updated_game_state =
       if next_phase == :hand_complete do
-        # This is showdown - pass folded players
-        GameState.showdown(game_state_with_pot, updated_betting_round.folded_players)
+        # This is showdown - use original betting round for proper side pot handling
+        # The original betting round has the real bet amounts from when all-in first occurred
+        betting_round_for_showdown = state.original_betting_round || updated_betting_round
+        GameState.showdown(game_state_with_pot, betting_round_for_showdown)
       else
         # Regular phase transition
         next_game_state_fn.(game_state_with_pot)
@@ -308,11 +313,21 @@ defmodule PokerServer.GameServer do
             {nil, nil, :hand_complete}
         end
 
+      # For showdown, use the current betting round which has actual bet amounts
+      # For other phases, pass the new betting round
+      final_betting_round = 
+        if next_next_phase == :hand_complete do
+          # For showdown, use the betting round that completed (has real bet amounts)
+          updated_betting_round
+        else
+          next_betting_round
+        end
+        
       # Recursively advance to next phase
       handle_phase_transition(
         intermediate_state,
         game_id,
-        next_betting_round,
+        final_betting_round,
         updated_game_state,
         next_next_game_state_fn,
         next_next_betting_round_type,
@@ -393,9 +408,21 @@ defmodule PokerServer.GameServer do
     # Sync updated player chips from betting round to game state
     synced_game_state = %{state.game_state | players: updated_betting_round.players}
 
+    # Store original betting round when betting is complete AND we have all-in players
+    # This preserves the real bet amounts for side pot calculations
+    original_betting_round = 
+      if state.original_betting_round == nil && 
+         MapSet.size(updated_betting_round.all_in_players) > 0 && 
+         BettingRound.betting_complete?(updated_betting_round) do
+        updated_betting_round  # Store this as the source of truth for bet amounts
+      else
+        state.original_betting_round
+      end
+
     new_state = %{
       state
       | betting_round: updated_betting_round,
+        original_betting_round: original_betting_round,
         game_state: synced_game_state
     }
 

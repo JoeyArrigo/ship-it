@@ -289,53 +289,82 @@ defmodule PokerServer.GameState do
   end
 
   @doc """
-  Evaluate all player hands and determine winners.
+  Evaluate all player hands and determine winners with proper side pot handling.
 
   Compares all remaining players' hole cards against community cards
-  using short deck poker hand rankings. Awards pot to winner(s) and
-  transitions to hand complete phase.
+  using short deck poker hand rankings. Distributes side pots correctly
+  for all-in scenarios where players have unequal bet amounts.
 
   ## Parameters  
   - game_state: Current game state with community cards dealt
-  - folded_players: MapSet of player IDs who have folded
+  - betting_round: BettingRound struct containing bet amounts and all-in info
 
   ## Returns
   Updated game state with:
-  - Winners determined and chips awarded
+  - Winners determined and side pots awarded correctly
   - Phase set to :hand_complete
-  - Pot distributed to winning player(s)
+  - Proper side pot distribution for unequal all-in scenarios
 
   ## Notes
   Uses short deck hand evaluation where flush beats full house.
-  Handles ties by splitting pot equally among winners.
+  Handles ties by splitting each side pot among eligible winners.
   Folded players are excluded from hand evaluation and cannot win.
+  Uncalled bet amounts are returned to the appropriate players.
   """
-  @spec showdown(t(), MapSet.t(String.t())) :: t()
-  def showdown(game_state, folded_players) do
-    alias PokerServer.HandEvaluator
+  @spec showdown(t(), PokerServer.BettingRound.t()) :: t()
+  def showdown(game_state, betting_round) do
+    alias PokerServer.{HandEvaluator, BettingRound}
+
+    # Use the betting round directly - it now contains the correct bet amounts
+    # from when the all-in scenario first occurred, preserved by GameServer
 
     # Evaluate each player's hand, excluding folded players
     player_hands =
       game_state.players
-      |> Enum.reject(fn player -> player.id in folded_players end)
+      |> Enum.reject(fn player -> player.id in betting_round.folded_players end)
       |> Enum.map(fn player ->
         hand = HandEvaluator.evaluate_hand(player.hole_cards, game_state.community_cards)
         {player.id, hand}
       end)
 
-    # Determine winners
-    winners = HandEvaluator.determine_winners(player_hands)
+    # Determine winners among all non-folded players
+    overall_winners = HandEvaluator.determine_winners(player_hands)
 
-    # Distribute pot among winners
-    pot_per_winner = div(game_state.pot, length(winners))
+    # Calculate side pots using the betting round with correct bet amounts
+    side_pots = BettingRound.side_pots(betting_round)
 
+    # Distribute each side pot to eligible winners
     updated_players =
-      game_state.players
-      |> Enum.map(fn player ->
-        if player.id in winners do
-          %{player | chips: player.chips + pot_per_winner}
+      Enum.reduce(side_pots, game_state.players, fn side_pot, players ->
+        # Find winners eligible for this side pot
+        eligible_winners = 
+          overall_winners 
+          |> Enum.filter(fn winner_id -> winner_id in side_pot.eligible_players end)
+
+        if length(eligible_winners) > 0 do
+          # Split this side pot among eligible winners
+          chips_per_winner = div(side_pot.amount, length(eligible_winners))
+          
+          Enum.map(players, fn player ->
+            if player.id in eligible_winners do
+              %{player | chips: player.chips + chips_per_winner}
+            else
+              player
+            end
+          end)
         else
-          player
+          # No eligible winners from the hand winners, but side pot should go to eligible players
+          # This happens when the overall winner isn't eligible for this side pot (uncalled bet scenario)
+          eligible_for_pot = MapSet.to_list(side_pot.eligible_players)
+          chips_per_eligible = div(side_pot.amount, length(eligible_for_pot))
+          
+          Enum.map(players, fn player ->
+            if player.id in eligible_for_pot do
+              %{player | chips: player.chips + chips_per_eligible}
+            else
+              player
+            end
+          end)
         end
       end)
 
