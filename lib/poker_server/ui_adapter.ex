@@ -24,33 +24,6 @@ defmodule PokerServer.UIAdapter do
   end
 
   @doc """
-  Get filtered game state for a specific player from existing state.
-  This version accepts the game_server_state directly to avoid circular dependencies.
-  Returns only the data this player should see.
-  """
-  def get_player_view_from_state(game_server_state, player_id) do
-    # Filter the game_state.players to hide other players' hole cards
-    filtered_players =
-      Enum.map(game_server_state.game_state.players, fn player ->
-        if player.id == player_id do
-          # Current player can see their own cards
-          player
-        else
-          # Other players' hole cards are hidden
-          %{player | hole_cards: []}
-        end
-      end)
-
-    # Create filtered game state
-    filtered_game_state = %{game_server_state.game_state | players: filtered_players}
-
-    # Return the same structure as GameServer state, but with filtered players
-    filtered_state = %{game_server_state | game_state: filtered_game_state}
-
-    {:ok, filtered_state}
-  end
-
-  @doc """
   Get UI-optimized player view from existing state for broadcasts.
   Returns flattened structure suitable for LiveView consumption while maintaining
   backward compatibility with existing broadcast expectations.
