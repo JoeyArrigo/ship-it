@@ -101,7 +101,7 @@ defmodule PokerServer.UIAdapter do
       when phase in [:preflop_betting, :flop_betting, :turn_betting, :river_betting] and
              not is_nil(betting_round) ->
         active_player = BettingRound.get_active_player(betting_round)
-        active_player && active_player.id == player_id
+        not is_nil(active_player) and active_player.id == player_id
 
       # Non-betting phases from GameServer
       %{phase: :waiting_to_start} ->
