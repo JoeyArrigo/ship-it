@@ -200,7 +200,6 @@ defmodule PokerServer.GameServer do
   # Private Functions
 
   # Private helper function for processing betting phase actions
-  # Refactored into smaller, focused functions for better maintainability
   defp process_betting_phase_action(
          state,
          player_id,
