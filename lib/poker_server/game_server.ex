@@ -322,7 +322,6 @@ defmodule PokerServer.GameServer do
         else
           next_betting_round
         end
-
       # Recursively advance to next phase
       handle_phase_transition(
         intermediate_state,
@@ -414,8 +413,7 @@ defmodule PokerServer.GameServer do
       if state.original_betting_round == nil &&
            MapSet.size(updated_betting_round.all_in_players) > 0 &&
            BettingRound.betting_complete?(updated_betting_round) do
-        # Store this as the source of truth for bet amounts
-        updated_betting_round
+        updated_betting_round  # Store this as the source of truth for bet amounts
       else
         state.original_betting_round
       end
