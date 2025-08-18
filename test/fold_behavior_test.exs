@@ -44,11 +44,28 @@ defmodule PokerServer.FoldBehaviorTest do
         big_blind: 20
       }
 
-      # player1 has folded
+      # player1 has folded - create a betting round to represent this
       folded_players = MapSet.new(["player1"])
+      
+      # Create a mock betting round for showdown
+      betting_round = %PokerServer.BettingRound{
+        players: game_state.players,
+        player_bets: %{"player1" => 0, "player2" => 0, "player3" => 0},
+        folded_players: folded_players,
+        all_in_players: MapSet.new(),
+        pot: game_state.pot,
+        current_bet: 0,
+        small_blind: 0,
+        big_blind: 0,
+        round_type: :river,
+        active_player_index: 0,
+        last_raise_size: nil,
+        players_who_can_act: MapSet.new(),
+        last_raiser: nil
+      }
 
-      # Call showdown with folded players
-      result = GameState.showdown(game_state, folded_players)
+      # Call showdown with betting round
+      result = GameState.showdown(game_state, betting_round)
 
       # Should only evaluate player2 and player3, not player1
       assert result.phase == :hand_complete

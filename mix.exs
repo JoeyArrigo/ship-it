@@ -8,7 +8,8 @@ defmodule PokerServer.MixProject do
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      dialyzer: dialyzer()
     ]
   end
 
@@ -40,6 +41,13 @@ defmodule PokerServer.MixProject do
       {:heroicons, "~> 0.5"},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:tidewave, "~> 0.2", only: :dev}
+    ]
+  end
+
+  # Dialyzer configuration
+  defp dialyzer do
+    [
+      ignore_warnings: ".dialyzer_ignore.exs"
     ]
   end
 

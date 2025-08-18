@@ -11,7 +11,6 @@ defmodule PokerServer.GameBroadcasterTest do
     ]
 
     game_state = GameState.new(players)
-
     game_server_state = %{
       game_id: "test_game",
       game_state: game_state,
@@ -37,7 +36,6 @@ defmodule PokerServer.GameBroadcasterTest do
       # Both players should receive broadcasts
       assert_receive {:game_updated, player1_view}, 1000
       assert_receive {:game_updated, player2_view}, 1000
-
       # Both should be valid game views
       assert is_map(player1_view)
       assert is_map(player2_view)
@@ -65,7 +63,6 @@ defmodule PokerServer.GameBroadcasterTest do
       # Only player1 should receive the broadcast
       assert_receive {:game_updated, player1_view}, 1000
       refute_receive {:game_updated, _}, 500
-
       assert is_map(player1_view)
       assert Map.has_key?(player1_view, :game_id)
     end
@@ -86,7 +83,6 @@ defmodule PokerServer.GameBroadcasterTest do
 
       # Broadcast custom message
       assert :ok = GameBroadcaster.broadcast_message(game_id, custom_message)
-
       # Should receive the custom message
       assert_receive {:custom_event, "test_data"}, 1000
     end
@@ -108,7 +104,6 @@ defmodule PokerServer.GameBroadcasterTest do
 
       # Broadcast custom message to player
       assert :ok = GameBroadcaster.broadcast_to_player_message(game_id, player_id, custom_message)
-
       # Should receive the custom message
       assert_receive {:player_notification, "your turn"}, 1000
     end
@@ -116,7 +111,6 @@ defmodule PokerServer.GameBroadcasterTest do
     test "returns :ok on successful broadcast" do
       result =
         GameBroadcaster.broadcast_to_player_message("test_game", "player1", {:test, "message"})
-
       assert result == :ok
     end
   end
@@ -152,7 +146,6 @@ defmodule PokerServer.GameBroadcasterTest do
       # Find players in the filtered view
       player1_in_view = Enum.find(filtered_view.game_state.players, &(&1.id == "player1"))
       player2_in_view = Enum.find(filtered_view.game_state.players, &(&1.id == "player2"))
-
       # Player1 should see their own cards but not player2's
       assert length(player1_in_view.hole_cards) == 2
       assert length(player2_in_view.hole_cards) == 0
