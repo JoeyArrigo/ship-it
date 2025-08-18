@@ -478,12 +478,27 @@ defmodule PokerServer.BettingRound do
           if p.id == player_id, do: %{p | chips: p.chips - call_amount}, else: p
         end)
 
+      # Check if the calling player went all-in (chips = 0 after call)
+      player_went_all_in = 
+        updated_players
+        |> Enum.find(&(&1.id == player_id))
+        |> Map.get(:chips) == 0
+
+      # Update all_in_players if player went all-in
+      updated_all_in_players = 
+        if player_went_all_in do
+          MapSet.put(betting_round.all_in_players, player_id)
+        else
+          betting_round.all_in_players
+        end
+
       # Update betting round
       updated_round = %{
         betting_round
         | players: updated_players,
           player_bets: Map.put(betting_round.player_bets, player_id, betting_round.current_bet),
           pot: betting_round.pot + call_amount,
+          all_in_players: updated_all_in_players,
           players_who_can_act: MapSet.delete(betting_round.players_who_can_act, player_id),
           active_player_index: next_active_player_index(betting_round)
       }
