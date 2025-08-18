@@ -21,8 +21,9 @@ defmodule PokerServer.AllInMultiRoundTest do
   end
 
   describe "all-in player state preservation across betting rounds" do
-    test "all-in player cannot act in subsequent betting rounds" do
-      # Use the same pattern as fold_behavior_test.exs
+    test "when all players go all-in, game proceeds to showdown" do
+      # When all players have equal stacks and one goes all-in, 
+      # others calling will also go all-in, triggering immediate showdown
       players = [{"player1", 1000}, {"player2", 1000}, {"player3", 1000}]
       {:ok, game_id} = GameManager.create_game(players)
       [{game_pid, _}] = Registry.lookup(PokerServer.GameRegistry, game_id)
@@ -39,7 +40,7 @@ defmodule PokerServer.AllInMultiRoundTest do
       # Verify player is in all_in_players set
       assert first_active.id in state_after_all_in.betting_round.all_in_players
 
-      # Others call to complete preflop and reach flop
+      # Others call to complete preflop - this forces them all-in too
       second_state = GameServer.get_state(game_pid)
       second_active = PokerServer.BettingRound.get_active_player(second_state.betting_round)
 
@@ -49,19 +50,16 @@ defmodule PokerServer.AllInMultiRoundTest do
       third_state = GameServer.get_state(game_pid)
       third_active = PokerServer.BettingRound.get_active_player(third_state.betting_round)
 
-      {:ok, :betting_complete, flop_state} =
+      {:ok, :betting_complete, final_state} =
         GameServer.player_action(game_pid, third_active.id, {:call})
 
-      # CRITICAL TEST: Verify all-in player is preserved after phase transition
-      assert first_active.id in flop_state.betting_round.all_in_players
+      # When all players are all-in, game should automatically proceed to showdown
+      assert final_state.phase == :hand_complete
+      assert final_state.betting_round == nil
+      # Pot should be distributed (pot becomes 0 after showdown)
+      assert final_state.game_state.pot == 0
 
-      # Verify all-in player cannot act (should be no active player when all are all-in)
-      flop_active = PokerServer.BettingRound.get_active_player(flop_state.betting_round)
-      
-      # When all players are all-in, there should be no active player
-      assert flop_active == nil
-
-      # Try to make all-in player act - should fail
+      # Try to make any player act - should fail since hand is complete
       result = GameServer.player_action(game_pid, first_active.id, {:check})
       assert {:error, _reason} = result
     end

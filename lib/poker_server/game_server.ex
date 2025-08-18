@@ -284,7 +284,7 @@ defmodule PokerServer.GameServer do
         updated_betting_round.all_in_players
       )
 
-    final_state = %{
+    intermediate_state = %{
       state
       | game_state: updated_game_state,
         betting_round: next_betting_round,
@@ -293,8 +293,35 @@ defmodule PokerServer.GameServer do
         all_in_players: updated_betting_round.all_in_players
     }
 
-    GameBroadcaster.broadcast_state_change(game_id, final_state)
-    {:reply, {:ok, :betting_complete, final_state}, final_state}
+    # Check if the new betting round is immediately complete (all players all-in)
+    # If so, recursively advance to next phase
+    if next_betting_round != nil and BettingRound.betting_complete?(next_betting_round) do
+      # Determine next phase progression based on current phase
+      {next_next_game_state_fn, next_next_betting_round_type, next_next_phase} =
+        case next_phase do
+          :flop_betting -> {&GameState.deal_turn/1, :turn, :turn_betting}
+          :turn_betting -> {&GameState.deal_river/1, :river, :river_betting}
+          :river_betting ->
+            {fn _game_state -> raise "This should never be called for showdown" end, nil,
+             :hand_complete}
+          :hand_complete ->
+            {nil, nil, :hand_complete}
+        end
+
+      # Recursively advance to next phase
+      handle_phase_transition(
+        intermediate_state,
+        game_id,
+        next_betting_round,
+        updated_game_state,
+        next_next_game_state_fn,
+        next_next_betting_round_type,
+        next_next_phase
+      )
+    else
+      GameBroadcaster.broadcast_state_change(game_id, intermediate_state)
+      {:reply, {:ok, :betting_complete, intermediate_state}, intermediate_state}
+    end
   end
 
   # Helper function to create the next betting round
