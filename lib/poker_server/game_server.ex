@@ -86,7 +86,7 @@ defmodule PokerServer.GameServer do
         updated_game_state.players,
         # small blind - could be configurable
         10,
-        # big blind - could be configurable  
+        # big blind - could be configurable
         20,
         :preflop,
         updated_game_state.button_position
@@ -194,7 +194,6 @@ defmodule PokerServer.GameServer do
   # Private Functions
 
   # Private helper function for processing betting phase actions
-  # Refactored into smaller, focused functions for better maintainability
   defp process_betting_phase_action(
          state,
          player_id,
