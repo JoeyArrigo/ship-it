@@ -357,16 +357,12 @@ defmodule PokerServer.GameServer do
         updated_game_state.pot,
         0,
         next_betting_round_type,
-        updated_game_state.button_position
+        updated_game_state.button_position,
+        folded_players,
+        all_in_players
       )
 
-    # Set folded and all-in players from previous round
-    new_round = %{
-      new_round
-      | folded_players: folded_players,
-        all_in_players: all_in_players
-    }
-
+    # folded_players and all_in_players are already set correctly by new_from_existing
     new_round
   end
 

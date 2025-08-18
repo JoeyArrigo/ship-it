@@ -147,7 +147,15 @@ defmodule PokerServer.BettingRound do
       iex> BettingRound.new_from_existing(players, 30, 0, :flop)
       %BettingRound{pot: 30, current_bet: 0, ...}
   """
-  def new_from_existing(players, existing_pot, current_bet, round_type, button_position \\ nil) do
+  def new_from_existing(
+        players,
+        existing_pot,
+        current_bet,
+        round_type,
+        button_position \\ nil,
+        folded_players \\ MapSet.new(),
+        all_in_players \\ MapSet.new()
+      ) do
     # Validate betting round type
     Types.validate_betting_round_type!(round_type)
 
@@ -166,8 +174,30 @@ defmodule PokerServer.BettingRound do
       |> Enum.map(&{&1.id, 0})
       |> Enum.into(%{})
 
-    # All active players need to act in post-preflop rounds
-    active_player_ids = Enum.map(players, & &1.id) |> MapSet.new()
+    # All active players need to act in post-preflop rounds (excluding folded and all-in players)
+    active_player_ids =
+      players
+      |> Enum.map(& &1.id)
+      |> MapSet.new()
+      |> MapSet.difference(folded_players)
+      |> MapSet.difference(all_in_players)
+
+    initial_index =
+      get_initial_active_player_index(
+        players,
+        round_type,
+        small_blind_position,
+        big_blind_position
+      )
+
+    # Adjust active player index to skip folded/all-in players
+    adjusted_index =
+      find_next_eligible_player_index(
+        players,
+        initial_index,
+        folded_players,
+        all_in_players
+      )
 
     %__MODULE__{
       players: players,
@@ -179,15 +209,9 @@ defmodule PokerServer.BettingRound do
       pot: existing_pot,
       current_bet: current_bet,
       player_bets: player_bets,
-      active_player_index:
-        get_initial_active_player_index(
-          players,
-          round_type,
-          small_blind_position,
-          big_blind_position
-        ),
-      folded_players: MapSet.new(),
-      all_in_players: MapSet.new(),
+      active_player_index: adjusted_index,
+      folded_players: folded_players,
+      all_in_players: all_in_players,
       last_raise_size: nil,
       players_who_can_act: active_player_ids,
       last_raiser: nil
@@ -506,6 +530,32 @@ defmodule PokerServer.BettingRound do
     }
 
     {:ok, updated_round}
+  end
+
+  # Helper function to find next eligible player starting from a given index
+  defp find_next_eligible_player_index(players, start_index, folded_players, all_in_players) do
+    player_count = length(players)
+
+    # If there are no players or all are folded/all-in, return start_index
+    if player_count == 0 do
+      start_index
+    else
+      # Try each position starting from start_index
+      0..(player_count - 1)
+      |> Enum.reduce_while(start_index, fn _offset, check_index ->
+        current_index = rem(check_index, player_count)
+        current_player = Enum.at(players, current_index)
+
+        # Check if this player can act
+        if current_player &&
+             current_player.id not in folded_players &&
+             current_player.id not in all_in_players do
+          {:halt, current_index}
+        else
+          {:cont, rem(check_index + 1, player_count)}
+        end
+      end)
+    end
   end
 
   defp next_active_player_index(betting_round) do
