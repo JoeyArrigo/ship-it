@@ -288,7 +288,9 @@ defmodule PokerServer.GameServer do
       state
       | game_state: updated_game_state,
         betting_round: next_betting_round,
-        phase: next_phase
+        phase: next_phase,
+        folded_players: updated_betting_round.folded_players,
+        all_in_players: updated_betting_round.all_in_players
     }
 
     GameBroadcaster.broadcast_state_change(game_id, final_state)

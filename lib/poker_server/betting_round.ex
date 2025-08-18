@@ -391,7 +391,17 @@ defmodule PokerServer.BettingRound do
       nil
     else
       safe_index = rem(betting_round.active_player_index, player_count)
-      Enum.at(betting_round.players, safe_index)
+      player = Enum.at(betting_round.players, safe_index)
+      
+      # Check if the player at active_player_index can actually act
+      if player && 
+         player.id not in betting_round.folded_players &&
+         player.id not in betting_round.all_in_players do
+        player
+      else
+        # No valid active player (all are folded/all-in)
+        nil
+      end
     end
   end
 
