@@ -8,7 +8,8 @@ defmodule PokerServer.GameServer do
           game_state: GameState.t(),
           betting_round: BettingRound.t() | nil,
           phase: Types.server_phase(),
-          folded_players: MapSet.t(String.t())
+          folded_players: MapSet.t(String.t()),
+          all_in_players: MapSet.t(String.t())
         }
 
   # Client API
@@ -63,7 +64,8 @@ defmodule PokerServer.GameServer do
       game_state: game_state,
       betting_round: nil,
       phase: :waiting_to_start,
-      folded_players: MapSet.new()
+      folded_players: MapSet.new(),
+      all_in_players: MapSet.new()
     }
 
     {:ok, state}
@@ -104,7 +106,8 @@ defmodule PokerServer.GameServer do
       | game_state: synced_game_state,
         betting_round: betting_round,
         phase: :preflop_betting,
-        folded_players: MapSet.new()
+        folded_players: MapSet.new(),
+        all_in_players: MapSet.new()
     }
 
     GameBroadcaster.broadcast_state_change(state.game_id, new_state)
@@ -242,7 +245,8 @@ defmodule PokerServer.GameServer do
       | game_state: final_game_state,
         betting_round: nil,
         phase: :hand_complete,
-        folded_players: updated_betting_round.folded_players
+        folded_players: updated_betting_round.folded_players,
+        all_in_players: updated_betting_round.all_in_players
     }
 
     GameBroadcaster.broadcast_state_change(game_id, final_state)
@@ -276,7 +280,8 @@ defmodule PokerServer.GameServer do
       create_next_betting_round(
         next_betting_round_type,
         updated_game_state,
-        updated_betting_round.folded_players
+        updated_betting_round.folded_players,
+        updated_betting_round.all_in_players
       )
 
     final_state = %{
@@ -291,9 +296,15 @@ defmodule PokerServer.GameServer do
   end
 
   # Helper function to create the next betting round
-  defp create_next_betting_round(nil, _updated_game_state, _folded_players), do: nil
+  defp create_next_betting_round(nil, _updated_game_state, _folded_players, _all_in_players),
+    do: nil
 
-  defp create_next_betting_round(next_betting_round_type, updated_game_state, folded_players) do
+  defp create_next_betting_round(
+         next_betting_round_type,
+         updated_game_state,
+         folded_players,
+         all_in_players
+       ) do
     # Use new constructor that preserves existing pot without reposting blinds
     # Also need to pass folded players to prevent them from acting
     new_round =
@@ -302,11 +313,13 @@ defmodule PokerServer.GameServer do
         updated_game_state.pot,
         0,
         next_betting_round_type,
-        updated_game_state.button_position
+        updated_game_state.button_position,
+        folded_players,
+        all_in_players
       )
 
-    # Preserve folded players from previous round
-    %{new_round | folded_players: folded_players}
+    # folded_players and all_in_players are already set correctly by new_from_existing
+    new_round
   end
 
   # Helper function to handle betting round completion
