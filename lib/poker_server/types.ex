@@ -15,7 +15,7 @@ defmodule PokerServer.Types do
 
   # GameServer phases - represents what the server is currently doing
   @type server_phase ::
-          :waiting_to_start | :preflop_betting | :flop_betting | :turn_betting | :river_betting
+          :waiting_to_start | :preflop_betting | :flop_betting | :turn_betting | :river_betting | :hand_complete | :tournament_complete | :game_ended
 
   # Betting round types - the current betting street
   @type betting_round_type :: :preflop | :flop | :turn | :river
@@ -41,7 +41,10 @@ defmodule PokerServer.Types do
                   :preflop_betting,
                   :flop_betting,
                   :turn_betting,
-                  :river_betting
+                  :river_betting,
+                  :hand_complete,
+                  :tournament_complete,
+                  :game_ended
                 ]
 
   defguard is_betting_round_type(type) when type in [:preflop, :flop, :turn, :river]
@@ -53,7 +56,7 @@ defmodule PokerServer.Types do
     do: [:waiting_for_players, :preflop, :flop, :turn, :river, :hand_complete]
 
   def all_server_phases,
-    do: [:waiting_to_start, :preflop_betting, :flop_betting, :turn_betting, :river_betting]
+    do: [:waiting_to_start, :preflop_betting, :flop_betting, :turn_betting, :river_betting, :hand_complete, :tournament_complete, :game_ended]
 
   def all_betting_round_types, do: [:preflop, :flop, :turn, :river]
 
@@ -211,10 +214,13 @@ defmodule PokerServer.Types do
   def valid_server_transition?(from_phase, to_phase) do
     valid_transitions = %{
       :waiting_to_start => [:preflop_betting],
-      :preflop_betting => [:flop_betting, :waiting_to_start],
-      :flop_betting => [:turn_betting, :waiting_to_start],
-      :turn_betting => [:river_betting, :waiting_to_start],
-      :river_betting => [:waiting_to_start]
+      :preflop_betting => [:flop_betting, :hand_complete],
+      :flop_betting => [:turn_betting, :hand_complete],
+      :turn_betting => [:river_betting, :hand_complete],
+      :river_betting => [:hand_complete],
+      :hand_complete => [:waiting_to_start, :tournament_complete],
+      :tournament_complete => [:game_ended],
+      :game_ended => []
     }
 
     to_phase in Map.get(valid_transitions, from_phase, [])

@@ -46,6 +46,14 @@ defmodule PokerServer.GameServer do
     GenServer.call(pid, :start_hand)
   end
 
+  @doc """
+  End the game gracefully
+  """
+  @spec end_game(GenServer.server()) :: :ok
+  def end_game(pid) do
+    GenServer.cast(pid, :end_game)
+  end
+
   # Server Callbacks
 
   @impl true
@@ -192,6 +200,13 @@ defmodule PokerServer.GameServer do
   end
 
   @impl true
+  def handle_cast(:end_game, state) do
+    Logger.info("Game #{state.game_id} ending gracefully")
+    GameBroadcaster.broadcast_state_change(state.game_id, %{state | phase: :game_ended})
+    {:stop, :normal, state}
+  end
+
+  @impl true
   def handle_info(message, state) do
     Logger.error("PokerServer.GameServer received unexpected message: #{inspect(message)}")
     {:noreply, state}
@@ -252,8 +267,11 @@ defmodule PokerServer.GameServer do
         all_in_players: updated_betting_round.all_in_players
     }
 
-    GameBroadcaster.broadcast_state_change(game_id, final_state)
-    {:reply, {:ok, :betting_complete, final_state}, final_state}
+    # Check for tournament completion and schedule game end if needed
+    final_state_with_cleanup = check_and_handle_tournament_completion(final_state)
+
+    GameBroadcaster.broadcast_state_change(game_id, final_state_with_cleanup)
+    {:reply, {:ok, :betting_complete, final_state_with_cleanup}, final_state_with_cleanup}
   end
 
   # Helper function to handle phase transitions and create next betting round
@@ -333,8 +351,16 @@ defmodule PokerServer.GameServer do
         next_next_phase
       )
     else
-      GameBroadcaster.broadcast_state_change(game_id, intermediate_state)
-      {:reply, {:ok, :betting_complete, intermediate_state}, intermediate_state}
+      # Check for tournament completion if this is hand complete
+      final_state = 
+        if next_phase == :hand_complete do
+          check_and_handle_tournament_completion(intermediate_state)
+        else
+          intermediate_state
+        end
+        
+      GameBroadcaster.broadcast_state_change(game_id, final_state)
+      {:reply, {:ok, :betting_complete, final_state}, final_state}
     end
   end
 
@@ -440,5 +466,29 @@ defmodule PokerServer.GameServer do
       GameBroadcaster.broadcast_state_change(game_id, new_state)
       {:reply, {:ok, :action_processed, new_state}, new_state}
     end
+  end
+
+  # Helper function to check tournament completion and schedule cleanup
+  defp check_and_handle_tournament_completion(state) do
+    # Eliminate players with 0 chips
+    updated_game_state = GameState.eliminate_players(state.game_state)
+    
+    # Check if tournament is complete (only 1 player remaining)
+    if GameState.tournament_complete?(updated_game_state) do
+      # Schedule game termination after a brief delay to allow UI updates
+      Process.send_after(self(), :schedule_game_end, 5000)
+      
+      Logger.info("Tournament complete for game #{state.game_id}. Winner: #{hd(updated_game_state.players).id}")
+      
+      %{state | game_state: updated_game_state, phase: :tournament_complete}
+    else
+      %{state | game_state: updated_game_state}
+    end
+  end
+
+  @impl true
+  def handle_info(:schedule_game_end, state) do
+    Logger.info("Ending game #{state.game_id} after tournament completion")
+    {:stop, :normal, state}
   end
 end
