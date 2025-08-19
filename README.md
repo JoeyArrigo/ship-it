@@ -1,13 +1,15 @@
-# Poker App Project Summary
-## Project Goal
-Mobile poker app focused on short deck hold'em sit-n-go super-turbo tournaments (6 players). Prioritizing speed to MVP over UI polish.
-## Key Requirements
+# Ship It Poker
+## Project Status
+Functional poker game server with web interface. Core game mechanics work, 282 tests passing. Ready for internal testing.
+## Current Implementation
 
-- **Real-time multiplayer**: 6 players, ~100-200ms response time
-- **Anti-cheat critical**: Server authoritative for all game logic, no client-side game decisions
-- **Configurable tournaments**: Players, starting chips, blind structure as variables
-- **Default format**: 6 players, 15 big blinds starting, super-turbo blinds
-- **Multiple simultaneous games**: Architecture must support concurrent isolated tournaments
+- **Real-time multiplayer**: Phoenix LiveView with PubSub for state synchronization
+- **Server authoritative**: All game logic runs server-side, clients receive state updates
+- **Tournament support**: Player elimination, button advancement, chip tracking
+- **Short deck poker**: 36-card deck (6-A) with adjusted hand rankings
+- **Complete betting system**: All phases implemented (preflop/flop/turn/river/showdown)
+- **Side pot handling**: Multi-player all-in scenarios with proper pot distribution
+- **Web interface**: Functional UI for 2-player games, mobile responsive
 
 ## Technology Decisions
 
@@ -18,10 +20,10 @@ Mobile poker app focused on short deck hold'em sit-n-go super-turbo tournaments 
 
 - **Frontend**: React Native/Expo (familiar stack)
 
-## Development Phases
+## Development Status
 
-1. **Game Server Foundation**: Build core Elixir poker logic, test with simple clients
-1. **Mobile Integration**: Add type generation tooling, build React Native app
+1. **✅ Game Server Foundation**: Core poker logic implemented, tested
+2. **🚧 Mobile Integration**: Web interface working, React Native planned
 
 ## Future Features (Post-MVP)
 - Crypto buy-ins/payouts

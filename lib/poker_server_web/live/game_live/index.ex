@@ -112,7 +112,7 @@ defmodule PokerServerWeb.GameLive.Index do
             <span class="neo-spade">♠</span>
           </div>
           <p class="text-lg sm:text-xl text-gray-600 font-medium tracking-wider uppercase letter-spacing-2">
-            ALL IN • ALL NEW • ALL FUTURE
+            SHORT DECK HOLD'EM • 36 CARDS • FLUSH BEATS FULL HOUSE
           </p>
         </div>
       </div>
@@ -131,8 +131,11 @@ defmodule PokerServerWeb.GameLive.Index do
           </div>
 
           <div class="glass-neo p-4 sm:p-6">
-            <p class="text-gray-700 text-base sm:text-lg font-medium">
+            <p class="text-gray-700 text-base sm:text-lg font-medium mb-2">
               Games launch automatically when 2 players join the queue
+            </p>
+            <p class="text-sm text-gray-600 font-medium">
+              <strong>Short Deck:</strong> 36 cards (6-A), Ace still wraps (A-6-7-8-9 is low straight), Flush beats Full House
             </p>
             <div class="flex justify-center mt-4 gap-2">
               <span class="neo-club text-2xl">♣</span>
