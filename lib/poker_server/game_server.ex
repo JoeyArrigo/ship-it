@@ -475,31 +475,4 @@ defmodule PokerServer.GameServer do
       {:reply, {:ok, :action_processed, new_state}, new_state}
     end
   end
-
-  # Helper function to check tournament completion and schedule cleanup
-  defp check_and_handle_tournament_completion(state) do
-    # Only eliminate players and check tournament completion if this is a real end-of-hand
-    # Not just after pot distribution in all-in scenarios
-    updated_game_state = GameState.eliminate_players(state.game_state)
-    
-    # Only trigger tournament completion if there are multiple players in the game initially
-    # and now only 1 remains after elimination. This prevents premature tournament end
-    # in all-in scenarios where one player temporarily has 0 chips.
-    initial_player_count = length(state.game_state.players)
-    remaining_player_count = length(updated_game_state.players)
-    
-    if initial_player_count > 1 and GameState.tournament_complete?(updated_game_state) and 
-       remaining_player_count < initial_player_count do
-      # Schedule game termination after a brief delay to allow UI updates
-      Process.send_after(self(), :schedule_game_end, 5000)
-      
-      Logger.info("Tournament complete for game #{state.game_id}. Winner: #{hd(updated_game_state.players).id}")
-      
-      %{state | game_state: updated_game_state, phase: :tournament_complete}
-    else
-      # Just update the game state but keep current phase
-      %{state | game_state: updated_game_state}
-    end
-  end
-
 end
