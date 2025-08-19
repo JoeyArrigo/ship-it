@@ -135,7 +135,7 @@ defmodule PokerServerWeb.GameLive.Index do
               Games launch automatically when 2 players join the queue
             </p>
             <p class="text-sm text-gray-600 font-medium">
-              <strong>Short Deck:</strong> 36 cards (6-A), Flush beats Full House
+              <strong>Short Deck:</strong> 36 cards (6-A), Ace still wraps (A-6-7-8-9 is low straight), Flush beats Full House
             </p>
             <div class="flex justify-center mt-4 gap-2">
               <span class="neo-club text-2xl">♣</span>
