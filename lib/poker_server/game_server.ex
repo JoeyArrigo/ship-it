@@ -88,9 +88,21 @@ defmodule PokerServer.GameServer do
 
   @impl true
   def handle_call(:start_hand, _from, %{game_state: game_state} = state) do
-    # Set blind amounts in game state before starting hand (0 so GameState doesn't post blinds)
-    game_state_with_blinds = %{game_state | small_blind: 0, big_blind: 0}
-    updated_game_state = GameState.start_hand(game_state_with_blinds)
+    # Check for tournament completion before starting a new hand
+    # This is the appropriate time to check, not after every pot distribution
+    if GameState.tournament_complete?(game_state) do
+      Logger.info("Tournament complete for game #{state.game_id}. Winner: #{hd(game_state.players).id}")
+      final_state = %{state | phase: :tournament_complete}
+      
+      # Schedule game termination after a brief delay
+      Process.send_after(self(), :schedule_game_end, 5000)
+      
+      GameBroadcaster.broadcast_state_change(state.game_id, final_state)
+      {:reply, {:ok, final_state}, final_state}
+    else
+      # Set blind amounts in game state before starting hand (0 so GameState doesn't post blinds)
+      game_state_with_blinds = %{game_state | small_blind: 0, big_blind: 0}
+      updated_game_state = GameState.start_hand(game_state_with_blinds)
 
     # Create betting round for preflop - BettingRound handles actual blind posting
     betting_round =
@@ -121,8 +133,9 @@ defmodule PokerServer.GameServer do
         all_in_players: MapSet.new()
     }
 
-    GameBroadcaster.broadcast_state_change(state.game_id, new_state)
-    {:reply, {:ok, new_state}, new_state}
+      GameBroadcaster.broadcast_state_change(state.game_id, new_state)
+      {:reply, {:ok, new_state}, new_state}
+    end
   end
 
   @impl true
@@ -207,6 +220,12 @@ defmodule PokerServer.GameServer do
   end
 
   @impl true
+  def handle_info(:schedule_game_end, state) do
+    Logger.info("Ending game #{state.game_id} after tournament completion")
+    {:stop, :normal, state}
+  end
+
+  @impl true
   def handle_info(message, state) do
     Logger.error("PokerServer.GameServer received unexpected message: #{inspect(message)}")
     {:noreply, state}
@@ -267,11 +286,8 @@ defmodule PokerServer.GameServer do
         all_in_players: updated_betting_round.all_in_players
     }
 
-    # Check for tournament completion and schedule game end if needed
-    final_state_with_cleanup = check_and_handle_tournament_completion(final_state)
-
-    GameBroadcaster.broadcast_state_change(game_id, final_state_with_cleanup)
-    {:reply, {:ok, :betting_complete, final_state_with_cleanup}, final_state_with_cleanup}
+    GameBroadcaster.broadcast_state_change(game_id, final_state)
+    {:reply, {:ok, :betting_complete, final_state}, final_state}
   end
 
   # Helper function to handle phase transitions and create next betting round
@@ -351,16 +367,8 @@ defmodule PokerServer.GameServer do
         next_next_phase
       )
     else
-      # Check for tournament completion if this is hand complete
-      final_state = 
-        if next_phase == :hand_complete do
-          check_and_handle_tournament_completion(intermediate_state)
-        else
-          intermediate_state
-        end
-        
-      GameBroadcaster.broadcast_state_change(game_id, final_state)
-      {:reply, {:ok, :betting_complete, final_state}, final_state}
+      GameBroadcaster.broadcast_state_change(game_id, intermediate_state)
+      {:reply, {:ok, :betting_complete, intermediate_state}, intermediate_state}
     end
   end
 
@@ -470,11 +478,18 @@ defmodule PokerServer.GameServer do
 
   # Helper function to check tournament completion and schedule cleanup
   defp check_and_handle_tournament_completion(state) do
-    # Eliminate players with 0 chips
+    # Only eliminate players and check tournament completion if this is a real end-of-hand
+    # Not just after pot distribution in all-in scenarios
     updated_game_state = GameState.eliminate_players(state.game_state)
     
-    # Check if tournament is complete (only 1 player remaining)
-    if GameState.tournament_complete?(updated_game_state) do
+    # Only trigger tournament completion if there are multiple players in the game initially
+    # and now only 1 remains after elimination. This prevents premature tournament end
+    # in all-in scenarios where one player temporarily has 0 chips.
+    initial_player_count = length(state.game_state.players)
+    remaining_player_count = length(updated_game_state.players)
+    
+    if initial_player_count > 1 and GameState.tournament_complete?(updated_game_state) and 
+       remaining_player_count < initial_player_count do
       # Schedule game termination after a brief delay to allow UI updates
       Process.send_after(self(), :schedule_game_end, 5000)
       
@@ -482,13 +497,9 @@ defmodule PokerServer.GameServer do
       
       %{state | game_state: updated_game_state, phase: :tournament_complete}
     else
+      # Just update the game state but keep current phase
       %{state | game_state: updated_game_state}
     end
   end
 
-  @impl true
-  def handle_info(:schedule_game_end, state) do
-    Logger.info("Ending game #{state.game_id} after tournament completion")
-    {:stop, :normal, state}
-  end
 end
