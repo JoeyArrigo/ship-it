@@ -46,7 +46,7 @@ defmodule PokerServer.FoldBehaviorTest do
 
       # player1 has folded - create a betting round to represent this
       folded_players = MapSet.new(["player1"])
-      
+
       # Create a mock betting round for showdown
       betting_round = %PokerServer.BettingRound{
         players: game_state.players,

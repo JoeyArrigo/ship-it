@@ -53,10 +53,10 @@ defmodule PokerServer.GameServerConcurrencyTest do
       assert length(valid_results) == 3
 
       # At least one action should succeed (the valid player's turn), but concurrent actions may interfere
-      successful_actions = 
-        Enum.filter(results, fn 
+      successful_actions =
+        Enum.filter(results, fn
           {:ok, _action_result, _state} -> true
-          _ -> false 
+          _ -> false
         end)
 
       # Note: Due to concurrency, all actions might fail with "not your turn" - this is actually expected behavior

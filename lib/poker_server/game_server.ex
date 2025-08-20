@@ -91,12 +91,15 @@ defmodule PokerServer.GameServer do
     # Check for tournament completion before starting a new hand
     # This is the appropriate time to check, not after every pot distribution
     if GameState.tournament_complete?(game_state) do
-      Logger.info("Tournament complete for game #{state.game_id}. Winner: #{hd(game_state.players).id}")
+      Logger.info(
+        "Tournament complete for game #{state.game_id}. Winner: #{hd(game_state.players).id}"
+      )
+
       final_state = %{state | phase: :tournament_complete}
-      
+
       # Schedule game termination after a brief delay
       Process.send_after(self(), :schedule_game_end, 5000)
-      
+
       GameBroadcaster.broadcast_state_change(state.game_id, final_state)
       {:reply, {:ok, final_state}, final_state}
     else
@@ -104,34 +107,34 @@ defmodule PokerServer.GameServer do
       game_state_with_blinds = %{game_state | small_blind: 0, big_blind: 0}
       updated_game_state = GameState.start_hand(game_state_with_blinds)
 
-    # Create betting round for preflop - BettingRound handles actual blind posting
-    betting_round =
-      BettingRound.new(
-        updated_game_state.players,
-        # small blind - could be configurable
-        10,
-        # big blind - could be configurable
-        20,
-        :preflop,
-        updated_game_state.button_position
-      )
+      # Create betting round for preflop - BettingRound handles actual blind posting
+      betting_round =
+        BettingRound.new(
+          updated_game_state.players,
+          # small blind - could be configurable
+          10,
+          # big blind - could be configurable
+          20,
+          :preflop,
+          updated_game_state.button_position
+        )
 
-    # Sync player chips from betting round back to game state (blinds are posted in BettingRound.new)
-    synced_game_state = %{
-      updated_game_state
-      | players: betting_round.players,
-        pot: betting_round.pot
-    }
+      # Sync player chips from betting round back to game state (blinds are posted in BettingRound.new)
+      synced_game_state = %{
+        updated_game_state
+        | players: betting_round.players,
+          pot: betting_round.pot
+      }
 
-    new_state = %{
-      state
-      | game_state: synced_game_state,
-        betting_round: betting_round,
-        original_betting_round: nil,
-        phase: :preflop_betting,
-        folded_players: MapSet.new(),
-        all_in_players: MapSet.new()
-    }
+      new_state = %{
+        state
+        | game_state: synced_game_state,
+          betting_round: betting_round,
+          original_betting_round: nil,
+          phase: :preflop_betting,
+          folded_players: MapSet.new(),
+          all_in_players: MapSet.new()
+      }
 
       GameBroadcaster.broadcast_state_change(state.game_id, new_state)
       {:reply, {:ok, new_state}, new_state}
@@ -338,11 +341,16 @@ defmodule PokerServer.GameServer do
       # Determine next phase progression based on current phase
       {next_next_game_state_fn, next_next_betting_round_type, next_next_phase} =
         case next_phase do
-          :flop_betting -> {&GameState.deal_turn/1, :turn, :turn_betting}
-          :turn_betting -> {&GameState.deal_river/1, :river, :river_betting}
+          :flop_betting ->
+            {&GameState.deal_turn/1, :turn, :turn_betting}
+
+          :turn_betting ->
+            {&GameState.deal_river/1, :river, :river_betting}
+
           :river_betting ->
             {fn _game_state -> raise "This should never be called for showdown" end, nil,
              :hand_complete}
+
           :hand_complete ->
             {nil, nil, :hand_complete}
         end
@@ -356,6 +364,7 @@ defmodule PokerServer.GameServer do
         else
           next_betting_round
         end
+
       # Recursively advance to next phase
       handle_phase_transition(
         intermediate_state,
@@ -447,7 +456,8 @@ defmodule PokerServer.GameServer do
       if state.original_betting_round == nil &&
            MapSet.size(updated_betting_round.all_in_players) > 0 &&
            BettingRound.betting_complete?(updated_betting_round) do
-        updated_betting_round  # Store this as the source of truth for bet amounts
+        # Store this as the source of truth for bet amounts
+        updated_betting_round
       else
         state.original_betting_round
       end

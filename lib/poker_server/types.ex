@@ -15,7 +15,14 @@ defmodule PokerServer.Types do
 
   # GameServer phases - represents what the server is currently doing
   @type server_phase ::
-          :waiting_to_start | :preflop_betting | :flop_betting | :turn_betting | :river_betting | :hand_complete | :tournament_complete | :game_ended
+          :waiting_to_start
+          | :preflop_betting
+          | :flop_betting
+          | :turn_betting
+          | :river_betting
+          | :hand_complete
+          | :tournament_complete
+          | :game_ended
 
   # Betting round types - the current betting street
   @type betting_round_type :: :preflop | :flop | :turn | :river
@@ -56,7 +63,16 @@ defmodule PokerServer.Types do
     do: [:waiting_for_players, :preflop, :flop, :turn, :river, :hand_complete]
 
   def all_server_phases,
-    do: [:waiting_to_start, :preflop_betting, :flop_betting, :turn_betting, :river_betting, :hand_complete, :tournament_complete, :game_ended]
+    do: [
+      :waiting_to_start,
+      :preflop_betting,
+      :flop_betting,
+      :turn_betting,
+      :river_betting,
+      :hand_complete,
+      :tournament_complete,
+      :game_ended
+    ]
 
   def all_betting_round_types, do: [:preflop, :flop, :turn, :river]
 

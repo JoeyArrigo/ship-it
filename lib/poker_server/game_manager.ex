@@ -63,12 +63,13 @@ defmodule PokerServer.GameManager do
   # Server Callbacks
 
   @impl true
-  def init(state) do
+  def init(_state) do
     # Initialize state with games map and monitor refs
     initial_state = %{
       games: %{},
       monitors: %{}
     }
+
     {:ok, initial_state}
   end
 
@@ -82,13 +83,13 @@ defmodule PokerServer.GameManager do
           {:ok, pid} ->
             # Monitor the game process for cleanup
             monitor_ref = Process.monitor(pid)
-            
+
             game_info = %{
               pid: pid,
               players: validated_players,
               created_at: DateTime.utc_now()
             }
-            
+
             updated_state = %{
               state
               | games: Map.put(state.games, game_id, game_info),
@@ -119,17 +120,17 @@ defmodule PokerServer.GameManager do
       nil ->
         # Unknown monitor ref, ignore
         {:noreply, state}
-        
+
       game_id ->
         Logger.info("Game #{game_id} process terminated with reason: #{inspect(reason)}")
-        
+
         # Clean up both games and monitors maps
         updated_state = %{
           state
           | games: Map.delete(state.games, game_id),
             monitors: Map.delete(state.monitors, monitor_ref)
         }
-        
+
         {:noreply, updated_state}
     end
   end

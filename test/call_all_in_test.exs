@@ -18,7 +18,7 @@ defmodule PokerServer.CallAllInTest do
 
       # Player 1 goes all-in for 50 chips
       {:ok, betting_round} = BettingRound.process_action(betting_round, 1, {:all_in})
-      
+
       # Verify player 1 is in all_in_players
       assert 1 in betting_round.all_in_players
       assert betting_round.current_bet == 50
@@ -52,7 +52,7 @@ defmodule PokerServer.CallAllInTest do
 
       # Player 1 goes all-in for 30 chips
       {:ok, betting_round} = BettingRound.process_action(betting_round, 1, {:all_in})
-      
+
       # Verify player 1 is in all_in_players
       assert 1 in betting_round.all_in_players
       assert betting_round.current_bet == 30
@@ -68,23 +68,29 @@ defmodule PokerServer.CallAllInTest do
       player_1 = Enum.find(betting_round.players, &(&1.id == 1))
       player_2 = Enum.find(betting_round.players, &(&1.id == 2))
       assert player_1.chips == 0
-      assert player_2.chips == 70  # 100 - 10 (BB) - 20 (call) = 70
+      # 100 - 10 (BB) - 20 (call) = 70
+      assert player_2.chips == 70
     end
 
     test "multiple players can go all-in via calls" do
       players = [
-        player(1, 50, 0),   # Will go all-in
-        player(2, 50, 1),   # Will call all-in  
-        player(3, 50, 2)    # Will call all-in
+        # Will go all-in
+        player(1, 50, 0),
+        # Will call all-in  
+        player(2, 50, 1),
+        # Will call all-in
+        player(3, 50, 2)
       ]
 
       betting_round = BettingRound.new(players, 5, 10, :preflop)
 
       # Get the first active player (might not be player 1)
       first_active = BettingRound.get_active_player(betting_round)
-      
+
       # First active player goes all-in
-      {:ok, betting_round} = BettingRound.process_action(betting_round, first_active.id, {:all_in})
+      {:ok, betting_round} =
+        BettingRound.process_action(betting_round, first_active.id, {:all_in})
+
       assert first_active.id in betting_round.all_in_players
 
       # Get next active player and have them call (going all-in)
