@@ -5,13 +5,14 @@ defmodule PokerServer.AllInMultiRoundTest do
   # Helper function to complete a betting round
   defp complete_betting_round(game_pid, current_state) do
     active_player = PokerServer.BettingRound.get_active_player(current_state.betting_round)
-    
+
     if active_player do
       # Continue with active player
       case GameServer.player_action(game_pid, active_player.id, {:call}) do
-        {:ok, :action_processed, state} -> 
+        {:ok, :action_processed, state} ->
           complete_betting_round(game_pid, state)
-        {:ok, :betting_complete, state} -> 
+
+        {:ok, :betting_complete, state} ->
           state
       end
     else
@@ -76,29 +77,31 @@ defmodule PokerServer.AllInMultiRoundTest do
 
       # First active player (should be one of the big stacks) makes a small raise
       first_active = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
-      {:ok, :action_processed, _} = 
+
+      {:ok, :action_processed, _} =
         GameServer.player_action(game_pid, first_active.id, {:raise, 60})
 
       # Find the small stack player and make them go all-in
       second_state = GameServer.get_state(game_pid)
       second_active = PokerServer.BettingRound.get_active_player(second_state.betting_round)
-      
+
       # If this isn't the small stack, continue until we find them
       if second_active.id == "player1" do
-        {:ok, :action_processed, _} = 
+        {:ok, :action_processed, _} =
           GameServer.player_action(game_pid, "player1", {:all_in})
       else
-        {:ok, :action_processed, _} = 
+        {:ok, :action_processed, _} =
           GameServer.player_action(game_pid, second_active.id, {:call})
-        
+
         _third_state = GameServer.get_state(game_pid)
-        {:ok, :action_processed, _} = 
+
+        {:ok, :action_processed, _} =
           GameServer.player_action(game_pid, "player1", {:all_in})
       end
 
       # Complete preflop - finish all remaining actions
       current_state = GameServer.get_state(game_pid)
-      
+
       # Continue until betting is complete
       flop_state = complete_betting_round(game_pid, current_state)
 
@@ -107,10 +110,11 @@ defmodule PokerServer.AllInMultiRoundTest do
 
       # The other players should still be able to act (not all-in)
       flop_active = PokerServer.BettingRound.get_active_player(flop_state.betting_round)
-      
+
       if flop_active do
         # Verify we can continue betting on flop
-        assert flop_active.id != "player1"  # All-in player shouldn't be active
+        # All-in player shouldn't be active
+        assert flop_active.id != "player1"
       end
     end
 
@@ -122,7 +126,7 @@ defmodule PokerServer.AllInMultiRoundTest do
       # - Contested: 1400 × 2 = 2800 chips (main pot)
       # - Uncalled: 200 chips returned to A (side pot)
       # - If B wins: B gets 2800, A gets 200
-      
+
       # Force a scenario where B wins by giving B better hole cards
       players = [{"player_a", 1600}, {"player_b", 1400}]
       {:ok, game_id} = GameManager.create_game(players)
@@ -130,20 +134,27 @@ defmodule PokerServer.AllInMultiRoundTest do
 
       {:ok, _} = GameServer.start_hand(game_pid)
       initial_state = GameServer.get_state(game_pid)
-      
+
       # Force both players all-in - handle turn order
       first_active = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
-      
-      final_state = if first_active.id == "player_a" do
-        {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_a", {:all_in})
-        {:ok, :betting_complete, state} = GameServer.player_action(game_pid, "player_b", {:all_in})
-        state
-      else
-        {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_b", {:call})
-        {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_a", {:all_in})
-        {:ok, :betting_complete, state} = GameServer.player_action(game_pid, "player_b", {:all_in})
-        state
-      end
+
+      final_state =
+        if first_active.id == "player_a" do
+          {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_a", {:all_in})
+
+          {:ok, :betting_complete, state} =
+            GameServer.player_action(game_pid, "player_b", {:all_in})
+
+          state
+        else
+          {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_b", {:call})
+          {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_a", {:all_in})
+
+          {:ok, :betting_complete, state} =
+            GameServer.player_action(game_pid, "player_b", {:all_in})
+
+          state
+        end
 
       # Game should proceed to hand_complete
       assert final_state.phase == :hand_complete
@@ -162,16 +173,18 @@ defmodule PokerServer.AllInMultiRoundTest do
       # We can't control who wins due to random cards, so test both scenarios
       if final_player_b.chips > final_player_a.chips do
         # B won - should get contested amount (2800), A gets uncalled portion (200)
-        assert final_player_b.chips == 2800, 
-          "Player B should get contested pot amount, got #{final_player_b.chips}"
+        assert final_player_b.chips == 2800,
+               "Player B should get contested pot amount, got #{final_player_b.chips}"
+
         assert final_player_a.chips == 200,
-          "Player A should get uncalled bet back, got #{final_player_a.chips}"
+               "Player A should get uncalled bet back, got #{final_player_a.chips}"
       else
         # A won - should get everything (A can win their own uncalled bet)
-        assert final_player_a.chips == 3000, 
-          "Player A should get all chips when winning"
+        assert final_player_a.chips == 3000,
+               "Player A should get all chips when winning"
+
         assert final_player_b.chips == 0,
-          "Player B should get nothing when losing"
+               "Player B should get nothing when losing"
       end
     end
 
@@ -185,27 +198,34 @@ defmodule PokerServer.AllInMultiRoundTest do
       # - Final: A gets 1400 (half contested) + 200 (uncalled) = 1600
       # - Final: B gets 1400 (half contested) = 1400
       # - Total check: 1600 + 1400 = 3000 ✓
-      
+
       players = [{"player_a", 1600}, {"player_b", 1400}]
       {:ok, game_id} = GameManager.create_game(players)
       [{game_pid, _}] = Registry.lookup(PokerServer.GameRegistry, game_id)
 
       {:ok, _} = GameServer.start_hand(game_pid)
       initial_state = GameServer.get_state(game_pid)
-      
+
       # Force both players all-in - handle turn order
       first_active = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
-      
-      final_state = if first_active.id == "player_a" do
-        {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_a", {:all_in})
-        {:ok, :betting_complete, state} = GameServer.player_action(game_pid, "player_b", {:all_in})
-        state
-      else
-        {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_b", {:call})
-        {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_a", {:all_in})
-        {:ok, :betting_complete, state} = GameServer.player_action(game_pid, "player_b", {:all_in})
-        state
-      end
+
+      final_state =
+        if first_active.id == "player_a" do
+          {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_a", {:all_in})
+
+          {:ok, :betting_complete, state} =
+            GameServer.player_action(game_pid, "player_b", {:all_in})
+
+          state
+        else
+          {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_b", {:call})
+          {:ok, :action_processed, _} = GameServer.player_action(game_pid, "player_a", {:all_in})
+
+          {:ok, :betting_complete, state} =
+            GameServer.player_action(game_pid, "player_b", {:all_in})
+
+          state
+        end
 
       # Game should proceed to hand_complete
       assert final_state.phase == :hand_complete
@@ -228,9 +248,10 @@ defmodule PokerServer.AllInMultiRoundTest do
         # A: 1400 (half contested) + 200 (uncalled) = 1600
         # B: 1400 (half contested) = 1400
         assert final_player_a.chips == 1600,
-          "In a tie, Player A should get half contested pot plus uncalled bet, got #{final_player_a.chips}"
+               "In a tie, Player A should get half contested pot plus uncalled bet, got #{final_player_a.chips}"
+
         assert final_player_b.chips == 1400,
-          "In a tie, Player B should get half contested pot only, got #{final_player_b.chips}"
+               "In a tie, Player B should get half contested pot only, got #{final_player_b.chips}"
       else
         # Not a tie - document what should happen for reference
         if final_player_a.chips > final_player_b.chips do
@@ -240,9 +261,10 @@ defmodule PokerServer.AllInMultiRoundTest do
         else
           # B won - should get contested pot (2800), A gets uncalled portion (200)
           assert final_player_b.chips == 2800,
-            "Player B should get contested pot amount, got #{final_player_b.chips}"
+                 "Player B should get contested pot amount, got #{final_player_b.chips}"
+
           assert final_player_a.chips == 200,
-            "Player A should get uncalled bet back, got #{final_player_a.chips}"
+                 "Player A should get uncalled bet back, got #{final_player_a.chips}"
         end
       end
     end

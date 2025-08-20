@@ -11,6 +11,7 @@ defmodule PokerServer.GameBroadcasterTest do
     ]
 
     game_state = GameState.new(players)
+
     game_server_state = %{
       game_id: "test_game",
       game_state: game_state,
@@ -111,6 +112,7 @@ defmodule PokerServer.GameBroadcasterTest do
     test "returns :ok on successful broadcast" do
       result =
         GameBroadcaster.broadcast_to_player_message("test_game", "player1", {:test, "message"})
+
       assert result == :ok
     end
   end

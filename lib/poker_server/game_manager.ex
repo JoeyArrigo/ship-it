@@ -1,6 +1,7 @@
 defmodule PokerServer.GameManager do
   use GenServer
   alias PokerServer.{GameServer, InputValidator}
+  require Logger
 
   # Client API
 
@@ -62,8 +63,14 @@ defmodule PokerServer.GameManager do
   # Server Callbacks
 
   @impl true
-  def init(state) do
-    {:ok, state}
+  def init(_state) do
+    # Initialize state with games map and monitor refs
+    initial_state = %{
+      games: %{},
+      monitors: %{}
+    }
+
+    {:ok, initial_state}
   end
 
   @impl true
@@ -73,13 +80,23 @@ defmodule PokerServer.GameManager do
         game_id = generate_game_id()
 
         case start_game_process(game_id, validated_players) do
-          {:ok, _pid} ->
-            updated_state =
-              Map.put(state, game_id, %{
-                players: validated_players,
-                created_at: DateTime.utc_now()
-              })
+          {:ok, pid} ->
+            # Monitor the game process for cleanup
+            monitor_ref = Process.monitor(pid)
 
+            game_info = %{
+              pid: pid,
+              players: validated_players,
+              created_at: DateTime.utc_now()
+            }
+
+            updated_state = %{
+              state
+              | games: Map.put(state.games, game_id, game_info),
+                monitors: Map.put(state.monitors, monitor_ref, game_id)
+            }
+
+            Logger.info("Created game #{game_id} with #{length(validated_players)} players")
             {:reply, {:ok, game_id}, updated_state}
 
           {:error, reason} ->
@@ -93,8 +110,35 @@ defmodule PokerServer.GameManager do
 
   @impl true
   def handle_call(:list_games, _from, state) do
-    games = Map.keys(state)
+    games = Map.keys(state.games)
     {:reply, games, state}
+  end
+
+  @impl true
+  def handle_info({:DOWN, monitor_ref, :process, _pid, reason}, state) do
+    case Map.get(state.monitors, monitor_ref) do
+      nil ->
+        # Unknown monitor ref, ignore
+        {:noreply, state}
+
+      game_id ->
+        Logger.info("Game #{game_id} process terminated with reason: #{inspect(reason)}")
+
+        # Clean up both games and monitors maps
+        updated_state = %{
+          state
+          | games: Map.delete(state.games, game_id),
+            monitors: Map.delete(state.monitors, monitor_ref)
+        }
+
+        {:noreply, updated_state}
+    end
+  end
+
+  @impl true
+  def handle_info(message, state) do
+    Logger.warning("GameManager received unexpected message: #{inspect(message)}")
+    {:noreply, state}
   end
 
   # Private Functions

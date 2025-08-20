@@ -370,6 +370,7 @@ defmodule PokerServer.GameStateTest do
         players_who_can_act: MapSet.new(),
         last_raiser: nil
       }
+
       updated_state = GameState.showdown(game_state, betting_round)
 
       assert updated_state.phase == :hand_complete
@@ -437,6 +438,7 @@ defmodule PokerServer.GameStateTest do
         players_who_can_act: MapSet.new(),
         last_raiser: nil
       }
+
       updated_state = GameState.showdown(game_state, betting_round)
 
       # Both players should get equal share

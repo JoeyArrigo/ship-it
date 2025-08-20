@@ -150,6 +150,7 @@ defmodule PokerServer.BettingRound do
   def new_from_existing(players, existing_pot, current_bet, round_type) do
     new_from_existing(players, existing_pot, current_bet, round_type, nil)
   end
+
   def new_from_existing(players, existing_pot, current_bet, round_type, button_position) do
     # Validate betting round type
     Types.validate_betting_round_type!(round_type)
@@ -392,11 +393,11 @@ defmodule PokerServer.BettingRound do
     else
       safe_index = rem(betting_round.active_player_index, player_count)
       player = Enum.at(betting_round.players, safe_index)
-      
+
       # Check if the player at active_player_index can actually act
-      if player && 
-         player.id not in betting_round.folded_players &&
-         player.id not in betting_round.all_in_players do
+      if player &&
+           player.id not in betting_round.folded_players &&
+           player.id not in betting_round.all_in_players do
         player
       else
         # No valid active player (all are folded/all-in)
@@ -489,13 +490,13 @@ defmodule PokerServer.BettingRound do
         end)
 
       # Check if the calling player went all-in (chips = 0 after call)
-      player_went_all_in = 
+      player_went_all_in =
         updated_players
         |> Enum.find(&(&1.id == player_id))
         |> Map.get(:chips) == 0
 
       # Update all_in_players if player went all-in
-      updated_all_in_players = 
+      updated_all_in_players =
         if player_went_all_in do
           MapSet.put(betting_round.all_in_players, player_id)
         else
@@ -793,5 +794,4 @@ defmodule PokerServer.BettingRound do
         {0, 1}
     end
   end
-
 end

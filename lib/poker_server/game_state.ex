@@ -337,14 +337,14 @@ defmodule PokerServer.GameState do
     updated_players =
       Enum.reduce(side_pots, game_state.players, fn side_pot, players ->
         # Find winners eligible for this side pot
-        eligible_winners = 
-          overall_winners 
+        eligible_winners =
+          overall_winners
           |> Enum.filter(fn winner_id -> winner_id in side_pot.eligible_players end)
 
         if length(eligible_winners) > 0 do
           # Split this side pot among eligible winners
           chips_per_winner = div(side_pot.amount, length(eligible_winners))
-          
+
           Enum.map(players, fn player ->
             if player.id in eligible_winners do
               %{player | chips: player.chips + chips_per_winner}
@@ -357,7 +357,7 @@ defmodule PokerServer.GameState do
           # This happens when the overall winner isn't eligible for this side pot (uncalled bet scenario)
           eligible_for_pot = MapSet.to_list(side_pot.eligible_players)
           chips_per_eligible = div(side_pot.amount, length(eligible_for_pot))
-          
+
           Enum.map(players, fn player ->
             if player.id in eligible_for_pot do
               %{player | chips: player.chips + chips_per_eligible}

@@ -12,9 +12,9 @@ defmodule PokerServer.GameServerConcurrencyTest do
     test "simultaneous player actions are processed safely" do
       # Create a game with 3 players
       players = [
-        player(1, 1500),
-        player(2, 1500),
-        player(3, 1500)
+        player("1", 1500),
+        player("2", 1500),
+        player("3", 1500)
       ]
 
       {:ok, game_id} = GameManager.create_game(players)
@@ -28,31 +28,36 @@ defmodule PokerServer.GameServerConcurrencyTest do
       # But we test what happens with concurrent submissions
       tasks = [
         Task.async(fn ->
-          GameServer.player_action(game_pid, 1, {:fold})
+          GameServer.player_action(game_pid, "1", {:fold})
         end),
         Task.async(fn ->
-          GameServer.player_action(game_pid, 2, {:call})
+          GameServer.player_action(game_pid, "2", {:call})
         end),
         Task.async(fn ->
-          GameServer.player_action(game_pid, 3, {:raise, 40})
+          GameServer.player_action(game_pid, "3", {:raise, 40})
         end)
       ]
 
       results = Task.await_many(tasks, 5000)
 
       # Results should be consistent - some should succeed, others should get "not your turn"
+      # GameServer.player_action returns {:ok, :action_processed, state} or {:ok, :betting_complete, state} or {:error, reason}
       valid_results =
         Enum.filter(results, fn
-          :ok -> true
+          {:ok, _action_result, _state} -> true
           {:error, _reason} -> true
           _ -> false
         end)
 
-      # At least 2 results should be valid (may have some invalid concurrent attempts)
-      assert length(valid_results) >= 2
+      # All 3 results should be valid responses (either success or proper error)
+      assert length(valid_results) == 3
 
       # At least one action should succeed (the valid player's turn), but concurrent actions may interfere
-      successful_actions = Enum.filter(results, fn result -> result == :ok end)
+      successful_actions =
+        Enum.filter(results, fn
+          {:ok, _action_result, _state} -> true
+          _ -> false
+        end)
 
       # Note: Due to concurrency, all actions might fail with "not your turn" - this is actually expected behavior
       # At least no crashes
@@ -72,7 +77,7 @@ defmodule PokerServer.GameServerConcurrencyTest do
 
     test "rapid sequential actions maintain game state consistency" do
       # Create a game
-      players = [player(1, 1500), player(2, 1500)]
+      players = [player("1", 1500), player("2", 1500)]
       {:ok, game_id} = GameManager.create_game(players)
       {:ok, game_pid} = GameManager.lookup_game(game_id)
 
@@ -91,7 +96,7 @@ defmodule PokerServer.GameServerConcurrencyTest do
 
       # Submit actions rapidly
       for action <- actions do
-        for player_id <- [1, 2] do
+        for player_id <- ["1", "2"] do
           spawn(fn ->
             GameServer.player_action(game_pid, player_id, action)
           end)
@@ -124,7 +129,7 @@ defmodule PokerServer.GameServerConcurrencyTest do
   describe "concurrent game state access" do
     test "multiple state queries during active game" do
       # Create and start a game
-      players = [player(1, 1500), player(2, 1500), player(3, 1500)]
+      players = [player("1", 1500), player("2", 1500), player("3", 1500)]
       {:ok, game_id} = GameManager.create_game(players)
       {:ok, game_pid} = GameManager.lookup_game(game_id)
 
@@ -146,13 +151,13 @@ defmodule PokerServer.GameServerConcurrencyTest do
           # Submit some valid actions
           Process.sleep(10)
           # UTG calls
-          GameServer.player_action(game_pid, 3, {:call})
+          GameServer.player_action(game_pid, "3", {:call})
           Process.sleep(10)
           # SB calls
-          GameServer.player_action(game_pid, 1, {:call})
+          GameServer.player_action(game_pid, "1", {:call})
           Process.sleep(10)
           # BB checks
-          GameServer.player_action(game_pid, 2, {:check})
+          GameServer.player_action(game_pid, "2", {:check})
           :actions_complete
         end)
 
@@ -185,7 +190,7 @@ defmodule PokerServer.GameServerConcurrencyTest do
 
     test "game state consistency during hand transitions" do
       # Create a game
-      players = [player(1, 1500), player(2, 1500)]
+      players = [player("1", 1500), player("2", 1500)]
       {:ok, game_id} = GameManager.create_game(players)
       {:ok, game_pid} = GameManager.lookup_game(game_id)
 
@@ -229,7 +234,7 @@ defmodule PokerServer.GameServerConcurrencyTest do
   describe "process crash resilience" do
     test "game server handles unexpected process messages" do
       # Create a game
-      players = [player(1, 1500), player(2, 1500)]
+      players = [player("1", 1500), player("2", 1500)]
       {:ok, game_id} = GameManager.create_game(players)
       {:ok, game_pid} = GameManager.lookup_game(game_id)
 
@@ -253,7 +258,7 @@ defmodule PokerServer.GameServerConcurrencyTest do
 
     test "concurrent operations continue after recoverable errors" do
       # Create a game
-      players = [player(1, 1500), player(2, 1500)]
+      players = [player("1", 1500), player("2", 1500)]
       {:ok, game_id} = GameManager.create_game(players)
       {:ok, game_pid} = GameManager.lookup_game(game_id)
 
@@ -266,7 +271,7 @@ defmodule PokerServer.GameServerConcurrencyTest do
         # Invalid operations (should return errors, not crash)
         Task.async(fn ->
           try do
-            GameServer.player_action(game_pid, 999, {:invalid_action})
+            GameServer.player_action(game_pid, "999", {:invalid_action})
           rescue
             _error -> {:error, :invalid_action}
           end
@@ -274,7 +279,7 @@ defmodule PokerServer.GameServerConcurrencyTest do
         Task.async(fn ->
           try do
             # Before betting starts
-            GameServer.player_action(game_pid, 1, {:fold})
+            GameServer.player_action(game_pid, "1", {:fold})
           rescue
             _error -> {:error, :betting_not_active}
           end
