@@ -235,6 +235,8 @@ defmodule PokerServer.HandEvaluator do
   end
 
   defp compare_kickers([], []), do: :equal
+  defp compare_kickers([], _), do: :less
+  defp compare_kickers(_, []), do: :greater
 
   defp compare_kickers([card1 | rest1], [card2 | rest2]) do
     val1 = card_rank_value(card1)
@@ -299,15 +301,19 @@ defmodule PokerServer.HandEvaluator do
       cards
       |> Enum.group_by(& &1.rank)
       |> Enum.map(fn {rank, group} -> {rank, length(group)} end)
+      |> Enum.sort_by(fn {rank, count} -> {count, card_rank_value(%{rank: rank})} end, :desc)
 
+    # Find the highest trips (first group with 3+ cards)
     trips_rank =
       rank_counts
-      |> Enum.find(fn {_rank, count} -> count == 3 end)
+      |> Enum.find(fn {_rank, count} -> count >= 3 end)
       |> elem(0)
 
+    # Find the highest pair from remaining ranks (could be another trips or a pair)
     pair_rank =
       rank_counts
-      |> Enum.find(fn {_rank, count} -> count == 2 end)
+      |> Enum.reject(fn {rank, _count} -> rank == trips_rank end)
+      |> Enum.find(fn {_rank, count} -> count >= 2 end)
       |> elem(0)
 
     {trips_rank, pair_rank}
@@ -363,8 +369,11 @@ defmodule PokerServer.HandEvaluator do
         all_cards
         |> combinations(5)
         |> Enum.map(&evaluate_five_cards/1)
-        |> Enum.max_by(fn {hand_type, _cards} ->
-          hand_rankings() |> Enum.find_index(&(&1 == hand_type)) |> then(&(100 - &1))
+        |> Enum.reduce(fn hand1, hand2 ->
+          case compare_hands(hand1, hand2) do
+            :greater -> hand1
+            _ -> hand2
+          end
         end)
       end
 

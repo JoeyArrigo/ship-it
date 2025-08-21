@@ -1031,5 +1031,32 @@ defmodule PokerServer.HandEvaluatorTest do
 
       assert HandEvaluator.hand_rankings() == hand_rankings
     end
+
+    test "full house comparison: Bob KQ vs Alice QQ with community T T J T Q" do
+      # Bob has K♠ Q♦
+      bob_hole = [card(:king, :spades), card(:queen, :diamonds)]
+      # Alice has Q♠ Q♣
+      alice_hole = [card(:queen, :spades), card(:queen, :clubs)]
+      
+      # Community: T♥ T♦ J♠ T♣ Q♥
+      community = [
+        card(:ten, :hearts),
+        card(:ten, :diamonds),
+        card(:jack, :spades),
+        card(:ten, :clubs),
+        card(:queen, :hearts)
+      ]
+
+      bob_hand = HandEvaluator.evaluate_hand(bob_hole, community)
+      alice_hand = HandEvaluator.evaluate_hand(alice_hole, community)
+
+      # Both should have full houses
+      assert elem(bob_hand, 0) == :full_house
+      assert elem(alice_hand, 0) == :full_house
+
+      # Alice should win (QQQ over TTT beats TTT over QQQ)
+      assert HandEvaluator.compare_hands(alice_hand, bob_hand) == :greater
+      assert HandEvaluator.compare_hands(bob_hand, alice_hand) == :less
+    end
   end
 end
