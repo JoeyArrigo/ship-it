@@ -496,7 +496,7 @@ defmodule PokerServer.HandEvaluatorTest do
       assert hand_type == :straight
     end
 
-    test "A-6-7-8-9 straight beats no straight" do
+    test "A-6-7-8-9 straight loses to 10-J-Q-K-A" do
       wheel_straight =
         {:straight,
          [
@@ -507,8 +507,8 @@ defmodule PokerServer.HandEvaluatorTest do
            card(:nine, :hearts)
          ]}
 
-      high_card =
-        {:high_card,
+      high_straight =
+        {:straight,
          [
            card(:ace, :clubs),
            card(:king, :diamonds),
@@ -517,7 +517,7 @@ defmodule PokerServer.HandEvaluatorTest do
            card(:ten, :clubs)
          ]}
 
-      assert HandEvaluator.compare_hands(wheel_straight, high_card) == :greater
+      assert HandEvaluator.compare_hands(wheel_straight, high_straight) == :less
     end
 
     test "6-7-8-9-10 straight beats A-6-7-8-9 straight" do
@@ -1030,6 +1030,61 @@ defmodule PokerServer.HandEvaluatorTest do
       ]
 
       assert HandEvaluator.hand_rankings() == hand_rankings
+    end
+
+    test "full house comparison: Bob KQ vs Alice QQ with community T T J T Q" do
+      # Bob has K♠ Q♦
+      bob_hole = [card(:king, :spades), card(:queen, :diamonds)]
+      # Alice has Q♠ Q♣
+      alice_hole = [card(:queen, :spades), card(:queen, :clubs)]
+
+      # Community: T♥ T♦ J♠ T♣ Q♥
+      community = [
+        card(:ten, :hearts),
+        card(:ten, :diamonds),
+        card(:jack, :spades),
+        card(:ten, :clubs),
+        card(:queen, :hearts)
+      ]
+
+      bob_hand = HandEvaluator.evaluate_hand(bob_hole, community)
+      alice_hand = HandEvaluator.evaluate_hand(alice_hole, community)
+
+      # Both should have full houses
+      assert elem(bob_hand, 0) == :full_house
+      assert elem(alice_hand, 0) == :full_house
+
+      # Alice should win (QQQ over TTT beats TTT over QQQ)
+      assert HandEvaluator.compare_hands(alice_hand, bob_hand) == :greater
+      assert HandEvaluator.compare_hands(bob_hand, alice_hand) == :less
+    end
+
+    test "Bob KQ vs Alice QA with community 8 6 7 9 K - straight beats pair" do
+      # Bob has K♠ Q♦
+      bob_hole = [card(:king, :spades), card(:queen, :diamonds)]
+      # Alice has Q♠ A♣
+      alice_hole = [card(:queen, :clubs), card(:ace, :hearts)]
+
+      # Community: 8♥ 6♦ 7♠ 9♣ K♥ (different suits to avoid flush)
+      community = [
+        card(:eight, :hearts),
+        card(:six, :diamonds),
+        card(:seven, :spades),
+        card(:nine, :clubs),
+        card(:king, :hearts)
+      ]
+
+      bob_hand = HandEvaluator.evaluate_hand(bob_hole, community)
+      alice_hand = HandEvaluator.evaluate_hand(alice_hole, community)
+
+      # Bob should have pair of kings
+      assert elem(bob_hand, 0) == :one_pair
+      # Alice should have A-6-7-8-9 straight (wheel straight in short deck)
+      assert elem(alice_hand, 0) == :straight
+
+      # Alice's straight should beat Bob's pair of kings
+      assert HandEvaluator.compare_hands(alice_hand, bob_hand) == :greater
+      assert HandEvaluator.compare_hands(bob_hand, alice_hand) == :less
     end
   end
 end
