@@ -496,7 +496,7 @@ defmodule PokerServer.HandEvaluatorTest do
       assert hand_type == :straight
     end
 
-    test "A-6-7-8-9 straight beats no straight" do
+    test "A-6-7-8-9 straight loses to 10-J-Q-K-A" do
       wheel_straight =
         {:straight,
          [
@@ -507,8 +507,8 @@ defmodule PokerServer.HandEvaluatorTest do
            card(:nine, :hearts)
          ]}
 
-      high_card =
-        {:high_card,
+      high_straight =
+        {:straight,
          [
            card(:ace, :clubs),
            card(:king, :diamonds),
@@ -517,7 +517,7 @@ defmodule PokerServer.HandEvaluatorTest do
            card(:ten, :clubs)
          ]}
 
-      assert HandEvaluator.compare_hands(wheel_straight, high_card) == :greater
+      assert HandEvaluator.compare_hands(wheel_straight, high_straight) == :less
     end
 
     test "6-7-8-9-10 straight beats A-6-7-8-9 straight" do
