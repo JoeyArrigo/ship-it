@@ -1,14 +1,18 @@
 defmodule PokerServer.GameServerPubSubTest do
-  use ExUnit.Case, async: true
-  alias PokerServer.GameServer
+  use ExUnit.Case, async: false
+  alias PokerServer.{GameServer, Repo}
   alias Phoenix.PubSub
 
   setup do
+    # Set up database sandbox for tournament persistence
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(PokerServer.Repo)
+    Ecto.Adapters.SQL.Sandbox.mode(PokerServer.Repo, {:shared, self()})
+    
     # Create test players  
     players = [{"player1", 1000}, {"player2", 1000}]
 
-    # Start game directly with deterministic button position
-    game_id = "test_game_#{:rand.uniform(1_000_000)}"
+    # Start game directly with UUID game ID
+    game_id = Ecto.UUID.generate()
     {:ok, game_pid} = PokerServer.GameServer.start_link({game_id, players})
 
     # Set deterministic button position: button=1 means player2 is button, player1 is small blind

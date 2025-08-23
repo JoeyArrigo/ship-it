@@ -9,10 +9,14 @@ defmodule PokerServer.FoldBehaviorTest do
   4. Side pots exclude folded players
   """
 
-  use ExUnit.Case, async: true
-  alias PokerServer.{GameServer, BettingRound, GameState, Player}
+  use ExUnit.Case, async: false
+  alias PokerServer.{GameServer, BettingRound, GameState, Player, Repo}
 
   setup do
+    # Set up database sandbox for tournament persistence
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(PokerServer.Repo)
+    Ecto.Adapters.SQL.Sandbox.mode(PokerServer.Repo, {:shared, self()})
+    
     # Create a 2-player game for most tests
     players = [{"player1", 1000}, {"player2", 1000}]
     {:ok, game_id} = PokerServer.GameManager.create_game(players)
