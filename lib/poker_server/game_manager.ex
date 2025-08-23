@@ -148,6 +148,6 @@ defmodule PokerServer.GameManager do
   end
 
   defp generate_game_id do
-    :crypto.strong_rand_bytes(8) |> Base.encode64() |> binary_part(0, 8)
+    Ecto.UUID.generate()
   end
 end
