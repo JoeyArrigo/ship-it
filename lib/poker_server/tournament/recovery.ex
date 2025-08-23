@@ -55,13 +55,14 @@ defmodule PokerServer.Tournament.Recovery do
   This would typically be called on application startup.
   """
   def tournaments_requiring_recovery do
-    # This is a simplified implementation - in production you'd want
-    # to query for active tournaments from a tournaments table
     Logger.info("Scanning for tournaments requiring recovery...")
     
-    # For now, return empty list as we don't have a tournaments table yet
-    # TODO: Implement proper tournament discovery
-    []
+    # Query all distinct tournament IDs that have persisted events
+    # These are tournaments that were running when the server shut down
+    tournament_ids = Event.get_all_tournament_ids()
+    
+    Logger.info("Found #{length(tournament_ids)} tournaments with events")
+    tournament_ids
   end
 
   # Private functions

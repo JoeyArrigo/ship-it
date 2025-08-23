@@ -66,6 +66,17 @@ defmodule PokerServer.Tournament.Event do
   end
 
   @doc """
+  Gets all tournament IDs that have persisted events.
+  Used for recovery on system startup.
+  """
+  def get_all_tournament_ids do
+    __MODULE__
+    |> select([e], e.tournament_id)
+    |> distinct(true)
+    |> Repo.all()
+  end
+
+  @doc """
   Replays all events for a tournament to reconstruct state.
   """
   def replay(tournament_id, initial_state \\ nil) do

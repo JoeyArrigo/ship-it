@@ -23,6 +23,15 @@ defmodule PokerServer.GameServer do
   end
 
   @doc """
+  Start a GameServer with recovered state (used for tournament recovery)
+  """
+  def start_link({game_id, :recovered_state, recovered_state}) do
+    GenServer.start_link(__MODULE__, {game_id, :recovered_state, recovered_state},
+      name: {:via, Registry, {PokerServer.GameRegistry, game_id}}
+    )
+  end
+
+  @doc """
   Get the current game state
   """
   @spec get_state(GenServer.server()) :: state()
@@ -85,6 +94,18 @@ defmodule PokerServer.GameServer do
       "button_position" => game_state.button_position
     })
 
+    {:ok, state}
+  end
+
+  @impl true
+  def init({game_id, :recovered_state, recovered_state}) do
+    Logger.info("Starting GameServer #{game_id} with recovered state")
+    
+    # Use the recovered state directly, but ensure game_id is set
+    state = Map.put(recovered_state, :game_id, game_id)
+    
+    Logger.info("GameServer #{game_id} recovered at phase: #{state.phase}, hand: #{state.game_state.hand_number}")
+    
     {:ok, state}
   end
 

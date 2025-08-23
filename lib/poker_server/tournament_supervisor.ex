@@ -60,15 +60,20 @@ defmodule PokerServer.TournamentSupervisor do
     
     case Recovery.recover_tournament_state(tournament_id) do
       {:ok, recovered_state} ->
-        # Extract player information from recovered state
-        players = Enum.map(recovered_state.game_state.players, fn player ->
-          {player.id, player.chips}
-        end)
+        # Start the GameServer with the recovered state
+        child_spec = %{
+          id: GameServer,
+          start: {GameServer, :start_link, [{tournament_id, :recovered_state, recovered_state}]},
+          restart: :transient
+        }
         
-        # Start the tournament with recovered players
-        case start_tournament(tournament_id, players) do
+        case DynamicSupervisor.start_child(__MODULE__, child_spec) do
           {:ok, pid} ->
             Logger.info("Successfully recovered tournament #{tournament_id}")
+            {:ok, pid}
+            
+          {:error, {:already_started, pid}} ->
+            Logger.info("Tournament #{tournament_id} already running")
             {:ok, pid}
             
           {:error, reason} ->
