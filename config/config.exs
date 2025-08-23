@@ -31,6 +31,9 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Configure Ecto
+config :poker_server, ecto_repos: [PokerServer.Repo]
+
 # Import environment specific config
 if File.exists?(Path.expand("#{config_env()}.exs", __DIR__)) do
   import_config "#{config_env()}.exs"

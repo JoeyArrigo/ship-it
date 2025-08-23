@@ -9,14 +9,17 @@ defmodule PokerServer.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      # Database repository
+      PokerServer.Repo,
+
       # Phoenix PubSub for real-time communication
       {Phoenix.PubSub, name: PokerServer.PubSub},
 
       # Registry for looking up game processes by ID
       {Registry, keys: :unique, name: PokerServer.GameRegistry},
 
-      # Dynamic supervisor for individual game processes  
-      {DynamicSupervisor, name: PokerServer.GameSupervisor, strategy: :one_for_one},
+      # Tournament supervisor with recovery support
+      PokerServer.TournamentSupervisor,
 
       # Game manager that coordinates games
       PokerServer.GameManager,
