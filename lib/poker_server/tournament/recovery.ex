@@ -135,11 +135,21 @@ defmodule PokerServer.Tournament.Recovery do
         state
         
       "hand_started" ->
-        # Update state to reflect hand start
+        # Update state to reflect hand start, including player chip updates
+        updated_players = Enum.map(payload["players"], fn player_data ->
+          %Player{
+            id: player_data["id"],
+            chips: player_data["chips"],
+            position: player_data["position"],
+            hole_cards: []
+          }
+        end)
+        
         updated_game_state = %{
           state.game_state |
           hand_number: payload["hand_number"],
-          button_position: payload["button_position"]
+          button_position: payload["button_position"],
+          players: updated_players
         }
         
         %{state | 
@@ -154,17 +164,23 @@ defmodule PokerServer.Tournament.Recovery do
         %{state | folded_players: MapSet.put(state.folded_players, player_id)}
         
       "player_called" ->
-        # Update pot and player chips if needed
-        # For now, just track the action occurred
-        state
+        # Update pot from the event payload
+        updated_game_state = %{state.game_state | pot: payload["pot"]}
+        %{state | game_state: updated_game_state}
         
       "player_raised" ->
-        # Update pot and player chips based on raise
-        state
+        # Update pot from the event payload
+        updated_game_state = %{state.game_state | pot: payload["pot"]}
+        %{state | game_state: updated_game_state}
         
       "player_checked" ->
-        # No state change needed for check
-        state
+        # Update pot from the event payload (if provided)
+        if payload["pot"] do
+          updated_game_state = %{state.game_state | pot: payload["pot"]}
+          %{state | game_state: updated_game_state}
+        else
+          state
+        end
         
       "player_all_in" ->
         player_id = payload["player_id"]
