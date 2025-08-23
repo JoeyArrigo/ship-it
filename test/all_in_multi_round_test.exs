@@ -1,6 +1,13 @@
 defmodule PokerServer.AllInMultiRoundTest do
-  use ExUnit.Case
-  alias PokerServer.{GameServer, GameManager}
+  use ExUnit.Case, async: false
+  alias PokerServer.{GameServer, GameManager, Repo}
+
+  setup do
+    # Set up database sandbox for tournament persistence
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(PokerServer.Repo)
+    Ecto.Adapters.SQL.Sandbox.mode(PokerServer.Repo, {:shared, self()})
+    :ok
+  end
 
   # Helper function to complete a betting round
   defp complete_betting_round(game_pid, current_state) do

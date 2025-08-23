@@ -1,11 +1,16 @@
 defmodule PokerServer.GameManagerConcurrencyTest do
-  use ExUnit.Case
-  alias PokerServer.GameManager
+  use ExUnit.Case, async: false
+  alias PokerServer.{GameManager, Repo}
 
   # Helper to create a player tuple (format expected by GameServer)
   defp player(id, chips), do: {id, chips}
 
-  # No setup needed - application starts automatically with mix test
+  setup do
+    # Set up database sandbox for tournament persistence
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(PokerServer.Repo)
+    Ecto.Adapters.SQL.Sandbox.mode(PokerServer.Repo, {:shared, self()})
+    :ok
+  end
 
   describe "concurrent game creation" do
     test "multiple games can be created simultaneously without conflicts" do
