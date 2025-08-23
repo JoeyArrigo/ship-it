@@ -144,10 +144,7 @@ defmodule PokerServer.GameManager do
   # Private Functions
 
   defp start_game_process(game_id, players) do
-    DynamicSupervisor.start_child(
-      PokerServer.GameSupervisor,
-      {PokerServer.GameServer, {game_id, players}}
-    )
+    PokerServer.TournamentSupervisor.start_tournament(game_id, players)
   end
 
   defp generate_game_id do
