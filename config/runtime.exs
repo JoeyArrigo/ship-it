@@ -16,7 +16,7 @@ config :poker_server, PokerServerWeb.Endpoint,
     layout: false
   ],
   pubsub_server: PokerServer.PubSub,
-  live_view: [signing_salt: "poker_secret_salt"]
+  live_view: [signing_salt: System.get_env("LIVE_VIEW_SIGNING_SALT") || raise("LIVE_VIEW_SIGNING_SALT environment variable is required")]
 
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.
