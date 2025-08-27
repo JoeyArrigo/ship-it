@@ -20,6 +20,9 @@ defmodule PokerServer.Application do
 
       # Tournament supervisor with recovery support
       PokerServer.TournamentSupervisor,
+      
+      # Tournament persistence handler for event-driven architecture
+      PokerServer.Tournament.PersistenceHandler,
 
       # Game manager that coordinates games
       PokerServer.GameManager,

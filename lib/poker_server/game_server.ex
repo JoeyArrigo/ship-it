@@ -1,7 +1,7 @@
 defmodule PokerServer.GameServer do
   use GenServer
   alias PokerServer.{GameState, BettingRound, Player, InputValidator, GameBroadcaster, Types}
-  alias PokerServer.Tournament.{Event, Snapshot}
+  alias PokerServer.Tournament.EventBus
   require Logger
 
   @type state :: %{
@@ -88,10 +88,10 @@ defmodule PokerServer.GameServer do
       all_in_players: MapSet.new()
     }
 
-    # Persist tournament creation event
-    persist_event(game_id, "tournament_created", %{
-      "players" => Enum.map(players, fn p -> %{"id" => p.id, "chips" => p.chips, "position" => p.position} end),
-      "button_position" => game_state.button_position
+    # Emit tournament creation event
+    EventBus.tournament_created(game_id, %{
+      players: Enum.map(players, fn p -> %{id: p.id, chips: p.chips, position: p.position} end),
+      button_position: game_state.button_position
     })
 
     {:ok, state}
@@ -135,13 +135,16 @@ defmodule PokerServer.GameServer do
       game_state_with_blinds = %{game_state | small_blind: 0, big_blind: 0}
       updated_game_state = GameState.start_hand(game_state_with_blinds)
       
-      # Persist hand started event
-      persist_event(state.game_id, "hand_started", %{
-        "hand_number" => updated_game_state.hand_number,
-        "button_position" => updated_game_state.button_position,
-        "players" => Enum.map(updated_game_state.players, fn p -> 
-          %{"id" => p.id, "chips" => p.chips, "position" => p.position}
-        end)
+      # Emit hand started event with card state for secure storage
+      EventBus.hand_started(state.game_id, %{
+        hand_number: updated_game_state.hand_number,
+        button_position: updated_game_state.button_position,
+        players: updated_game_state.players,
+        card_state: %{
+          hole_cards: extract_hole_cards(updated_game_state.players),
+          community_cards: updated_game_state.community_cards,
+          deck: updated_game_state.deck
+        }
       })
 
       # Create betting round for preflop - BettingRound handles actual blind posting
@@ -287,8 +290,14 @@ defmodule PokerServer.GameServer do
          :ok <- InputValidator.validate_game_state(state.game_state) do
       case BettingRound.process_action(state.betting_round, player_id, action) do
         {:ok, updated_betting_round} ->
-          # Persist player action event
-          persist_player_action_event(state.game_id, player_id, action, updated_betting_round)
+          # Emit player action event
+          player = Enum.find(updated_betting_round.players, &(&1.id == player_id))
+          EventBus.player_action_taken(state.game_id, %{
+            player_id: player_id,
+            action: action,
+            pot: updated_betting_round.pot,
+            player_chips: player.chips
+          })
           
           process_successful_action(
             state,
@@ -526,77 +535,12 @@ defmodule PokerServer.GameServer do
     end
   end
 
-  # Persistence helper functions
-
-  defp persist_event(tournament_id, event_type, payload) do
-    case Event.append(tournament_id, event_type, payload) do
-      {:ok, _event} -> 
-        :ok
-      {:error, reason} ->
-        Logger.error("Failed to persist event #{event_type} for tournament #{tournament_id}: #{inspect(reason)}")
-        :error
-    end
-  end
-
-  defp persist_player_action_event(tournament_id, player_id, action, betting_round) do
-    event_type = case action do
-      {:fold} -> "player_folded"
-      {:call} -> "player_called" 
-      {:raise, amount} -> "player_raised"
-      {:check} -> "player_checked"
-      {:all_in} -> "player_all_in"
-      _ -> "player_action"
-    end
-
-    payload = case action do
-      {:raise, amount} -> 
-        %{"player_id" => player_id, "amount" => amount, "pot" => betting_round.pot}
-      {:all_in} ->
-        player = Enum.find(betting_round.players, &(&1.id == player_id))
-        %{"player_id" => player_id, "amount" => player.chips, "pot" => betting_round.pot}
-      _ ->
-        %{"player_id" => player_id, "pot" => betting_round.pot}
-    end
-
-    persist_event(tournament_id, event_type, payload)
-  end
-
-  defp maybe_create_snapshot(tournament_id, state, sequence) do
-    # Create snapshot at key moments or every 100 events
-    case Snapshot.maybe_create_snapshot(tournament_id, serialize_state(state), sequence) do
-      {:ok, _snapshot} ->
-        Logger.debug("Created snapshot for tournament #{tournament_id} at sequence #{sequence}")
-        :ok
-      {:ok, :no_snapshot_needed} ->
-        :ok
-      {:error, reason} ->
-        Logger.error("Failed to create snapshot for tournament #{tournament_id}: #{inspect(reason)}")
-        :error
-    end
-  end
-
-  defp serialize_state(state) do
-    # Convert the current server state to a serializable format
-    %{
-      "game_id" => state.game_id,
-      "phase" => state.phase,
-      "game_state" => %{
-        "players" => Enum.map(state.game_state.players, fn p ->
-          %{
-            "id" => p.id,
-            "chips" => p.chips,
-            "position" => p.position,
-            "hole_cards" => p.hole_cards
-          }
-        end),
-        "community_cards" => state.game_state.community_cards,
-        "pot" => state.game_state.pot,
-        "phase" => state.game_state.phase,
-        "hand_number" => state.game_state.hand_number,
-        "button_position" => state.game_state.button_position
-      },
-      "folded_players" => MapSet.to_list(state.folded_players),
-      "all_in_players" => MapSet.to_list(state.all_in_players)
-    }
+  # Event helper functions
+  
+  defp extract_hole_cards(players) do
+    players
+    |> Enum.reduce(%{}, fn player, acc ->
+      Map.put(acc, player.id, player.hole_cards)
+    end)
   end
 end
