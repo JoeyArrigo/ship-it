@@ -44,7 +44,7 @@ defmodule PokerServer.Tournament.PersistenceHandler do
   
   # Private event handlers
   
-  defp handle_tournament_event(%{tournament_id: tournament_id, event_type: event_type, event_data: data}) do
+  defp handle_tournament_event(%{tournament_id: tournament_id, event_type: event_type, event_data: data} = event) do
     case event_type do
       :tournament_created ->
         handle_tournament_created(tournament_id, data)
@@ -57,13 +57,20 @@ defmodule PokerServer.Tournament.PersistenceHandler do
         
       :hand_completed ->
         handle_hand_completed(tournament_id, data)
+        # Create snapshot after hand completion (key moment)
+        maybe_create_tournament_snapshot(tournament_id, force: true)
         
       :tournament_completed ->
         handle_tournament_completed(tournament_id, data)
+        # Create final snapshot
+        maybe_create_tournament_snapshot(tournament_id, force: true)
         
       _ ->
         Logger.warning("Unknown tournament event type: #{event_type}")
     end
+    
+    # Check if we should create a periodic snapshot (but not for every single event)
+    # Only check periodically to avoid too much overhead
   rescue
     error ->
       Logger.error("Error handling tournament event #{event_type} for #{tournament_id}: #{inspect(error)}")
@@ -176,5 +183,47 @@ defmodule PokerServer.Tournament.PersistenceHandler do
     
     # Store using Shamir's Secret Sharing
     SecretShard.store_card_state(tournament_id, hand_number, compact_state)
+  end
+  
+  # Helper function to maybe create a snapshot by getting current tournament state
+  defp maybe_create_tournament_snapshot(tournament_id, opts \\ []) do
+    force = Keyword.get(opts, :force, false)
+    
+    # Get current tournament state from the running tournament
+    case Registry.lookup(PokerServer.GameRegistry, tournament_id) do
+      [{pid, _}] ->
+        try do
+          game_state = PokerServer.GameServer.get_state(pid)
+          current_sequence = get_current_event_sequence(tournament_id)
+          
+          case Snapshot.maybe_create_snapshot(tournament_id, game_state, current_sequence, opts) do
+            {:ok, %Snapshot{}} when force ->
+              Logger.info("Created forced snapshot for #{tournament_id} at sequence #{current_sequence}")
+            {:ok, %Snapshot{}} ->
+              Logger.debug("Created periodic snapshot for #{tournament_id} at sequence #{current_sequence}")
+            {:ok, :no_snapshot_needed} ->
+              :ok  # Normal case, don't log
+            {:error, reason} ->
+              Logger.error("Failed to create snapshot for #{tournament_id} at sequence #{current_sequence}: #{inspect(reason)}")
+          end
+        rescue
+          error ->
+            Logger.error("Error getting tournament state for snapshot #{tournament_id}: #{inspect(error)}")
+        end
+        
+      [] ->
+        Logger.warning("Tournament #{tournament_id} not found for snapshot creation")
+    end
+  rescue
+    error ->
+      Logger.error("Error creating snapshot for #{tournament_id}: #{inspect(error)}")
+  end
+  
+  # Helper to get the current highest sequence number for a tournament
+  defp get_current_event_sequence(tournament_id) do
+    case Event.get_latest_sequence(tournament_id) do
+      nil -> 0
+      sequence -> sequence
+    end
   end
 end

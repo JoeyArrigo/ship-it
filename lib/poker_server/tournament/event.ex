@@ -77,6 +77,18 @@ defmodule PokerServer.Tournament.Event do
   end
 
   @doc """
+  Gets the latest sequence number for a tournament.
+  Returns nil if no events exist.
+  """
+  def get_latest_sequence(tournament_id) do
+    query = from e in __MODULE__,
+      where: e.tournament_id == ^tournament_id,
+      select: max(e.sequence)
+    
+    Repo.one(query)
+  end
+
+  @doc """
   Replays all events for a tournament to reconstruct state.
   """
   def replay(tournament_id, initial_state \\ nil) do

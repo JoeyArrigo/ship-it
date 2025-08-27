@@ -28,13 +28,14 @@ defmodule PokerServer.Tournament.Snapshot do
   Creates a new snapshot of tournament state at a specific sequence.
   """
   def create(tournament_id, state, sequence) do
+    normalized_state = normalize_for_json(state)
     checksum = generate_checksum(state)
     
     %__MODULE__{}
     |> changeset(%{
       tournament_id: tournament_id,
       sequence: sequence,
-      state: state,
+      state: normalized_state,
       checksum: checksum
     })
     |> Repo.insert()
@@ -121,10 +122,35 @@ defmodule PokerServer.Tournament.Snapshot do
 
   defp generate_checksum(state) do
     state
+    |> normalize_for_json()
     |> Jason.encode!()
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode64()
   end
+
+  # Convert MapSets and other non-JSON types to JSON-encodable formats
+  defp normalize_for_json(%MapSet{} = mapset) do
+    MapSet.to_list(mapset)
+  end
+
+  defp normalize_for_json(state) when is_struct(state) do
+    # Convert struct to map, then normalize recursively
+    state
+    |> Map.from_struct()
+    |> normalize_for_json()
+  end
+
+  defp normalize_for_json(state) when is_map(state) do
+    state
+    |> Enum.map(fn {key, value} -> {key, normalize_for_json(value)} end)
+    |> Map.new()
+  end
+
+  defp normalize_for_json(value) when is_list(value) do
+    Enum.map(value, &normalize_for_json/1)
+  end
+
+  defp normalize_for_json(value), do: value
 
   defp is_key_moment?(state) do
     # Define key moments when we always want a snapshot

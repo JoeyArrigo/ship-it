@@ -14,6 +14,7 @@ defmodule PokerServer.GameState do
 
   alias PokerServer.{Deck, Player, Card, Types}
 
+  @derive Jason.Encoder
   @type t :: %__MODULE__{
           players: [Player.t()],
           community_cards: [Card.t()],
