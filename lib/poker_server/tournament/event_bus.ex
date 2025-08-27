@@ -29,8 +29,13 @@ defmodule PokerServer.Tournament.EventBus do
       timestamp: DateTime.utc_now()
     }
     
-    # Broadcast to topic: "tournament_events:tournament_id"
+    # Broadcast to specific tournament topic
     PubSub.broadcast(@pubsub, "tournament_events:#{tournament_id}", {:tournament_event, event})
+    
+    # Also broadcast to global topic for handlers that listen to all tournaments
+    PubSub.broadcast(@pubsub, "tournament_events:all", {:tournament_event, event})
+    
+    :ok
   end
   
   @doc """
@@ -46,7 +51,7 @@ defmodule PokerServer.Tournament.EventBus do
   """
   @spec subscribe_all() :: :ok | {:error, term()}
   def subscribe_all do
-    PubSub.subscribe(@pubsub, "tournament_events:*")
+    PubSub.subscribe(@pubsub, "tournament_events:all")
   end
   
   @doc """
