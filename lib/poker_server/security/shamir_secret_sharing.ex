@@ -1,4 +1,6 @@
 defmodule PokerServer.Security.ShamirSecretSharing do
+  import Bitwise
+  
   @moduledoc """
   Implementation of Shamir's Secret Sharing scheme for secure card state storage.
   
@@ -11,8 +13,9 @@ defmodule PokerServer.Security.ShamirSecretSharing do
   - Threshold reconstruction (need exactly 2 shards)
   """
   
-  # Use a large prime for finite field arithmetic (2^251 - 9)
-  @prime 3618502788666131213697322783095070105623107215331596699973092056135872020481
+  # Use a very large prime for finite field arithmetic (2^2203 - 1, a Mersenne prime)
+  # This can handle secrets up to ~275 bytes, perfect for our card state (161 bytes + margin)
+  @prime (1 <<< 2203) - 1
   
   @doc """
   Splits a secret into 3 shards using Shamir's Secret Sharing.
@@ -132,14 +135,27 @@ defmodule PokerServer.Security.ShamirSecretSharing do
   end
   
   # Modular arithmetic functions
-  defp mod_add(a, b, m), do: rem(a + b, m)
-  defp mod_mul(a, b, m), do: rem(a * b, m)
+  defp mod_add(a, b, m) do
+    result = rem(a + b, m)
+    if result < 0, do: result + m, else: result
+  end
+  
+  defp mod_mul(a, b, m) do
+    result = rem(a * b, m)
+    if result < 0, do: result + m, else: result
+  end
   
   # Modular multiplicative inverse using extended Euclidean algorithm
   defp mod_inverse(a, m) do
-    case extended_gcd(a, m) do
-      {1, x, _y} -> rem(x + m, m)
-      _ -> raise "Modular inverse does not exist"
+    # Normalize negative inputs
+    normalized_a = if a < 0, do: rem(a, m) + m, else: rem(a, m)
+    
+    case extended_gcd(normalized_a, m) do
+      {1, x, _y} -> 
+        result = rem(x, m)
+        if result < 0, do: result + m, else: result
+      {gcd, _x, _y} -> 
+        raise "Modular inverse does not exist: gcd(#{normalized_a}, #{m}) = #{gcd}"
     end
   end
   
