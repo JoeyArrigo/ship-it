@@ -268,11 +268,40 @@ defmodule PokerServer.Tournament.Recovery do
     %{
       game_id: serialized_state["game_id"],
       game_state: game_state,
-      betting_round: nil,  # Betting rounds are reconstructed as needed
-      original_betting_round: nil,
+      betting_round: deserialize_betting_round(serialized_state["betting_round"]),
+      original_betting_round: deserialize_betting_round(serialized_state["original_betting_round"]),
       phase: String.to_atom(serialized_state["phase"]),
       folded_players: MapSet.new(serialized_state["folded_players"] || []),
       all_in_players: MapSet.new(serialized_state["all_in_players"] || [])
+    }
+  end
+  
+  @doc """
+  Deserializes a betting round from JSON format back to BettingRound struct.
+  """
+  defp deserialize_betting_round(nil), do: nil
+  defp deserialize_betting_round(betting_round_data) do
+    %PokerServer.BettingRound{
+      players: Enum.map(betting_round_data["players"] || [], fn player_data ->
+        %Player{
+          id: player_data["id"],
+          chips: player_data["chips"],
+          position: player_data["position"],
+          hole_cards: [] # Hole cards come from secret sharing, not snapshots
+        }
+      end),
+      small_blind: betting_round_data["small_blind"],
+      big_blind: betting_round_data["big_blind"],
+      round_type: String.to_atom(betting_round_data["round_type"]),
+      pot: betting_round_data["pot"] || 0,
+      current_bet: betting_round_data["current_bet"] || 0,
+      player_bets: betting_round_data["player_bets"] || %{},
+      active_player_index: betting_round_data["active_player_index"],
+      folded_players: MapSet.new(betting_round_data["folded_players"] || []),
+      all_in_players: MapSet.new(betting_round_data["all_in_players"] || []),
+      last_raise_size: betting_round_data["last_raise_size"],
+      players_who_can_act: MapSet.new(betting_round_data["players_who_can_act"] || []),
+      last_raiser: betting_round_data["last_raiser"]
     }
   end
   

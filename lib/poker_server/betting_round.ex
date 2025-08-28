@@ -12,6 +12,8 @@ defmodule PokerServer.BettingRound do
   """
 
   alias PokerServer.{Player, Types}
+  
+  @derive Jason.Encoder
 
   @type t :: %__MODULE__{
           players: list(),
