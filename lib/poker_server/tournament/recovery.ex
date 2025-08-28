@@ -222,21 +222,44 @@ defmodule PokerServer.Tournament.Recovery do
 
   defp deserialize_state(serialized_state) do
     players = Enum.map(serialized_state["game_state"]["players"], fn player_data ->
+      hole_cards = Enum.map(player_data["hole_cards"] || [], fn card_data ->
+        %PokerServer.Card{
+          rank: String.to_atom(card_data["rank"]),
+          suit: String.to_atom(card_data["suit"])
+        }
+      end)
+      
       %Player{
         id: player_data["id"],
         chips: player_data["chips"],
         position: player_data["position"],
-        hole_cards: player_data["hole_cards"] || []
+        hole_cards: hole_cards
+      }
+    end)
+    
+    # Convert community cards back to Card structs
+    community_cards = Enum.map(serialized_state["game_state"]["community_cards"] || [], fn card_data ->
+      %PokerServer.Card{
+        rank: String.to_atom(card_data["rank"]),
+        suit: String.to_atom(card_data["suit"])
+      }
+    end)
+    
+    # Convert deck back to Card structs
+    deck = Enum.map(serialized_state["game_state"]["deck"] || [], fn card_data ->
+      %PokerServer.Card{
+        rank: String.to_atom(card_data["rank"]),
+        suit: String.to_atom(card_data["suit"])
       }
     end)
     
     game_state = %GameState{
       players: players,
-      community_cards: serialized_state["game_state"]["community_cards"] || [],
+      community_cards: community_cards,
       pot: serialized_state["game_state"]["pot"] || 0,
       phase: String.to_atom(serialized_state["game_state"]["phase"]),
       hand_number: serialized_state["game_state"]["hand_number"] || 0,
-      deck: PokerServer.Deck.create(),  # Reconstruct deck - cards in play are tracked separately
+      deck: deck,
       button_position: serialized_state["game_state"]["button_position"] || 0,
       small_blind: nil,
       big_blind: nil
@@ -285,10 +308,11 @@ defmodule PokerServer.Tournament.Recovery do
         card_state = CardSerializer.deserialize_card_state(compact_card_state)
         
         # Integrate card state into the game state
+        # NOTE: Keep community_cards from snapshot, only get deck and hole_cards from secret sharing
         updated_game_state = %{
           game_state.game_state |
           deck: card_state.deck,
-          community_cards: card_state.community_cards,
+          # community_cards: preserve from snapshot (don't override with secret sharing)
           players: merge_player_hole_cards(game_state.game_state.players, card_state.hole_cards)
         }
         
