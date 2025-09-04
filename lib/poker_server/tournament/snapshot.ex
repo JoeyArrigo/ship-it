@@ -3,6 +3,7 @@ defmodule PokerServer.Tournament.Snapshot do
   import Ecto.Changeset
   import Ecto.Query
   alias PokerServer.Repo
+  alias PokerServer.GameState.{SecureState, PublicState}
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -25,20 +26,31 @@ defmodule PokerServer.Tournament.Snapshot do
   end
 
   @doc """
-  Creates a new snapshot of tournament state at a specific sequence.
+  Creates a new secure snapshot containing only public tournament state.
+  Private card information is excluded for security.
   """
   def create(tournament_id, state, sequence) do
-    normalized_state = normalize_for_json(state)
-    checksum = generate_checksum(normalized_state)
+    # Extract only public state for snapshot storage
+    public_state = extract_public_state(state)
     
-    %__MODULE__{}
-    |> changeset(%{
-      tournament_id: tournament_id,
-      sequence: sequence,
-      state: normalized_state,
-      checksum: checksum
-    })
-    |> Repo.insert()
+    # Validate security before storage
+    case PublicState.validate_security(public_state) do
+      :ok ->
+        normalized_state = normalize_for_json(public_state)
+        checksum = generate_checksum(normalized_state)
+        
+        %__MODULE__{}
+        |> changeset(%{
+          tournament_id: tournament_id,
+          sequence: sequence,
+          state: normalized_state,
+          checksum: checksum
+        })
+        |> Repo.insert()
+        
+      {:error, reason} ->
+        {:error, {:security_violation, reason}}
+    end
   end
 
   @doc """
@@ -164,5 +176,32 @@ defmodule PokerServer.Tournament.Snapshot do
       :waiting_for_players -> Map.get(state, :hand_number, 0) == 1  # Tournament start
       _ -> false
     end
+  end
+  
+  @doc """
+  Extracts public state from various input formats.
+  Handles both traditional GameState and new SecureState formats.
+  """
+  defp extract_public_state(%SecureState{} = secure_state) do
+    SecureState.public_only(secure_state)
+  end
+  
+  defp extract_public_state(%PokerServer.GameState{} = game_state) do
+    PublicState.from_game_state(game_state)
+  end
+  
+  # Handle the case where we're already dealing with public state
+  defp extract_public_state(%PublicState{} = public_state) do
+    public_state
+  end
+  
+  # Handle server state format (from GameServer.get_state)
+  defp extract_public_state(%{game_state: game_state} = _server_state) do
+    PublicState.from_game_state(game_state)
+  end
+  
+  # Fallback - if we receive an unknown format, assume it's unsafe and reject
+  defp extract_public_state(unknown_state) do
+    raise ArgumentError, "Cannot extract public state from unknown format: #{inspect(unknown_state)}"
   end
 end

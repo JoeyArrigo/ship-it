@@ -8,6 +8,7 @@ defmodule PokerServer.Tournament.Recovery do
   
   alias PokerServer.Tournament.{Event, Snapshot, SecretShard}
   alias PokerServer.{GameState, Player}
+  alias PokerServer.GameState.{SecureState, PublicState, PrivateState}
   alias PokerServer.Security.CardSerializer
   require Logger
 
@@ -44,17 +45,21 @@ defmodule PokerServer.Tournament.Recovery do
   
   @doc """
   Enhanced recovery that includes card state reconstruction from secret shards.
+  Uses the new SecureState architecture to properly separate public and private data.
   """
   defp recover_with_card_state(tournament_id, recovery_fn) do
     case recovery_fn.(tournament_id) do
-      {:ok, game_state} ->
-        # Check if we're mid-hand and need to reconstruct card state
-        if needs_card_recovery?(game_state) do
+      {:ok, server_state} ->
+        # Create secure state from recovered public data
+        secure_state = SecureState.from_game_state(server_state.game_state)
+        
+        # Check if we're mid-hand and need to reconstruct private card state
+        if needs_card_recovery?(server_state) do
           Logger.info("Tournament #{tournament_id} is mid-hand, reconstructing card state")
-          reconstruct_card_state(tournament_id, game_state)
+          reconstruct_secure_card_state(tournament_id, server_state, secure_state)
         else
           Logger.info("Tournament #{tournament_id} recovered, no card state needed")
-          {:ok, game_state}
+          {:ok, server_state}
         end
         
       error ->
@@ -375,5 +380,49 @@ defmodule PokerServer.Tournament.Recovery do
           %{player | hole_cards: hole_cards}
       end
     end)
+  end
+
+  @doc """
+  Reconstructs card state from secret shards using the new SecureState architecture.
+  """
+  defp reconstruct_secure_card_state(tournament_id, server_state, secure_state) do
+    hand_number = server_state.game_state.hand_number
+    
+    case SecretShard.reconstruct_card_state(tournament_id, hand_number) do
+      {:ok, compact_card_state} ->
+        Logger.info("Successfully reconstructed card secrets for tournament #{tournament_id} hand #{hand_number}")
+        
+        # Deserialize the compact card state
+        card_state = CardSerializer.deserialize_card_state(compact_card_state)
+        
+        # Create private state from reconstructed card data
+        private_state = PrivateState.from_card_state(card_state)
+        
+        # Combine with public state to create complete secure state
+        complete_secure_state = SecureState.with_private_state(secure_state, private_state)
+        
+        # Convert back to traditional GameState for compatibility
+        case SecureState.to_game_state(complete_secure_state) do
+          {:ok, reconstructed_game_state} ->
+            final_server_state = %{server_state | game_state: reconstructed_game_state}
+            
+            Logger.info("Card state successfully integrated into tournament #{tournament_id}")
+            {:ok, final_server_state}
+            
+          {:error, reason} ->
+            Logger.error("Failed to reconstruct complete game state for tournament #{tournament_id}: #{inspect(reason)}")
+            {:error, {:state_reconstruction_failed, reason}}
+        end
+        
+      {:error, reason} ->
+        Logger.error("Failed to reconstruct card state for tournament #{tournament_id}: #{inspect(reason)}")
+        Logger.warning("Continuing recovery without card state - may affect game fairness")
+        {:ok, server_state}  # Continue without card state rather than failing completely
+        
+      {:error, {:insufficient_shards, shard_count}} ->
+        Logger.error("Insufficient shards (#{shard_count}) to reconstruct card state for tournament #{tournament_id}")
+        Logger.error("Cannot safely continue tournament - card integrity compromised")
+        {:error, :insufficient_card_shards}
+    end
   end
 end
