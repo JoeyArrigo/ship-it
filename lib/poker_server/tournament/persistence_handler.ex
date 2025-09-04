@@ -54,6 +54,8 @@ defmodule PokerServer.Tournament.PersistenceHandler do
         
       :player_action_taken ->
         handle_player_action_taken(tournament_id, data)
+        # Create snapshot after every player action for optimal recovery
+        maybe_create_tournament_snapshot(tournament_id, force: true)
         
       :hand_completed ->
         handle_hand_completed(tournament_id, data)

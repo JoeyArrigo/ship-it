@@ -196,8 +196,8 @@ defmodule PokerServer.Tournament.Snapshot do
   end
   
   # Handle server state format (from GameServer.get_state)
-  defp extract_public_state(%{game_state: game_state} = _server_state) do
-    PublicState.from_game_state(game_state)
+  defp extract_public_state(%{game_state: game_state} = server_state) do
+    PublicState.from_server_state(server_state)
   end
   
   # Fallback - if we receive an unknown format, assume it's unsafe and reject

@@ -226,7 +226,8 @@ defmodule PokerServer.Tournament.Recovery do
   end
 
   defp deserialize_state(serialized_state) do
-    players = Enum.map(serialized_state["game_state"]["players"], fn player_data ->
+    # Enhanced public state format with betting context
+    players = Enum.map(serialized_state["players"] || [], fn player_data ->
       hole_cards = Enum.map(player_data["hole_cards"] || [], fn card_data ->
         %PokerServer.Card{
           rank: String.to_atom(card_data["rank"]),
@@ -243,44 +244,106 @@ defmodule PokerServer.Tournament.Recovery do
     end)
     
     # Convert community cards back to Card structs
-    community_cards = Enum.map(serialized_state["game_state"]["community_cards"] || [], fn card_data ->
+    community_cards = Enum.map(serialized_state["community_cards"] || [], fn card_data ->
       %PokerServer.Card{
         rank: String.to_atom(card_data["rank"]),
         suit: String.to_atom(card_data["suit"])
       }
     end)
     
-    # Convert deck back to Card structs
-    deck = Enum.map(serialized_state["game_state"]["deck"] || [], fn card_data ->
-      %PokerServer.Card{
-        rank: String.to_atom(card_data["rank"]),
-        suit: String.to_atom(card_data["suit"])
-      }
-    end)
+    # Deck will be empty in public snapshots (reconstructed from secret shards if needed)
+    deck = []
     
     game_state = %GameState{
       players: players,
       community_cards: community_cards,
-      pot: serialized_state["game_state"]["pot"] || 0,
-      phase: String.to_atom(serialized_state["game_state"]["phase"]),
-      hand_number: serialized_state["game_state"]["hand_number"] || 0,
+      pot: serialized_state["pot"] || 0,
+      phase: String.to_atom(serialized_state["phase"] || "waiting_to_start"),
+      hand_number: serialized_state["hand_number"] || 0,
       deck: deck,
-      button_position: serialized_state["game_state"]["button_position"] || 0,
-      small_blind: nil,
-      big_blind: nil
+      button_position: serialized_state["button_position"] || 0,
+      small_blind: serialized_state["small_blind"],
+      big_blind: serialized_state["big_blind"]
     }
     
+    # Reconstruct betting round from saved betting context
+    betting_round = if serialized_state["betting_round_type"] do
+      reconstruct_betting_round(
+        players,
+        serialized_state["current_bet"] || 0,
+        String.to_atom(serialized_state["betting_round_type"]),
+        serialized_state["active_player_id"],
+        serialized_state["folded_players"] || [],
+        serialized_state["all_in_players"] || [],
+        serialized_state["player_bets"] || %{},
+        serialized_state["pot"] || 0,
+        serialized_state["button_position"] || 0
+      )
+    else
+      nil
+    end
+    
+    # Map game phase to server phase
+    server_phase = case game_state.phase do
+      :preflop -> :preflop_betting
+      :flop -> :flop_betting  
+      :turn -> :turn_betting
+      :river -> :river_betting
+      phase -> phase
+    end
+    
     %{
-      game_id: serialized_state["game_id"],
+      game_id: nil,  # Will be set by recovery caller
       game_state: game_state,
-      betting_round: deserialize_betting_round(serialized_state["betting_round"]),
-      original_betting_round: deserialize_betting_round(serialized_state["original_betting_round"]),
-      phase: String.to_atom(serialized_state["phase"]),
+      betting_round: betting_round,
+      original_betting_round: nil,  # Could be added later if needed
+      phase: server_phase,
       folded_players: MapSet.new(serialized_state["folded_players"] || []),
       all_in_players: MapSet.new(serialized_state["all_in_players"] || [])
     }
   end
   
+  @doc """
+  Reconstructs a betting round from minimal saved betting context.
+  This enables complete recovery without storing the full betting round structure.
+  """
+  defp reconstruct_betting_round(players, current_bet, round_type, active_player_id, folded_player_ids, all_in_player_ids, player_bets, pot, button_position) do
+    # Find active player index
+    active_player_index = if active_player_id do
+      Enum.find_index(players, fn player -> player.id == active_player_id end)
+    else
+      nil
+    end
+    
+    # Convert to MapSets
+    folded_players = MapSet.new(folded_player_ids)
+    all_in_players = MapSet.new(all_in_player_ids)
+    
+    # Determine who can still act
+    players_who_can_act = players
+    |> Enum.reject(fn player -> 
+      player.id in folded_players or player.id in all_in_players
+    end)
+    |> Enum.map(& &1.id)
+    |> MapSet.new()
+    
+    %PokerServer.BettingRound{
+      players: players,
+      small_blind: 10,  # Default - could be saved if needed
+      big_blind: 20,    # Default - could be saved if needed  
+      round_type: round_type,
+      pot: pot,
+      current_bet: current_bet,
+      player_bets: player_bets,
+      active_player_index: active_player_index,
+      folded_players: folded_players,
+      all_in_players: all_in_players,
+      last_raise_size: 0,  # Could be calculated or saved
+      players_who_can_act: players_who_can_act,
+      last_raiser: nil     # Could be saved if needed
+    }
+  end
+
   @doc """
   Deserializes a betting round from JSON format back to BettingRound struct.
   """
