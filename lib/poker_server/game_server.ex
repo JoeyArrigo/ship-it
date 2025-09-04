@@ -496,8 +496,12 @@ defmodule PokerServer.GameServer do
          next_betting_round_type,
          next_phase
        ) do
-    # Sync updated player chips from betting round to game state
-    synced_game_state = %{state.game_state | players: updated_betting_round.players}
+    # Sync updated player chips from betting round to game state while preserving hole cards
+    synced_players = merge_betting_updates_preserving_cards(
+      state.game_state.players,  # Original players (with hole cards)
+      updated_betting_round.players  # Updated betting info (chips/position)
+    )
+    synced_game_state = %{state.game_state | players: synced_players}
 
     # Store original betting round when betting is complete AND we have all-in players
     # This preserves the real bet amounts for side pot calculations
@@ -541,6 +545,18 @@ defmodule PokerServer.GameServer do
     players
     |> Enum.reduce(%{}, fn player, acc ->
       Map.put(acc, player.id, player.hole_cards)
+    end)
+  end
+  
+  defp merge_betting_updates_preserving_cards(game_players, betting_players) do
+    Enum.map(game_players, fn game_player ->
+      betting_player = Enum.find(betting_players, &(&1.id == game_player.id))
+      
+      if betting_player do
+        %{game_player | chips: betting_player.chips, position: betting_player.position}
+      else
+        game_player
+      end
     end)
   end
 end
