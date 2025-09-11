@@ -12,9 +12,12 @@ defmodule PokerServer.Tournament.PersistenceHandler do
   
   use GenServer
   
-  alias PokerServer.Tournament.{EventBus, Event, Snapshot, SecretShard}
+  alias PokerServer.Tournament.EventBus
   alias PokerServer.Security.CardSerializer
   require Logger
+
+  # Get the configured persistence implementation
+  @persistence_module Application.compile_env(:poker_server, :tournament_persistence)
   
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -81,8 +84,8 @@ defmodule PokerServer.Tournament.PersistenceHandler do
   defp handle_tournament_created(tournament_id, data) do
     Logger.debug("Persisting tournament_created event for #{tournament_id}")
     
-    # Store in event log
-    case Event.append(tournament_id, "tournament_created", %{
+    # Store in event log using configured persistence
+    case @persistence_module.append_event(tournament_id, "tournament_created", %{
       "players" => data.players,
       "button_position" => data.button_position
     }) do
@@ -97,7 +100,7 @@ defmodule PokerServer.Tournament.PersistenceHandler do
     Logger.debug("Persisting hand_started event and card secrets for #{tournament_id}")
     
     # 1. Store in event log (public information only - no cards)
-    case Event.append(tournament_id, "hand_started", %{
+    case @persistence_module.append_event(tournament_id, "hand_started", %{
       "hand_number" => data.hand_number,
       "button_position" => data.button_position,
       "players" => Enum.map(data.players, fn p -> 
@@ -142,7 +145,7 @@ defmodule PokerServer.Tournament.PersistenceHandler do
         %{"player_id" => data.player_id, "pot" => data.pot}
     end
 
-    case Event.append(tournament_id, event_type, payload) do
+    case @persistence_module.append_event(tournament_id, event_type, payload) do
       {:ok, _event} -> 
         Logger.debug("Successfully persisted #{event_type} for #{tournament_id}")
       {:error, reason} ->
@@ -153,7 +156,7 @@ defmodule PokerServer.Tournament.PersistenceHandler do
   defp handle_hand_completed(tournament_id, data) do
     Logger.debug("Persisting hand_completed event for #{tournament_id}")
     
-    case Event.append(tournament_id, "hand_completed", %{
+    case @persistence_module.append_event(tournament_id, "hand_completed", %{
       "hand_number" => data.hand_number,
       "winners" => data.winners || []
     }) do
@@ -167,7 +170,7 @@ defmodule PokerServer.Tournament.PersistenceHandler do
   defp handle_tournament_completed(tournament_id, data) do
     Logger.debug("Persisting tournament_completed event for #{tournament_id}")
     
-    case Event.append(tournament_id, "tournament_completed", %{
+    case @persistence_module.append_event(tournament_id, "tournament_completed", %{
       "winner" => data.winner,
       "final_standings" => data.final_standings || []
     }) do
@@ -183,8 +186,8 @@ defmodule PokerServer.Tournament.PersistenceHandler do
     # Serialize card state to compact format
     compact_state = CardSerializer.serialize_card_state(card_state)
     
-    # Store using Shamir's Secret Sharing
-    SecretShard.store_card_state(tournament_id, hand_number, compact_state)
+    # Store using configured persistence
+    @persistence_module.store_card_secrets(tournament_id, hand_number, compact_state)
   end
   
   # Helper function to maybe create a snapshot by getting current tournament state
@@ -198,10 +201,10 @@ defmodule PokerServer.Tournament.PersistenceHandler do
           game_state = PokerServer.GameServer.get_state(pid)
           current_sequence = get_current_event_sequence(tournament_id)
           
-          case Snapshot.maybe_create_snapshot(tournament_id, game_state, current_sequence, opts) do
-            {:ok, %Snapshot{}} when force ->
+          case @persistence_module.create_snapshot(tournament_id, game_state, current_sequence, opts) do
+            {:ok, _snapshot} when force ->
               Logger.info("Created forced snapshot for #{tournament_id} at sequence #{current_sequence}")
-            {:ok, %Snapshot{}} ->
+            {:ok, _snapshot} ->
               Logger.debug("Created periodic snapshot for #{tournament_id} at sequence #{current_sequence}")
             {:ok, :no_snapshot_needed} ->
               :ok  # Normal case, don't log
@@ -223,7 +226,7 @@ defmodule PokerServer.Tournament.PersistenceHandler do
   
   # Helper to get the current highest sequence number for a tournament
   defp get_current_event_sequence(tournament_id) do
-    case Event.get_latest_sequence(tournament_id) do
+    case @persistence_module.get_latest_sequence(tournament_id) do
       nil -> 0
       sequence -> sequence
     end

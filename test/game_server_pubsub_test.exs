@@ -4,9 +4,6 @@ defmodule PokerServer.GameServerPubSubTest do
   alias Phoenix.PubSub
 
   setup do
-    # Set up database sandbox for tournament persistence
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(PokerServer.Repo)
-    Ecto.Adapters.SQL.Sandbox.mode(PokerServer.Repo, {:shared, self()})
     
     # Create test players  
     players = [{"player1", 1000}, {"player2", 1000}]

@@ -21,3 +21,6 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+# Use no-op persistence implementation in tests to avoid database coupling
+config :poker_server, :tournament_persistence, PokerServer.Tournament.TestPersistence
