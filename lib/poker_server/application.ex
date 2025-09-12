@@ -11,7 +11,7 @@ defmodule PokerServer.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
+    children = database_children() ++ [
       # Phoenix PubSub for real-time communication
       {Phoenix.PubSub, name: PokerServer.PubSub},
 
@@ -35,7 +35,7 @@ defmodule PokerServer.Application do
 
       # Phoenix endpoint
       PokerServerWeb.Endpoint
-    ] ++ database_children()
+    ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
