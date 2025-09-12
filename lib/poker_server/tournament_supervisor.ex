@@ -113,10 +113,8 @@ defmodule PokerServer.TournamentSupervisor do
     DynamicSupervisor.which_children(__MODULE__)
     |> Enum.map(fn {_, pid, :worker, [GameServer]} ->
       # Get tournament ID from the process
-      case GameServer.get_state(pid) do
-        %{game_id: game_id} -> {game_id, pid}
-        _ -> {nil, pid}
-      end
+      %{game_id: game_id} = GameServer.get_state(pid)
+      {game_id, pid}
     end)
     |> Enum.filter(fn {game_id, _pid} -> game_id != nil end)
   end

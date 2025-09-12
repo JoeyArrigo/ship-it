@@ -297,11 +297,9 @@ defmodule PokerServer.Tournament.Recovery do
     }
   end
   
-  @doc """
-  Reconstructs a betting round from minimal saved betting context.
-  This enables complete recovery without storing the full betting round structure.
-  """
-  defp reconstruct_betting_round(players, current_bet, round_type, active_player_id, folded_player_ids, all_in_player_ids, player_bets, pot, button_position) do
+  # Reconstructs a betting round from minimal saved betting context.
+  # This enables complete recovery without storing the full betting round structure.
+  defp reconstruct_betting_round(players, current_bet, round_type, active_player_id, folded_player_ids, all_in_player_ids, player_bets, pot, _button_position) do
     # Find active player index
     active_player_index = if active_player_id do
       Enum.find_index(players, fn player -> player.id == active_player_id end)
@@ -384,15 +382,15 @@ defmodule PokerServer.Tournament.Recovery do
             {:error, {:state_reconstruction_failed, reason}}
         end
         
-      {:error, reason} ->
-        Logger.error("Failed to reconstruct card state for tournament #{tournament_id}: #{inspect(reason)}")
-        Logger.warning("Continuing recovery without card state - may affect game fairness")
-        {:ok, server_state}  # Continue without card state rather than failing completely
-        
       {:error, {:insufficient_shards, shard_count}} ->
         Logger.error("Insufficient shards (#{shard_count}) to reconstruct card state for tournament #{tournament_id}")
         Logger.error("Cannot safely continue tournament - card integrity compromised")
         {:error, :insufficient_card_shards}
+        
+      {:error, reason} ->
+        Logger.error("Failed to reconstruct card state for tournament #{tournament_id}: #{inspect(reason)}")
+        Logger.warning("Continuing recovery without card state - may affect game fairness")
+        {:ok, server_state}  # Continue without card state rather than failing completely
     end
   end
 end

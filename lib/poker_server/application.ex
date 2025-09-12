@@ -45,11 +45,10 @@ defmodule PokerServer.Application do
 
   # Database children - only include if using production persistence (compile-time decision)
   defp database_children do
-    case @persistence_module do
-      PokerServer.Tournament.ProductionPersistence ->
-        [PokerServer.Repo]
-      _ ->
-        []
+    if @persistence_module == PokerServer.Tournament.ProductionPersistence do
+      [PokerServer.Repo]
+    else
+      []
     end
   end
 end
