@@ -6,12 +6,12 @@ defmodule PokerServer.Application do
   use Application
   require Logger
 
+  # Get the configured persistence implementation to determine if we need database
+  @persistence_module Application.compile_env(:poker_server, :tournament_persistence)
+
   @impl true
   def start(_type, _args) do
     children = [
-      # Database repository
-      PokerServer.Repo,
-
       # Phoenix PubSub for real-time communication
       {Phoenix.PubSub, name: PokerServer.PubSub},
 
@@ -35,11 +35,21 @@ defmodule PokerServer.Application do
 
       # Phoenix endpoint
       PokerServerWeb.Endpoint
-    ]
+    ] ++ database_children()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: PokerServer.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # Database children - only include if using production persistence (compile-time decision)
+  defp database_children do
+    case @persistence_module do
+      PokerServer.Tournament.ProductionPersistence ->
+        [PokerServer.Repo]
+      _ ->
+        []
+    end
   end
 end

@@ -1,14 +1,7 @@
 defmodule PokerServerTest do
   use ExUnit.Case, async: false
-  alias PokerServer.Repo
   doctest PokerServer
 
-  setup do
-    # Set up database sandbox for tournament persistence
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(PokerServer.Repo)
-    Ecto.Adapters.SQL.Sandbox.mode(PokerServer.Repo, {:shared, self()})
-    :ok
-  end
 
   test "can create a game" do
     players = [{1, 1500}, {2, 1500}, {3, 1500}]

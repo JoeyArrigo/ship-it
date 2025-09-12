@@ -1,13 +1,7 @@
 defmodule PokerServer.InputValidationIntegrationTest do
   use ExUnit.Case, async: false
-  alias PokerServer.{GameManager, GameServer, Repo}
+  alias PokerServer.{GameManager, GameServer}
 
-  setup do
-    # Set up database sandbox for tournament persistence
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(PokerServer.Repo)
-    Ecto.Adapters.SQL.Sandbox.mode(PokerServer.Repo, {:shared, self()})
-    :ok
-  end
 
   describe "security against malicious inputs" do
     test "prevents game creation with negative chip amounts" do
