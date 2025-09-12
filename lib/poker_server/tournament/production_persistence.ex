@@ -10,7 +10,6 @@ defmodule PokerServer.Tournament.ProductionPersistence do
   @behaviour PokerServer.Tournament.PersistenceBehaviour
   
   alias PokerServer.Tournament.{Event, Snapshot, SecretShard}
-  alias PokerServer.Repo
   require Logger
 
   @impl true
@@ -73,7 +72,7 @@ defmodule PokerServer.Tournament.ProductionPersistence do
 
   @impl true
   def get_latest_snapshot(tournament_id) do
-    case Snapshot.get_latest(tournament_id) do
+    case Snapshot.load_latest(tournament_id) do
       nil -> {:error, :not_found}
       snapshot -> {:ok, snapshot}
     end

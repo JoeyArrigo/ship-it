@@ -7,7 +7,7 @@ defmodule PokerServer.GameState.SecureState do
   """
   
   alias PokerServer.GameState.{PublicState, PrivateState}
-  alias PokerServer.{GameState, Player}
+  alias PokerServer.GameState
   
   @type t :: %__MODULE__{
     public: PublicState.t(),
@@ -32,7 +32,7 @@ defmodule PokerServer.GameState.SecureState do
   Requires both public state and private state to be present.
   """
   @spec to_game_state(t()) :: {:ok, GameState.t()} | {:error, term()}
-  def to_game_state(%__MODULE__{public: public, private: nil}) do
+  def to_game_state(%__MODULE__{public: _public, private: nil}) do
     {:error, "Cannot reconstruct GameState without private state"}
   end
   

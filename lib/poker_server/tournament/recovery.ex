@@ -7,7 +7,7 @@ defmodule PokerServer.Tournament.Recovery do
   """
   
   alias PokerServer.{GameState, Player}
-  alias PokerServer.GameState.{SecureState, PublicState, PrivateState}
+  alias PokerServer.GameState.{SecureState, PrivateState}
   alias PokerServer.Security.CardSerializer
   require Logger
 
@@ -41,10 +41,6 @@ defmodule PokerServer.Tournament.Recovery do
     end
   end
   
-  @doc """
-  Enhanced recovery that includes card state reconstruction from secret shards.
-  Uses the new SecureState architecture to properly separate public and private data.
-  """
   defp recover_with_card_state(tournament_id, recovery_fn) do
     case recovery_fn.(tournament_id) do
       {:ok, server_state} ->
@@ -342,41 +338,9 @@ defmodule PokerServer.Tournament.Recovery do
     }
   end
 
-  @doc """
-  Deserializes a betting round from JSON format back to BettingRound struct.
-  """
-  defp deserialize_betting_round(nil), do: nil
-  defp deserialize_betting_round(betting_round_data) do
-    %PokerServer.BettingRound{
-      players: Enum.map(betting_round_data["players"] || [], fn player_data ->
-        %Player{
-          id: player_data["id"],
-          chips: player_data["chips"],
-          position: player_data["position"],
-          hole_cards: [] # Hole cards come from secret sharing, not snapshots
-        }
-      end),
-      small_blind: betting_round_data["small_blind"],
-      big_blind: betting_round_data["big_blind"],
-      round_type: String.to_atom(betting_round_data["round_type"]),
-      pot: betting_round_data["pot"] || 0,
-      current_bet: betting_round_data["current_bet"] || 0,
-      player_bets: betting_round_data["player_bets"] || %{},
-      active_player_index: betting_round_data["active_player_index"],
-      folded_players: MapSet.new(betting_round_data["folded_players"] || []),
-      all_in_players: MapSet.new(betting_round_data["all_in_players"] || []),
-      last_raise_size: betting_round_data["last_raise_size"],
-      players_who_can_act: MapSet.new(betting_round_data["players_who_can_act"] || []),
-      last_raiser: betting_round_data["last_raiser"]
-    }
-  end
   
   # Card state recovery functions
   
-  @doc """
-  Determines if a tournament state needs card recovery.
-  Returns true if the tournament is mid-hand and would need card state.
-  """
   defp needs_card_recovery?(game_state) do
     # Need card recovery if we're in an active hand (not waiting_to_start or hand_complete)
     case game_state.phase do
@@ -389,63 +353,8 @@ defmodule PokerServer.Tournament.Recovery do
     end
   end
   
-  @doc """
-  Reconstructs card state from secret shards and integrates it into the game state.
-  """
-  defp reconstruct_card_state(tournament_id, game_state) do
-    hand_number = game_state.game_state.hand_number
-    
-    case @persistence_module.reconstruct_card_state(tournament_id, hand_number) do
-      {:ok, compact_card_state} ->
-        Logger.info("Successfully reconstructed card secrets for tournament #{tournament_id} hand #{hand_number}")
-        
-        # Deserialize the compact card state
-        card_state = CardSerializer.deserialize_card_state(compact_card_state)
-        
-        # Integrate card state into the game state
-        # NOTE: Keep community_cards from snapshot, only get deck and hole_cards from secret sharing
-        updated_game_state = %{
-          game_state.game_state |
-          deck: card_state.deck,
-          # community_cards: preserve from snapshot (don't override with secret sharing)
-          players: merge_player_hole_cards(game_state.game_state.players, card_state.hole_cards)
-        }
-        
-        final_state = %{game_state | game_state: updated_game_state}
-        
-        Logger.info("Card state successfully integrated into tournament #{tournament_id}")
-        {:ok, final_state}
-        
-      {:error, reason} ->
-        Logger.error("Failed to reconstruct card state for tournament #{tournament_id}: #{inspect(reason)}")
-        Logger.warning("Continuing recovery without card state - may affect game fairness")
-        {:ok, game_state}  # Continue without card state rather than failing completely
-        
-      {:error, {:insufficient_shards, shard_count}} ->
-        Logger.error("Insufficient shards (#{shard_count}) to reconstruct card state for tournament #{tournament_id}")
-        Logger.warning("Tournament recovery incomplete - card state cannot be restored")
-        {:error, :insufficient_card_shards}
-    end
-  end
   
-  @doc """
-  Merges hole cards from the reconstructed card state into the player list.
-  """
-  defp merge_player_hole_cards(players, hole_cards_map) do
-    Enum.map(players, fn player ->
-      case Map.get(hole_cards_map, player.id) do
-        nil -> 
-          Logger.warning("No hole cards found for player #{player.id}")
-          player
-        hole_cards ->
-          %{player | hole_cards: hole_cards}
-      end
-    end)
-  end
 
-  @doc """
-  Reconstructs card state from secret shards using the new SecureState architecture.
-  """
   defp reconstruct_secure_card_state(tournament_id, server_state, secure_state) do
     hand_number = server_state.game_state.hand_number
     

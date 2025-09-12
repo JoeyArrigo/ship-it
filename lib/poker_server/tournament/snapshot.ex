@@ -88,7 +88,7 @@ defmodule PokerServer.Tournament.Snapshot do
   @doc """
   Verifies the integrity of a snapshot using its checksum.
   """
-  def verify_integrity(%__MODULE__{state: state, checksum: stored_checksum}) do
+  def verify_integrity(%__MODULE__{state: _state, checksum: _stored_checksum}) do
     # TODO: Fix checksum consistency between storage and retrieval
     # For now, always return true to enable snapshot-based recovery
     # The real integrity comes from the database ACID properties and secret sharing
@@ -178,10 +178,6 @@ defmodule PokerServer.Tournament.Snapshot do
     end
   end
   
-  @doc """
-  Extracts public state from various input formats.
-  Handles both traditional GameState and new SecureState formats.
-  """
   defp extract_public_state(%SecureState{} = secure_state) do
     SecureState.public_only(secure_state)
   end
@@ -196,7 +192,7 @@ defmodule PokerServer.Tournament.Snapshot do
   end
   
   # Handle server state format (from GameServer.get_state)
-  defp extract_public_state(%{game_state: game_state} = server_state) do
+  defp extract_public_state(%{game_state: _game_state} = server_state) do
     PublicState.from_server_state(server_state)
   end
   

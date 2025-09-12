@@ -47,7 +47,7 @@ defmodule PokerServer.Tournament.PersistenceHandler do
   
   # Private event handlers
   
-  defp handle_tournament_event(%{tournament_id: tournament_id, event_type: event_type, event_data: data} = event) do
+  defp handle_tournament_event(%{tournament_id: tournament_id, event_type: event_type, event_data: data} = _event) do
     case event_type do
       :tournament_created ->
         handle_tournament_created(tournament_id, data)
@@ -191,7 +191,7 @@ defmodule PokerServer.Tournament.PersistenceHandler do
   end
   
   # Helper function to maybe create a snapshot by getting current tournament state
-  defp maybe_create_tournament_snapshot(tournament_id, opts \\ []) do
+  defp maybe_create_tournament_snapshot(tournament_id, opts) do
     force = Keyword.get(opts, :force, false)
     
     # Get current tournament state from the running tournament
