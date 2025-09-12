@@ -31,7 +31,8 @@ defmodule PokerServer.GameState.PublicState do
     betting_round_type: atom() | nil,
     folded_players: [String.t()],
     all_in_players: [String.t()],
-    player_bets: %{String.t() => non_neg_integer()}
+    player_bets: %{String.t() => non_neg_integer()},
+    players_who_can_act: [String.t()]
   }
   
   defstruct [
@@ -48,7 +49,8 @@ defmodule PokerServer.GameState.PublicState do
     :betting_round_type,
     :folded_players,
     :all_in_players,
-    :player_bets
+    :player_bets,
+    :players_who_can_act
   ]
   
   @doc """
@@ -71,7 +73,8 @@ defmodule PokerServer.GameState.PublicState do
       betting_round_type: nil,
       folded_players: [],
       all_in_players: [],
-      player_bets: %{}
+      player_bets: %{},
+      players_who_can_act: []
     }
   end
   
@@ -84,7 +87,7 @@ defmodule PokerServer.GameState.PublicState do
     betting_round = server_state[:betting_round]
     
     # Extract betting context if betting round exists
-    {active_player_id, current_bet, betting_round_type, folded_players, all_in_players, player_bets} = 
+    {active_player_id, current_bet, betting_round_type, folded_players, all_in_players, player_bets, players_who_can_act} = 
       if betting_round do
         active_player = if betting_round.active_player_index do
           Enum.at(betting_round.players, betting_round.active_player_index)
@@ -96,10 +99,11 @@ defmodule PokerServer.GameState.PublicState do
           betting_round.round_type,
           MapSet.to_list(betting_round.folded_players || MapSet.new()),
           MapSet.to_list(betting_round.all_in_players || MapSet.new()),
-          betting_round.player_bets || %{}
+          betting_round.player_bets || %{},
+          MapSet.to_list(betting_round.players_who_can_act || MapSet.new())
         }
       else
-        {nil, 0, nil, [], [], %{}}
+        {nil, 0, nil, [], [], %{}, []}
       end
     
     %__MODULE__{
@@ -117,7 +121,8 @@ defmodule PokerServer.GameState.PublicState do
       betting_round_type: betting_round_type,
       folded_players: folded_players,
       all_in_players: all_in_players,
-      player_bets: player_bets
+      player_bets: player_bets,
+      players_who_can_act: players_who_can_act
     }
   end
   

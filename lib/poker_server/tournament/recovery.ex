@@ -271,7 +271,8 @@ defmodule PokerServer.Tournament.Recovery do
         serialized_state["all_in_players"] || [],
         serialized_state["player_bets"] || %{},
         serialized_state["pot"] || 0,
-        serialized_state["button_position"] || 0
+        serialized_state["button_position"] || 0,
+        serialized_state["players_who_can_act"] || []
       )
     else
       nil
@@ -297,9 +298,9 @@ defmodule PokerServer.Tournament.Recovery do
     }
   end
   
-  # Reconstructs a betting round from minimal saved betting context.
-  # This enables complete recovery without storing the full betting round structure.
-  defp reconstruct_betting_round(players, current_bet, round_type, active_player_id, folded_player_ids, all_in_player_ids, player_bets, pot, _button_position) do
+  # Reconstructs a betting round from complete saved betting context.
+  # This uses persisted players_who_can_act to maintain exact betting round integrity.
+  defp reconstruct_betting_round(players, current_bet, round_type, active_player_id, folded_player_ids, all_in_player_ids, player_bets, pot, _button_position, players_who_can_act_list) do
     # Find active player index
     active_player_index = if active_player_id do
       Enum.find_index(players, fn player -> player.id == active_player_id end)
@@ -311,13 +312,8 @@ defmodule PokerServer.Tournament.Recovery do
     folded_players = MapSet.new(folded_player_ids)
     all_in_players = MapSet.new(all_in_player_ids)
     
-    # Determine who can still act
-    players_who_can_act = players
-    |> Enum.reject(fn player -> 
-      player.id in folded_players or player.id in all_in_players
-    end)
-    |> Enum.map(& &1.id)
-    |> MapSet.new()
+    # Use persisted players_who_can_act (fixes recovery bug)
+    players_who_can_act = MapSet.new(players_who_can_act_list)
     
     %PokerServer.BettingRound{
       players: players,
