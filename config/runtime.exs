@@ -78,6 +78,15 @@ if config_env() == :prod do
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
+
+  # Configure the database for production
+  database_url =
+    System.get_env("DATABASE_URL") ||
+      raise "environment variable DATABASE_URL is missing."
+
+  config :poker_server, PokerServer.Repo,
+    url: database_url,
+    socket_options: [:inet6]
 end
 
 # Configure the port for all environments
