@@ -16,7 +16,7 @@ config :poker_server, PokerServerWeb.Endpoint,
     layout: false
   ],
   pubsub_server: PokerServer.PubSub,
-  live_view: [signing_salt: "poker_secret_salt"]
+  live_view: [signing_salt: System.get_env("LIVE_VIEW_SIGNING_SALT") || raise("LIVE_VIEW_SIGNING_SALT environment variable is required")]
 
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.
@@ -78,6 +78,15 @@ if config_env() == :prod do
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
+
+  # Configure the database for production
+  database_url =
+    System.get_env("DATABASE_URL") ||
+      raise "environment variable DATABASE_URL is missing."
+
+  config :poker_server, PokerServer.Repo,
+    url: database_url,
+    socket_options: [:inet6]
 end
 
 # Configure the port for all environments

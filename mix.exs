@@ -40,7 +40,9 @@ defmodule PokerServer.MixProject do
       {:bandit, "~> 1.5"},
       {:heroicons, "~> 0.5"},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
-      {:tidewave, "~> 0.2", only: :dev}
+      {:tidewave, "~> 0.2", only: :dev},
+      {:ecto_sql, "~> 3.0"},
+      {:postgrex, ">= 0.0.0"}
     ]
   end
 

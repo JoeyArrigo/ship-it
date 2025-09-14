@@ -1,6 +1,7 @@
 defmodule PokerServer.Player do
   alias PokerServer.Card
 
+  @derive Jason.Encoder
   @type t :: %__MODULE__{
           id: String.t(),
           chips: non_neg_integer(),

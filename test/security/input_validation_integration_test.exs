@@ -1,6 +1,7 @@
 defmodule PokerServer.InputValidationIntegrationTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   alias PokerServer.{GameManager, GameServer}
+
 
   describe "security against malicious inputs" do
     test "prevents game creation with negative chip amounts" do

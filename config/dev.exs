@@ -1,14 +1,14 @@
 import Config
 
 # Configure your database
-# config :poker_server, PokerServer.Repo,
-#   username: "postgres",
-#   password: "postgres",
-#   hostname: "localhost",
-#   database: "poker_server_dev",
-#   stacktrace: true,
-#   show_sensitive_data_on_connection_error: true,
-#   pool_size: 10
+config :poker_server, PokerServer.Repo,
+  username: System.get_env("DATABASE_USERNAME") || raise("DATABASE_USERNAME environment variable is required"),
+  password: System.get_env("DATABASE_PASSWORD") || raise("DATABASE_PASSWORD environment variable is required"),
+  hostname: System.get_env("DATABASE_HOST") || raise("DATABASE_HOST environment variable is required"),
+  database: "poker_server_dev",
+  stacktrace: true,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
@@ -18,7 +18,7 @@ config :poker_server, PokerServerWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "poker_dev_secret_key_base_that_is_at_least_64_characters_long_and_secure",
+  secret_key_base: System.get_env("SECRET_KEY_BASE") || raise("SECRET_KEY_BASE environment variable is required"),
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:poker_server, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:poker_server, ~w(--watch)]}

@@ -1,12 +1,11 @@
 defmodule PokerServer.GameServerConcurrencyTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   import ExUnit.CaptureLog
   alias PokerServer.{GameManager, GameServer}
 
   # Helper to create a player tuple (format expected by GameServer)
   defp player(id, chips), do: {id, chips}
 
-  # No setup needed - application starts automatically with mix test
 
   describe "concurrent player actions" do
     test "simultaneous player actions are processed safely" do

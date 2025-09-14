@@ -1,12 +1,14 @@
 defmodule PokerServerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   doctest PokerServer
+
 
   test "can create a game" do
     players = [{1, 1500}, {2, 1500}, {3, 1500}]
     assert {:ok, game_id} = PokerServer.create_game(players)
     assert is_binary(game_id)
-    assert String.length(game_id) == 8
+    # Game ID is now UUID format instead of 8-character string
+    assert String.length(game_id) == 36  # UUID length
   end
 
   test "can start a hand" do

@@ -1,6 +1,7 @@
 defmodule PokerServer.GameServer do
   use GenServer
   alias PokerServer.{GameState, BettingRound, Player, InputValidator, GameBroadcaster, Types}
+  alias PokerServer.Tournament.EventBus
   require Logger
 
   @type state :: %{
@@ -17,6 +18,15 @@ defmodule PokerServer.GameServer do
 
   def start_link({game_id, players}) do
     GenServer.start_link(__MODULE__, {game_id, players},
+      name: {:via, Registry, {PokerServer.GameRegistry, game_id}}
+    )
+  end
+
+  @doc """
+  Start a GameServer with recovered state (used for tournament recovery)
+  """
+  def start_link({game_id, :recovered_state, recovered_state}) do
+    GenServer.start_link(__MODULE__, {game_id, :recovered_state, recovered_state},
       name: {:via, Registry, {PokerServer.GameRegistry, game_id}}
     )
   end
@@ -78,6 +88,24 @@ defmodule PokerServer.GameServer do
       all_in_players: MapSet.new()
     }
 
+    # Emit tournament creation event
+    EventBus.tournament_created(game_id, %{
+      players: Enum.map(players, fn p -> %{id: p.id, chips: p.chips, position: p.position} end),
+      button_position: game_state.button_position
+    })
+
+    {:ok, state}
+  end
+
+  @impl true
+  def init({game_id, :recovered_state, recovered_state}) do
+    Logger.info("Starting GameServer #{game_id} with recovered state")
+    
+    # Use the recovered state directly, but ensure game_id is set
+    state = Map.put(recovered_state, :game_id, game_id)
+    
+    Logger.info("GameServer #{game_id} recovered at phase: #{state.phase}, hand: #{state.game_state.hand_number}")
+    
     {:ok, state}
   end
 
@@ -106,6 +134,18 @@ defmodule PokerServer.GameServer do
       # Set blind amounts in game state before starting hand (0 so GameState doesn't post blinds)
       game_state_with_blinds = %{game_state | small_blind: 0, big_blind: 0}
       updated_game_state = GameState.start_hand(game_state_with_blinds)
+      
+      # Emit hand started event with card state for secure storage
+      EventBus.hand_started(state.game_id, %{
+        hand_number: updated_game_state.hand_number,
+        button_position: updated_game_state.button_position,
+        players: updated_game_state.players,
+        card_state: %{
+          hole_cards: extract_hole_cards(updated_game_state.players),
+          community_cards: updated_game_state.community_cards,
+          deck: updated_game_state.deck
+        }
+      })
 
       # Create betting round for preflop - BettingRound handles actual blind posting
       betting_round =
@@ -250,6 +290,15 @@ defmodule PokerServer.GameServer do
          :ok <- InputValidator.validate_game_state(state.game_state) do
       case BettingRound.process_action(state.betting_round, player_id, action) do
         {:ok, updated_betting_round} ->
+          # Emit player action event
+          player = Enum.find(updated_betting_round.players, &(&1.id == player_id))
+          EventBus.player_action_taken(state.game_id, %{
+            player_id: player_id,
+            action: action,
+            pot: updated_betting_round.pot,
+            player_chips: player.chips
+          })
+          
           process_successful_action(
             state,
             state.game_id,
@@ -447,8 +496,12 @@ defmodule PokerServer.GameServer do
          next_betting_round_type,
          next_phase
        ) do
-    # Sync updated player chips from betting round to game state
-    synced_game_state = %{state.game_state | players: updated_betting_round.players}
+    # Sync updated player chips from betting round to game state while preserving hole cards
+    synced_players = merge_betting_updates_preserving_cards(
+      state.game_state.players,  # Original players (with hole cards)
+      updated_betting_round.players  # Updated betting info (chips/position)
+    )
+    synced_game_state = %{state.game_state | players: synced_players}
 
     # Store original betting round when betting is complete AND we have all-in players
     # This preserves the real bet amounts for side pot calculations
@@ -484,5 +537,26 @@ defmodule PokerServer.GameServer do
       GameBroadcaster.broadcast_state_change(game_id, new_state)
       {:reply, {:ok, :action_processed, new_state}, new_state}
     end
+  end
+
+  # Event helper functions
+  
+  defp extract_hole_cards(players) do
+    players
+    |> Enum.reduce(%{}, fn player, acc ->
+      Map.put(acc, player.id, player.hole_cards)
+    end)
+  end
+  
+  defp merge_betting_updates_preserving_cards(game_players, betting_players) do
+    Enum.map(game_players, fn game_player ->
+      betting_player = Enum.find(betting_players, &(&1.id == game_player.id))
+      
+      if betting_player do
+        %{game_player | chips: betting_player.chips, position: betting_player.position}
+      else
+        game_player
+      end
+    end)
   end
 end

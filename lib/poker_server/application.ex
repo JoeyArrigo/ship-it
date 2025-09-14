@@ -6,17 +6,23 @@ defmodule PokerServer.Application do
   use Application
   require Logger
 
+  # Get the configured persistence implementation to determine if we need database
+  @persistence_module Application.compile_env(:poker_server, :tournament_persistence)
+
   @impl true
   def start(_type, _args) do
-    children = [
+    children = database_children() ++ [
       # Phoenix PubSub for real-time communication
       {Phoenix.PubSub, name: PokerServer.PubSub},
 
       # Registry for looking up game processes by ID
       {Registry, keys: :unique, name: PokerServer.GameRegistry},
 
-      # Dynamic supervisor for individual game processes  
-      {DynamicSupervisor, name: PokerServer.GameSupervisor, strategy: :one_for_one},
+      # Tournament supervisor with recovery support
+      PokerServer.TournamentSupervisor,
+      
+      # Tournament persistence handler for event-driven architecture
+      PokerServer.Tournament.PersistenceHandler,
 
       # Game manager that coordinates games
       PokerServer.GameManager,
@@ -35,5 +41,14 @@ defmodule PokerServer.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: PokerServer.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # Database children - only include if using production persistence (compile-time decision)
+  defp database_children do
+    if @persistence_module == PokerServer.Tournament.ProductionPersistence do
+      [PokerServer.Repo]
+    else
+      []
+    end
   end
 end

@@ -33,32 +33,38 @@ defmodule PokerServerWeb.GameLive.Index do
   end
 
   @impl true
-  def handle_event("join_queue", %{"player_name" => player_name}, socket)
-      when byte_size(player_name) > 0 do
-    # Subscribe to personal notifications BEFORE joining queue
-    if connected?(socket) do
-      IO.puts("📢 Player #{player_name} subscribing to channel player:#{player_name}")
-      PubSub.subscribe(PokerServer.PubSub, "player:#{player_name}")
+  def handle_event("join_queue", %{"player_name" => raw_player_name}, socket) do
+    player_name = String.trim(raw_player_name)
+
+    cond do
+      String.length(player_name) == 0 ->
+        {:noreply, put_flash(socket, :error, "Player name cannot be empty")}
+
+      String.length(player_name) > 40 ->
+        {:noreply, put_flash(socket, :error, "Player name must be 40 characters or less")}
+
+      true ->
+        # Subscribe to personal notifications BEFORE joining queue
+        if connected?(socket) do
+          IO.puts("📢 Player #{player_name} subscribing to channel player:#{player_name}")
+          PubSub.subscribe(PokerServer.PubSub, "player:#{player_name}")
+        end
+
+        case GameQueue.join_queue(player_name) do
+          :ok ->
+            {:noreply,
+             socket
+             |> assign(:current_player, player_name)
+             |> assign(:in_queue, true)
+             |> put_flash(:info, "Joined queue! Waiting for other players...")}
+
+          {:error, :already_in_queue} ->
+            {:noreply, put_flash(socket, :error, "You are already in the queue.")}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to join queue: #{reason}")}
+        end
     end
-
-    case GameQueue.join_queue(player_name) do
-      :ok ->
-        {:noreply,
-         socket
-         |> assign(:current_player, player_name)
-         |> assign(:in_queue, true)
-         |> put_flash(:info, "Joined queue! Waiting for other players...")}
-
-      {:error, :already_in_queue} ->
-        {:noreply, put_flash(socket, :error, "You are already in the queue.")}
-
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to join queue: #{reason}")}
-    end
-  end
-
-  def handle_event("join_queue", _params, socket) do
-    {:noreply, put_flash(socket, :error, "Player name cannot be empty")}
   end
 
   def handle_event("leave_queue", _params, socket) do
@@ -79,10 +85,9 @@ defmodule PokerServerWeb.GameLive.Index do
   end
 
   @impl true
-  def handle_info({:game_ready, game_id}, socket) do
+  def handle_info({:game_ready, game_id, token}, socket) do
     IO.puts("🎯 Player #{socket.assigns.current_player} received game_ready for game #{game_id}")
-    player_name = socket.assigns.current_player
-    {:noreply, push_navigate(socket, to: ~p"/game/#{game_id}?player=#{player_name}")}
+    {:noreply, push_navigate(socket, to: ~p"/game/#{game_id}?token=#{token}")}
   end
 
   @impl true
@@ -162,8 +167,9 @@ defmodule PokerServerWeb.GameLive.Index do
                 <input
                   name="player_name"
                   type="text"
-                  placeholder="Enter your name..."
+                  placeholder="Enter your name"
                   required
+                  maxlength="40"
                   class="w-full text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
                 />
               </div>

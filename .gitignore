@@ -43,3 +43,6 @@ rel/
 # Xref analysis files
 *.dot
 xref_*.png
+
+# Environment variables (contains secrets)
+.env

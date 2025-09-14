@@ -1,6 +1,7 @@
 defmodule PokerServer.AllInMultiRoundTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   alias PokerServer.{GameServer, GameManager}
+
 
   # Helper function to complete a betting round
   defp complete_betting_round(game_pid, current_state) do

@@ -9,7 +9,7 @@ defmodule PokerServer.FoldBehaviorTest do
   4. Side pots exclude folded players
   """
 
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   alias PokerServer.{GameServer, BettingRound, GameState, Player}
 
   setup do

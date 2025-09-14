@@ -1,11 +1,10 @@
 defmodule PokerServer.GameManagerConcurrencyTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   alias PokerServer.GameManager
 
   # Helper to create a player tuple (format expected by GameServer)
   defp player(id, chips), do: {id, chips}
 
-  # No setup needed - application starts automatically with mix test
 
   describe "concurrent game creation" do
     test "multiple games can be created simultaneously without conflicts" do
