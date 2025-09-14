@@ -21,9 +21,9 @@ defmodule PokerServer.GameManager do
   Get the current state of a game
   """
   def get_game_state(game_id) do
-    case Registry.lookup(PokerServer.GameRegistry, game_id) do
-      [{pid, _}] -> {:ok, GameServer.get_state(pid)}
-      [] -> {:error, :game_not_found}
+    case lookup_game(game_id) do
+      {:ok, pid} -> {:ok, GameServer.get_state(pid)}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -33,9 +33,9 @@ defmodule PokerServer.GameManager do
   def player_action(game_id, player_id, action) do
     with :ok <- InputValidator.validate_player_id(player_id),
          :ok <- InputValidator.validate_action(action) do
-      case Registry.lookup(PokerServer.GameRegistry, game_id) do
-        [{pid, _}] -> GameServer.player_action(pid, player_id, action)
-        [] -> {:error, :game_not_found}
+      case lookup_game(game_id) do
+        {:ok, pid} -> GameServer.player_action(pid, player_id, action)
+        {:error, reason} -> {:error, reason}
       end
     else
       {:error, validation_error} -> {:error, {:invalid_input, validation_error}}
@@ -45,11 +45,24 @@ defmodule PokerServer.GameManager do
   @doc """
   Lookup a game process by game ID
   Returns {:ok, pid} or {:error, :game_not_found}
+
+  If game is not found in Registry, attempts recovery from database.
   """
   def lookup_game(game_id) do
     case Registry.lookup(PokerServer.GameRegistry, game_id) do
-      [{pid, _}] -> {:ok, pid}
-      [] -> {:error, :game_not_found}
+      [{pid, _}] ->
+        {:ok, pid}
+      [] ->
+        # Game not in Registry - try to recover from database
+        case PokerServer.TournamentSupervisor.recover_tournament(game_id) do
+          {:ok, pid} when is_pid(pid) ->
+            Logger.info("Successfully recovered tournament #{game_id} on lookup")
+            {:ok, pid}
+          {:ok, :no_recovery_needed} ->
+            {:error, :game_not_found}
+          {:error, _reason} ->
+            {:error, :game_not_found}
+        end
     end
   end
 
