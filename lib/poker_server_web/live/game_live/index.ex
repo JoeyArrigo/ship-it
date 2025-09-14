@@ -35,14 +35,14 @@ defmodule PokerServerWeb.GameLive.Index do
   @impl true
   def handle_event("join_queue", %{"player_name" => raw_player_name}, socket) do
     player_name = String.trim(raw_player_name)
-    
+
     cond do
       String.length(player_name) == 0 ->
         {:noreply, put_flash(socket, :error, "Player name cannot be empty")}
-      
+
       String.length(player_name) > 40 ->
         {:noreply, put_flash(socket, :error, "Player name must be 40 characters or less")}
-      
+
       true ->
         # Subscribe to personal notifications BEFORE joining queue
         if connected?(socket) do
@@ -167,7 +167,7 @@ defmodule PokerServerWeb.GameLive.Index do
                 <input
                   name="player_name"
                   type="text"
-                  placeholder="Enter your name... 🎮"
+                  placeholder="Enter your name"
                   required
                   maxlength="40"
                   class="w-full text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
