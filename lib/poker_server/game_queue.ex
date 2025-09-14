@@ -5,7 +5,7 @@ defmodule PokerServer.GameQueue do
   """
   use GenServer
   alias Phoenix.PubSub
-  alias PokerServer.GameManager
+  alias PokerServer.{GameManager, PlayerToken}
 
   defstruct waiting_players: [],
             min_players_per_game: 2,
@@ -118,10 +118,11 @@ defmodule PokerServer.GameQueue do
               IO.puts("⚠️ Could not auto-start hand for game #{game_id}")
           end
 
-          # Notify players they're in a game
+          # Notify players they're in a game with secure tokens
           Enum.each(game_players, fn player ->
-            IO.puts("🎮 Notifying player #{player.name} about game #{game_id}")
-            PubSub.broadcast(PokerServer.PubSub, "player:#{player.name}", {:game_ready, game_id})
+            token = PlayerToken.generate_token(game_id, player.name)
+            IO.puts("🎮 Notifying player #{player.name} about game #{game_id} with token")
+            PubSub.broadcast(PokerServer.PubSub, "player:#{player.name}", {:game_ready, game_id, token})
           end)
 
           %{state | waiting_players: remaining_players}

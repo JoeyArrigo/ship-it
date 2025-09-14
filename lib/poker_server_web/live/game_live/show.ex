@@ -1,7 +1,7 @@
 defmodule PokerServerWeb.GameLive.Show do
   use PokerServerWeb, :live_view
 
-  alias PokerServer.{GameManager, UIAdapter}
+  alias PokerServer.{GameManager, UIAdapter, PlayerToken}
   alias Phoenix.PubSub
 
   @impl true
@@ -35,32 +35,42 @@ defmodule PokerServerWeb.GameLive.Show do
   end
 
   defp apply_action(socket, :show, params) do
-    current_player = Map.get(params, "player")
+    token = Map.get(params, "token")
+    game_id = socket.assigns.game_id
 
-    if is_nil(current_player) do
+    if is_nil(token) do
       socket
-      |> put_flash(:error, "Please join through the lobby")
+      |> put_flash(:error, "Invalid access. Please join through the lobby.")
       |> push_navigate(to: ~p"/")
     else
-      # Subscribe to player-specific channel for filtered updates
-      if connected?(socket) do
-        PubSub.subscribe(PokerServer.PubSub, "game:#{socket.assigns.game_id}:#{current_player}")
-      end
+      case PlayerToken.validate_token(token, game_id) do
+        {:ok, current_player} ->
+          # Subscribe to player-specific channel for filtered updates
+          if connected?(socket) do
+            PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}:#{current_player}")
+          end
 
-      # Get player view and validate player is in game
-      case UIAdapter.get_player_view(socket.assigns.game_id, current_player) do
-        {:ok, player_view} ->
+          # Get player view and validate player is in game
+          case UIAdapter.get_player_view(game_id, current_player) do
+            {:ok, player_view} ->
+              socket
+              |> assign(:page_title, "Poker Game")
+              |> assign(:current_player, current_player)
+              |> assign(:player_view, player_view)
+              |> assign(:player_token, token)
+
+            {:error, reason} ->
+              # Log the error for debugging
+              IO.inspect(reason, label: "UIAdapter error")
+
+              socket
+              |> put_flash(:error, "Error loading game: #{inspect(reason)}")
+              |> push_navigate(to: ~p"/")
+          end
+
+        {:error, _reason} ->
           socket
-          |> assign(:page_title, "Poker Game")
-          |> assign(:current_player, current_player)
-          |> assign(:player_view, player_view)
-
-        {:error, reason} ->
-          # Log the error for debugging
-          IO.inspect(reason, label: "UIAdapter error")
-
-          socket
-          |> put_flash(:error, "Error loading game: #{inspect(reason)}")
+          |> put_flash(:error, "Invalid or expired token. Please join through the lobby.")
           |> push_navigate(to: ~p"/")
       end
     end
@@ -137,20 +147,22 @@ defmodule PokerServerWeb.GameLive.Show do
             {:ok, game_pid} ->
               PokerServer.GameServer.start_hand(game_pid)
 
-              # Broadcast new game URL to all players in the current game
+              # Broadcast new game URL to all players with new tokens
               Enum.each(players, fn player ->
+                new_token = PlayerToken.generate_token(new_game_id, player.id)
                 PubSub.broadcast(
                   PokerServer.PubSub,
                   "game:#{socket.assigns.game_id}:#{player.id}",
-                  {:redirect_to_new_game, new_game_id}
+                  {:redirect_to_new_game, new_game_id, new_token}
                 )
               end)
 
-              # Redirect current player to the new game
+              # Generate new token for current player and redirect
+              current_player_token = PlayerToken.generate_token(new_game_id, current_player)
               {:noreply,
                socket
                |> put_flash(:info, "New game started!")
-               |> push_navigate(to: ~p"/game/#{new_game_id}?player=#{current_player}")}
+               |> push_navigate(to: ~p"/game/#{new_game_id}?token=#{current_player_token}")}
 
             {:error, :game_not_found} ->
               {:noreply, put_flash(socket, :error, "Failed to start new game")}
@@ -171,14 +183,13 @@ defmodule PokerServerWeb.GameLive.Show do
   end
 
   @impl true
-  def handle_info({:redirect_to_new_game, new_game_id}, socket) do
+  def handle_info({:redirect_to_new_game, new_game_id, new_token}, socket) do
     # Redirect to the new game when another player starts it
-    current_player = socket.assigns.current_player
 
     {:noreply,
      socket
      |> put_flash(:info, "New game started!")
-     |> push_navigate(to: ~p"/game/#{new_game_id}?player=#{current_player}")}
+     |> push_navigate(to: ~p"/game/#{new_game_id}?token=#{new_token}")}
   end
 
   # Helper function to make player actions via the service

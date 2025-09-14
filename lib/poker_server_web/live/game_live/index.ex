@@ -85,10 +85,9 @@ defmodule PokerServerWeb.GameLive.Index do
   end
 
   @impl true
-  def handle_info({:game_ready, game_id}, socket) do
+  def handle_info({:game_ready, game_id, token}, socket) do
     IO.puts("🎯 Player #{socket.assigns.current_player} received game_ready for game #{game_id}")
-    player_name = socket.assigns.current_player
-    {:noreply, push_navigate(socket, to: ~p"/game/#{game_id}?player=#{player_name}")}
+    {:noreply, push_navigate(socket, to: ~p"/game/#{game_id}?token=#{token}")}
   end
 
   @impl true
