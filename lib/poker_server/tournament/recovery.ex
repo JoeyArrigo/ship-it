@@ -317,8 +317,8 @@ defmodule PokerServer.Tournament.Recovery do
     
     %PokerServer.BettingRound{
       players: players,
-      small_blind: 10,  # Default - could be saved if needed
-      big_blind: 20,    # Default - could be saved if needed  
+      small_blind: 50,  # Default - could be saved if needed
+      big_blind: 100,    # Default - could be saved if needed  
       round_type: round_type,
       pot: pot,
       current_bet: current_bet,

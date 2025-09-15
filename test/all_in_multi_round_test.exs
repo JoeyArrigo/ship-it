@@ -80,7 +80,7 @@ defmodule PokerServer.AllInMultiRoundTest do
       first_active = PokerServer.BettingRound.get_active_player(initial_state.betting_round)
 
       {:ok, :action_processed, _} =
-        GameServer.player_action(game_pid, first_active.id, {:raise, 60})
+        GameServer.player_action(game_pid, first_active.id, {:raise, 200})
 
       # Find the small stack player and make them go all-in
       second_state = GameServer.get_state(game_pid)
