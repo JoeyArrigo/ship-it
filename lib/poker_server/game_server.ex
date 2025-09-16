@@ -152,9 +152,9 @@ defmodule PokerServer.GameServer do
         BettingRound.new(
           updated_game_state.players,
           # small blind - could be configurable
-          10,
+          50,
           # big blind - could be configurable
-          20,
+          100,
           :preflop,
           updated_game_state.button_position
         )

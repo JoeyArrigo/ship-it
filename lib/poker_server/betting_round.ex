@@ -188,10 +188,10 @@ defmodule PokerServer.BettingRound do
 
     %__MODULE__{
       players: players,
-      # Not applicable for post-preflop rounds
-      small_blind: 0,
-      # Not applicable for post-preflop rounds
-      big_blind: 0,
+      # Use current blind structure for minimum raise calculations
+      small_blind: 50,
+      # Use current blind structure for minimum raise calculations
+      big_blind: 100,
       round_type: round_type,
       pot: existing_pot,
       current_bet: current_bet,
@@ -268,10 +268,10 @@ defmodule PokerServer.BettingRound do
 
     %__MODULE__{
       players: players,
-      # Not applicable for post-preflop rounds
-      small_blind: 0,
-      # Not applicable for post-preflop rounds
-      big_blind: 0,
+      # Use current blind structure for minimum raise calculations
+      small_blind: 50,
+      # Use current blind structure for minimum raise calculations
+      big_blind: 100,
       round_type: round_type,
       pot: existing_pot,
       current_bet: current_bet,

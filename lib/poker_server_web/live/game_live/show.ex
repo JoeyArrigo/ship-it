@@ -386,36 +386,67 @@ defmodule PokerServerWeb.GameLive.Show do
               <div :if={:raise in @player_view.valid_actions} class="glass-neo p-3 sm:p-4 mt-3 sm:mt-4">
                 <div class="space-y-4">
                   <!-- Quick bet amount buttons -->
-                  <div class="mb-4">
+                  <div :if={
+                    div(@player_view.pot, 2) >= @player_view.betting_info.min_raise or
+                    div(@player_view.pot * 3, 4) >= @player_view.betting_info.min_raise or
+                    @player_view.pot >= @player_view.betting_info.min_raise or
+                    div(@player_view.pot * 5, 4) >= @player_view.betting_info.min_raise or
+                    div(@player_view.pot * 3, 2) >= @player_view.betting_info.min_raise or
+                    @player_view.pot * 2 >= @player_view.betting_info.min_raise
+                  } class="mb-4">
                     <p class="text-xs sm:text-sm text-gray-600 text-center font-medium mb-3 uppercase tracking-wider">Quick Bets</p>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <button 
-                        phx-click="player_action" 
-                        phx-value-action="raise" 
+                      <button
+                        :if={div(@player_view.pot, 2) >= @player_view.betting_info.min_raise}
+                        phx-click="player_action"
+                        phx-value-action="raise"
                         phx-value-amount={div(@player_view.pot, 2)}
                         class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
                         <span>½ POT</span>
                         <div class="text-xs opacity-75">₿<%= div(@player_view.pot, 2) %></div>
                       </button>
-                      <button 
-                        phx-click="player_action" 
-                        phx-value-action="raise" 
+                      <button
+                        :if={div(@player_view.pot * 3, 4) >= @player_view.betting_info.min_raise}
+                        phx-click="player_action"
+                        phx-value-action="raise"
                         phx-value-amount={div(@player_view.pot * 3, 4)}
                         class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
                         <span>¾ POT</span>
                         <div class="text-xs opacity-75">₿<%= div(@player_view.pot * 3, 4) %></div>
                       </button>
-                      <button 
-                        phx-click="player_action" 
-                        phx-value-action="raise" 
+                      <button
+                        :if={@player_view.pot >= @player_view.betting_info.min_raise}
+                        phx-click="player_action"
+                        phx-value-action="raise"
                         phx-value-amount={@player_view.pot}
                         class="neo-btn neo-btn-primary text-xs sm:text-sm py-2 px-3 relative group">
                         <span>POT</span>
                         <div class="text-xs opacity-75">₿<%= @player_view.pot %></div>
                       </button>
-                      <button 
-                        phx-click="player_action" 
-                        phx-value-action="raise" 
+                      <!-- Show 1.25× POT when ½ POT is hidden -->
+                      <button
+                        :if={div(@player_view.pot, 2) < @player_view.betting_info.min_raise and div(@player_view.pot * 5, 4) >= @player_view.betting_info.min_raise}
+                        phx-click="player_action"
+                        phx-value-action="raise"
+                        phx-value-amount={div(@player_view.pot * 5, 4)}
+                        class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
+                        <span>1.25× POT</span>
+                        <div class="text-xs opacity-75">₿<%= div(@player_view.pot * 5, 4) %></div>
+                      </button>
+                      <!-- Show 1.5× POT when ¾ POT is hidden -->
+                      <button
+                        :if={div(@player_view.pot * 3, 4) < @player_view.betting_info.min_raise and div(@player_view.pot * 3, 2) >= @player_view.betting_info.min_raise}
+                        phx-click="player_action"
+                        phx-value-action="raise"
+                        phx-value-amount={div(@player_view.pot * 3, 2)}
+                        class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
+                        <span>1.5× POT</span>
+                        <div class="text-xs opacity-75">₿<%= div(@player_view.pot * 3, 2) %></div>
+                      </button>
+                      <button
+                        :if={@player_view.pot * 2 >= @player_view.betting_info.min_raise}
+                        phx-click="player_action"
+                        phx-value-action="raise"
                         phx-value-amount={@player_view.pot * 2}
                         class="neo-btn neo-btn-primary text-xs sm:text-sm py-2 px-3 relative group">
                         <span>2× POT</span>
