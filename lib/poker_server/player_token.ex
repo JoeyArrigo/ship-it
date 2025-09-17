@@ -3,7 +3,7 @@ defmodule PokerServer.PlayerToken do
   Secure player token generation and validation for poker games.
 
   Tokens contain {game_id, player_name} signed with Phoenix.Token.
-  Tokens are valid until tournament completes (no time expiration).
+  Tokens have no time expiration and remain valid until tournament completes.
   """
 
   @salt "player_game_token"
@@ -39,7 +39,7 @@ defmodule PokerServer.PlayerToken do
   {:error, reason} if token is invalid or game_id doesn't match
   """
   def validate_token(token, expected_game_id) do
-    case Phoenix.Token.verify(get_secret_key_base(), @salt, token) do
+    case Phoenix.Token.verify(get_secret_key_base(), @salt, token, max_age: :infinity) do
       {:ok, %{game_id: token_game_id, player_name: player_name}} ->
         if token_game_id == expected_game_id do
           {:ok, player_name}
@@ -63,7 +63,7 @@ defmodule PokerServer.PlayerToken do
   {:error, reason} if token is invalid
   """
   def decode_token(token) do
-    case Phoenix.Token.verify(get_secret_key_base(), @salt, token) do
+    case Phoenix.Token.verify(get_secret_key_base(), @salt, token, max_age: :infinity) do
       {:ok, %{game_id: game_id, player_name: player_name}} ->
         {:ok, {game_id, player_name}}
 
