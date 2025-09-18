@@ -23,6 +23,7 @@ defmodule PokerServer.UIAdapter do
     end
   end
 
+
   @doc """
   Get UI-optimized player view from existing state for broadcasts.
   Returns flattened structure suitable for LiveView consumption while maintaining
@@ -370,4 +371,5 @@ defmodule PokerServer.UIAdapter do
       :high_card -> "High Card"
     end
   end
+
 end

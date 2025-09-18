@@ -76,6 +76,7 @@ defmodule PokerServerWeb.GameLive.Show do
     end
   end
 
+
   @impl true
   def handle_event("player_action", %{"action" => "fold"}, socket) do
     make_player_action(socket, {:fold})

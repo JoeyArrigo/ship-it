@@ -7,6 +7,7 @@ defmodule PokerServer.GameQueue do
   alias Phoenix.PubSub
   alias PokerServer.{GameManager, PlayerToken}
 
+
   defstruct waiting_players: [],
             min_players_per_game: 2,
             # Start with 2 for testing, will increase to 6 later
@@ -63,6 +64,12 @@ defmodule PokerServer.GameQueue do
       # Check if we can start a game
       final_state = maybe_start_game(updated_state)
 
+      # Send Discord notification based on queue state
+      queue_count = length(updated_state.waiting_players)
+      if queue_count == 1 do
+        notify_discord_queue_join(player_name, queue_count)
+      end
+
       # Broadcast queue update
       broadcast_queue_update(final_state)
 
@@ -118,6 +125,10 @@ defmodule PokerServer.GameQueue do
               IO.puts("⚠️ Could not auto-start hand for game #{game_id}")
           end
 
+          # Notify Discord about game launch
+          player_names = Enum.map(game_players, & &1.name)
+          notify_discord_game_launch(game_id, player_names)
+
           # Notify players they're in a game with secure tokens
           Enum.each(game_players, fn player ->
             token = PlayerToken.generate_token(game_id, player.name)
@@ -138,5 +149,36 @@ defmodule PokerServer.GameQueue do
 
   defp broadcast_queue_update(state) do
     PubSub.broadcast(PokerServer.PubSub, "game_queue", {:queue_updated, state})
+  end
+
+  # Discord notification functions
+  defp notify_discord_queue_join(player_name, queue_count) do
+    case get_discord_webhook_url() do
+      nil -> :ok
+      webhook_url ->
+        Task.start(fn ->
+          Req.post(webhook_url, json: %{
+            content: "🎯 **#{player_name}** joined the poker queue! (#{queue_count}/2 players)"
+          })
+        end)
+    end
+  end
+
+  defp notify_discord_game_launch(_game_id, player_names) do
+    case get_discord_webhook_url() do
+      nil -> :ok
+      webhook_url ->
+        Task.start(fn ->
+          players_text = Enum.join(player_names, " vs ")
+
+          Req.post(webhook_url, json: %{
+            content: "🚀 **New game started!** #{players_text}"
+          })
+        end)
+    end
+  end
+
+  defp get_discord_webhook_url do
+    System.get_env("DISCORD_WEBHOOK_URL")
   end
 end
