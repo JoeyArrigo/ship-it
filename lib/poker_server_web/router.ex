@@ -19,7 +19,6 @@ defmodule PokerServerWeb.Router do
 
     live("/", GameLive.Index, :index)
     live("/game/:game_id", GameLive.Show, :show)
-    live("/game/:game_id/spectate", GameLive.Show, :spectate)
   end
 
   # Other scopes may use custom stacks.

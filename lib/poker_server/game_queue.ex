@@ -164,16 +164,15 @@ defmodule PokerServer.GameQueue do
     end
   end
 
-  defp notify_discord_game_launch(game_id, player_names) do
+  defp notify_discord_game_launch(_game_id, player_names) do
     case get_discord_webhook_url() do
       nil -> :ok
       webhook_url ->
         Task.start(fn ->
           players_text = Enum.join(player_names, " vs ")
-          game_url = get_game_url(game_id)
 
           Req.post(webhook_url, json: %{
-            content: "🚀 **New game launched!** #{players_text}\n🔗 Watch: #{game_url}"
+            content: "🚀 **New game started!** #{players_text}"
           })
         end)
     end
@@ -181,11 +180,5 @@ defmodule PokerServer.GameQueue do
 
   defp get_discord_webhook_url do
     System.get_env("DISCORD_WEBHOOK_URL")
-  end
-
-  defp get_game_url(game_id) do
-    host = System.get_env("PHX_HOST") || "localhost:4000"
-    protocol = if String.contains?(host, "localhost"), do: "http", else: "https"
-    "#{protocol}://#{host}/game/#{game_id}/spectate"
   end
 end

@@ -23,20 +23,6 @@ defmodule PokerServer.UIAdapter do
     end
   end
 
-  @doc """
-  Get spectator view of the game state.
-  Shows public information without player-specific data or actions.
-  """
-  def get_spectator_view(game_id) do
-    case GameManager.get_game_state(game_id) do
-      {:ok, game_server_state} ->
-        spectator_view = build_spectator_view(game_server_state)
-        {:ok, spectator_view}
-
-      error ->
-        error
-    end
-  end
 
   @doc """
   Get UI-optimized player view from existing state for broadcasts.
@@ -386,51 +372,4 @@ defmodule PokerServer.UIAdapter do
     end
   end
 
-  def build_spectator_view(game_server_state) do
-    game_state = game_server_state.game_state
-
-    # Filter players to hide hole cards (spectators can't see hole cards unless showdown)
-    is_hand_complete = game_state.phase == :hand_complete
-    folded_players = get_folded_players(game_server_state)
-
-    # Show cards only during true showdown (not when hand ended due to folds)
-    is_fold_win =
-      is_hand_complete and
-        MapSet.size(folded_players) > 0 and
-        length(game_state.players) - MapSet.size(folded_players) <= 1
-
-    filtered_players =
-      Enum.map(game_state.players, fn player ->
-        can_see_cards = is_hand_complete and not is_fold_win and player.id not in folded_players
-
-        %{
-          id: player.id,
-          chips: get_effective_chips(game_server_state, player),
-          position: player.position,
-          hole_cards: if(can_see_cards, do: format_cards(player.hole_cards), else: []),
-          is_current_player: false  # Spectators don't have a "current player"
-        }
-      end)
-
-    %{
-      game_id: game_state.game_id,
-      phase: game_state.phase,
-      hand_number: game_state.hand_number,
-      pot: get_current_pot(game_server_state),
-      community_cards: format_cards(game_state.community_cards),
-      players: filtered_players,
-      dealer_position: game_state.dealer_position,
-      current_player: game_state.current_player,
-      last_action: get_last_action_description(game_server_state),
-      winning_players: format_winning_players(game_state.winning_players),
-
-      # Spectator-specific fields
-      is_spectator: true,
-      current_player_data: nil,  # No current player for spectators
-      can_act: false,
-      available_actions: [],
-      can_start_hand: false,
-      is_waiting_for_players: false
-    }
-  end
 end
