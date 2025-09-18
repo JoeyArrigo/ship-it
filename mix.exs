@@ -42,7 +42,8 @@ defmodule PokerServer.MixProject do
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:tidewave, "~> 0.2", only: :dev},
       {:ecto_sql, "~> 3.0"},
-      {:postgrex, ">= 0.0.0"}
+      {:postgrex, ">= 0.0.0"},
+      {:req, "~> 0.5.0"}
     ]
   end
 

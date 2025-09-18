@@ -76,6 +76,33 @@ defmodule PokerServerWeb.GameLive.Show do
     end
   end
 
+  defp apply_action(socket, :spectate, _params) do
+    game_id = socket.assigns.game_id
+
+    # Subscribe to general game updates (not player-specific)
+    if connected?(socket) do
+      PubSub.subscribe(PokerServer.PubSub, "game:#{game_id}")
+    end
+
+    # Get spectator view
+    case UIAdapter.get_spectator_view(game_id) do
+      {:ok, spectator_view} ->
+        socket
+        |> assign(:page_title, "Poker Game (Spectator)")
+        |> assign(:current_player, nil)
+        |> assign(:player_view, spectator_view)
+        |> assign(:is_spectator, true)
+
+      {:error, reason} ->
+        # Log the error for debugging
+        IO.inspect(reason, label: "UIAdapter spectator error")
+
+        socket
+        |> put_flash(:error, "Error loading game: #{inspect(reason)}")
+        |> push_navigate(to: ~p"/")
+    end
+  end
+
   @impl true
   def handle_event("player_action", %{"action" => "fold"}, socket) do
     make_player_action(socket, {:fold})
