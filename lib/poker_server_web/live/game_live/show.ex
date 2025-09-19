@@ -218,9 +218,9 @@ defmodule PokerServerWeb.GameLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-6xl mx-auto relative px-1 sm:px-4">
+    <div class="max-w-none mx-0 relative px-0 sm:max-w-6xl sm:mx-auto sm:px-4">
       <!-- Neo Wave Game Interface -->
-      <div :if={@player_view} class="mt-1 neo-table relative overflow-hidden">
+      <div :if={@player_view} class="mt-0 neo-table relative overflow-hidden">
         <!-- Floating particle effects -->
         <div class="neo-particles">
           <div class="neo-particle" style="left: 10%; animation-delay: 0s;"></div>
@@ -234,25 +234,28 @@ defmodule PokerServerWeb.GameLive.Show do
         <!-- Neo Wave Opponent Display -->
         <%= if length(@player_view.players) == 2 do %>
           <% opponent = Enum.find(@player_view.players, &(not &1.is_current_player)) %>
-          <div :if={opponent} class={"mb-2 sm:mb-4 neo-player-pos relative #{if opponent.is_folded, do: "neo-folded-player", else: ""}"}>
-            <!-- Mobile: Stack layout, Desktop: Horizontal layout -->
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-              <!-- Player info section -->
-              <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-                <!-- Avatar centered on mobile -->
-                <div class="w-12 h-12 sm:w-12 sm:h-12 rounded-full neo-avatar flex items-center justify-center text-white font-bold">
+          <div :if={opponent} class={"mb-0 sm:mb-4 neo-player-pos relative #{if opponent.is_folded, do: "neo-folded-player", else: ""}"}>
+            <!-- Mobile: Horizontal compact, Desktop: Original layout -->
+            <div class="flex justify-between items-center h-20 w-full sm:flex-row sm:justify-between sm:items-center">
+              <!-- Mobile: Avatar + Name + Position on left -->
+              <!-- Desktop: Player info section (avatar, name, status, cards grouped) -->
+              <div class="flex items-center gap-2 sm:gap-4">
+                <!-- Avatar -->
+                <div class="w-8 h-8 sm:w-12 sm:h-12 rounded-full neo-avatar flex items-center justify-center text-white font-bold text-xs sm:text-base">
                   <%= String.first(opponent.id) |> String.upcase() %>
                 </div>
-                <!-- Text content below avatar on mobile, beside on desktop -->
-                <div class="text-center sm:text-left">
-                  <div class="flex items-center justify-center sm:justify-start gap-2">
-                    <span class="text-lg sm:text-xl font-bold text-gray-900"><%= opponent.id %></span>
-                    <!-- Position indicators -->
+
+                <!-- Mobile: Name + position inline, Desktop: Name/status stacked -->
+                <div class="flex items-center gap-1 sm:block sm:text-left">
+                  <div class="flex items-center gap-1 sm:gap-2">
+                    <span class="text-sm sm:text-lg font-bold text-gray-900"><%= opponent.id %></span>
                     <div :for={indicator <- opponent.position_indicators} class={"neo-position-indicator #{indicator.color}"}>
                       <%= indicator.label %>
                     </div>
                   </div>
-                  <div class={["neo-status inline-block mt-1 sm:mt-0", cond do
+
+                  <!-- Status - hidden on mobile, shown on desktop -->
+                  <div class={["hidden sm:inline-block neo-status mt-1 text-sm", cond do
                     opponent.is_folded -> "neo-folded-status"
                     @player_view.can_act -> "waiting"
                     not @player_view.can_start_hand and not @player_view.is_waiting_for_players -> "thinking"
@@ -274,72 +277,76 @@ defmodule PokerServerWeb.GameLive.Show do
                   </div>
                 </div>
 
-                <!-- Opponent card backs (when cards are hidden) -->
-                <div :if={opponent.hole_cards_hidden} class="flex gap-2 justify-center sm:justify-start mt-2 sm:mt-0">
+                <!-- Desktop: Cards with left spacing -->
+                <div :if={opponent.hole_cards_hidden} class="hidden sm:flex gap-2">
                   <div :for={_card <- 1..opponent.hole_card_count} class={"neo-card-back #{if opponent.is_folded, do: "neo-folded-card", else: ""}"}></div>
                 </div>
               </div>
-              <!-- Chips - centered on mobile, right on desktop -->
-              <div class="neo-chips text-lg sm:text-xl mt-2 sm:mt-0 self-center sm:self-auto">
-                <span class="text-xl sm:text-2xl neo-bitcoin">₿</span> <%= opponent.chips %>
+
+              <!-- Mobile: Cards on right, Desktop: Chips on right -->
+              <div class="flex items-center">
+                <!-- Mobile cards -->
+                <div :if={opponent.hole_cards_hidden} class="flex gap-1 sm:hidden">
+                  <div :for={_card <- 1..opponent.hole_card_count} class={"neo-card-back #{if opponent.is_folded, do: "neo-folded-card", else: ""}"}></div>
+                </div>
+
+                <!-- Desktop chips -->
+                <div class="hidden sm:block neo-chips text-lg">
+                  <span class="text-xl neo-bitcoin">₿</span> <%= opponent.chips %>
+                </div>
               </div>
             </div>
           </div>
         <% end %>
 
-        <!-- Neo Wave Pot Display -->
-        <div class="neo-pot">
-          <div class="neo-pot-amount"><span class="neo-bitcoin">₿</span><%= @player_view.pot %></div>
-          <div class="neo-pot-label">Total Pot</div>
-          <!-- Pot odds information for betting decisions -->
-          <div :if={@player_view.can_act and :call in @player_view.valid_actions} class="mt-2 text-xs text-gray-600">
-            <% call_amount = @player_view.betting_info.call_amount %>
-            <% pot_odds = if call_amount > 0, do: trunc(@player_view.pot / call_amount * 100), else: 0 %>
-            <span class="font-medium">Pot Odds: <%= pot_odds %>% • Call to Win <%= @player_view.pot + call_amount %></span>
-          </div>
-        </div>
         
-        <!-- Neo Wave Game Info -->
-        <div class="flex justify-between items-center mb-2 sm:mb-4 glass-neo p-2 sm:p-3">
-          <div class="text-gray-900 font-semibold text-sm sm:text-base">
-            <span class="text-cyan-600 font-bold">HAND</span> #<%= @player_view.hand_number || 0 %>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="neo-chips text-sm sm:text-base">
-              <span class="text-base sm:text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
-            </div>
-            <!-- Current player position indicators -->
-            <div :for={indicator <- @player_view.current_player.position_indicators} class={"neo-position-indicator #{indicator.color}"}>
-              <%= indicator.label %>
-            </div>
-          </div>
-        </div>
 
-        <!-- Neo Wave Community Cards -->
-        <div :if={length(@player_view.community_cards) > 0} class="neo-community mb-2 sm:mb-4">
-          <h3 class="text-base sm:text-lg font-bold mb-2 sm:mb-3 gradient-text">COMMUNITY BOARD</h3>
-          <div class="flex gap-2 sm:gap-3 justify-center flex-wrap">
-            <div 
-              :for={card <- @player_view.community_cards} 
-              class={"neo-card " <> 
-                case card.color do
-                  "red-600" -> "pink-suit"
-                  "blue-600" -> "cyan-suit" 
-                  "green-600" -> "green-suit"
-                  "gray-900" -> "yellow-suit"
-                  _ -> "yellow-suit"
-                end}>
-              <%= card.display %>
+        <!-- Neo Wave Community Cards with Pot -->
+        <div class="neo-community mb-1 sm:mb-4">
+          <!-- Pot Display -->
+          <div class="text-center mb-2 sm:mb-4">
+            <div class="neo-pot-amount"><span class="neo-bitcoin">₿</span><%= @player_view.pot %></div>
+            <!-- Pot odds information for betting decisions -->
+            <div :if={@player_view.can_act and :call in @player_view.valid_actions} class="mt-1 text-xs text-gray-600">
+              <% call_amount = @player_view.betting_info.call_amount %>
+              <% pot_odds = if call_amount > 0, do: trunc(@player_view.pot / call_amount * 100), else: 0 %>
+              <span class="font-medium">Pot Odds: <%= pot_odds %>% • Call to Win <%= @player_view.pot + call_amount %></span>
+            </div>
+          </div>
+
+          <!-- Community Cards -->
+          <div :if={length(@player_view.community_cards) > 0}>
+            <div class="flex gap-2 sm:gap-3 justify-center flex-wrap">
+              <div
+                :for={card <- @player_view.community_cards}
+                class={"neo-card " <>
+                  case card.color do
+                    "red-600" -> "pink-suit"
+                    "blue-600" -> "cyan-suit"
+                    "green-600" -> "green-suit"
+                    "gray-900" -> "yellow-suit"
+                    _ -> "yellow-suit"
+                  end}>
+                <%= card.display %>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Neo Wave Player Cards -->
-        <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-2 sm:mb-4">
-          <div class="glass-neo p-3 sm:p-4 text-center">
-            <h3 class="text-base sm:text-lg font-bold mb-2 sm:mb-3">
-              <span class="gradient-text">YOUR HAND</span>
-            </h3>
+        <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-1 sm:mb-4">
+          <div class="glass-neo p-2 sm:p-4 text-center">
+            <!-- Player Info: Chips and Position -->
+            <div class="flex justify-center items-center gap-3 mb-1 sm:mb-3">
+              <div class="neo-chips text-sm sm:text-base">
+                <span class="text-base sm:text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
+              </div>
+              <!-- Current player position indicators -->
+              <div :for={indicator <- @player_view.current_player.position_indicators} class={"neo-position-indicator #{indicator.color}"}>
+                <%= indicator.label %>
+              </div>
+            </div>
+
             <div class="flex gap-3 sm:gap-4 justify-center">
               <div
                 :for={card <- @player_view.current_player.hole_cards}

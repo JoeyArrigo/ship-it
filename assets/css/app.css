@@ -931,20 +931,22 @@ body::before {
 
   /* Mobile poker table - optimized spacing */
   .neo-table {
-    padding: 8px;
-    margin: 2px;
+    padding: 1px;
+    margin: 0;
     border-radius: 16px;
+    min-height: calc(100vh - 2px);
+    position: relative;
   }
 
   /* Priority 1: Pot display - most important info */
   .neo-pot {
-    padding: 10px;
-    margin: 8px 0;
+    padding: 6px;
+    margin: 4px 0;
     order: -1; /* Ensure pot appears first */
   }
 
   .neo-pot-amount {
-    font-size: 2.75rem;
+    font-size: 2.5rem;
     letter-spacing: -1.5px;
     line-height: 1;
   }
@@ -952,20 +954,21 @@ body::before {
   .neo-pot-label {
     font-size: 0.7rem;
     letter-spacing: 1.5px;
-    margin-top: 4px;
+    margin-top: 2px;
   }
 
   /* Priority 2: Player positions - compact but clear */
   .neo-player-pos {
-    padding: 8px;
-    margin-bottom: 8px;
+    padding: 3px;
+    margin-bottom: 0;
     border-radius: 14px;
+    width: 100%;
   }
 
   /* Mobile avatar - smaller but still prominent */
   .neo-avatar {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2rem;
+    height: 2rem;
     font-size: 0.75rem;
   }
 
@@ -982,14 +985,14 @@ body::before {
 
   /* Community cards - prominent display */
   .neo-community {
-    padding: 10px;
-    margin: 8px 0;
+    padding: 6px;
+    margin: 4px 0;
     border-radius: 16px;
   }
 
   .neo-community h3 {
     font-size: 1.1rem;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
 
   /* Priority 4: Action buttons - larger touch targets */
@@ -1004,7 +1007,7 @@ body::before {
 
   /* Glass panels - tighter spacing */
   .glass-neo {
-    padding: 10px;
+    padding: 6px;
     border-radius: 16px;
   }
 
