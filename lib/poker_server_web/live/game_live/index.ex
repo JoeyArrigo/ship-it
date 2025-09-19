@@ -134,42 +134,39 @@ defmodule PokerServerWeb.GameLive.Index do
       </div>
 
       <!-- Neo Wave Join Queue Form -->
-      <div :if={not @in_queue} class="mb-8">
-        <div class="glass-neo p-6 sm:p-8 relative overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-cyan-500/5"></div>
-          <div class="relative z-10">
-            <h2 class="text-xl sm:text-2xl font-bold mb-6 text-center gradient-text">JOIN THE ACTION</h2>
+      <div :if={not @in_queue} class="mb-8 neo-table relative overflow-hidden">
+        <div class="text-center">
+          <h2 class="text-xl sm:text-2xl font-bold mb-6 gradient-text">JOIN THE ACTION</h2>
 
-            <.simple_form phx-submit="join_queue" class="space-y-6">
-              <div class="space-y-4">
-                <label class="block text-sm font-bold text-gray-700 uppercase tracking-wider">
-                  Player Name
-                </label>
-                <input
-                  name="player_name"
-                  type="text"
-                  placeholder="Enter your name"
-                  required
-                  maxlength="40"
-                  class="w-full text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
-                />
-              </div>
+          <.simple_form phx-submit="join_queue" class="space-y-6">
+            <div class="space-y-4">
+              <label class="block text-sm font-bold text-gray-700 uppercase tracking-wider">
+                Player Name
+              </label>
+              <input
+                name="player_name"
+                type="text"
+                placeholder="Enter your name"
+                required
+                maxlength="40"
+                class="w-full text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
+              />
+            </div>
 
-              <div class="text-center">
-                <button
-                  type="submit"
-                  class="neo-btn neo-btn-primary text-lg sm:text-xl py-4 px-8 sm:px-12">
-                  <span>JOIN QUEUE</span>
-                </button>
-              </div>
-            </.simple_form>
-          </div>
+            <div class="text-center">
+              <button
+                type="submit"
+                class="neo-btn neo-btn-primary text-lg sm:text-xl py-4 px-8 sm:px-12">
+                <span>JOIN QUEUE</span>
+              </button>
+            </div>
+          </.simple_form>
         </div>
       </div>
 
       <!-- Neo Wave Queue Status -->
-      <div class="mb-8 neo-table relative overflow-hidden">
-        <div class="text-center">
+      <div class="mb-8">
+        <div class="glass-neo p-6 sm:p-8 text-center">
           <h2 class="text-2xl sm:text-3xl font-bold mb-6 gradient-text">GAME LOBBY</h2>
 
           <!-- Players waiting display -->
