@@ -234,7 +234,7 @@ defmodule PokerServerWeb.GameLive.Show do
         <!-- Neo Wave Opponent Display -->
         <%= if length(@player_view.players) == 2 do %>
           <% opponent = Enum.find(@player_view.players, &(not &1.is_current_player)) %>
-          <div :if={opponent} class="mb-4 sm:mb-8 neo-player-pos relative">
+          <div :if={opponent} class={"mb-4 sm:mb-8 neo-player-pos relative #{if opponent.is_folded, do: "neo-folded-player", else: ""}"}>
             <!-- Mobile: Stack layout, Desktop: Horizontal layout -->
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center">
               <!-- Player info section -->
@@ -245,22 +245,38 @@ defmodule PokerServerWeb.GameLive.Show do
                 </div>
                 <!-- Text content below avatar on mobile, beside on desktop -->
                 <div class="text-center sm:text-left">
-                  <span class="text-lg sm:text-xl font-bold text-gray-900 block"><%= opponent.id %></span>
+                  <div class="flex items-center justify-center sm:justify-start gap-2">
+                    <span class="text-lg sm:text-xl font-bold text-gray-900"><%= opponent.id %></span>
+                    <!-- Position indicators -->
+                    <div :for={indicator <- opponent.position_indicators} class={"neo-position-indicator #{indicator.color}"}>
+                      <%= indicator.label %>
+                    </div>
+                  </div>
                   <div class={["neo-status inline-block mt-1 sm:mt-0", cond do
+                    opponent.is_folded -> "neo-folded-status"
                     @player_view.can_act -> "waiting"
                     not @player_view.can_start_hand and not @player_view.is_waiting_for_players -> "thinking"
                     true -> "active"
                   end]}>
-                    <%= if @player_view.can_act do %>
-                      Waiting
+                    <%= if opponent.is_folded do %>
+                      Folded
                     <% else %>
-                      <%= if not @player_view.can_start_hand and not @player_view.is_waiting_for_players do %>
-                        Thinking...
+                      <%= if @player_view.can_act do %>
+                        Waiting
                       <% else %>
-                        <%= if @player_view.can_start_hand, do: "Ready", else: "Waiting" %>
+                        <%= if not @player_view.can_start_hand and not @player_view.is_waiting_for_players do %>
+                          Thinking...
+                        <% else %>
+                          <%= if @player_view.can_start_hand, do: "Ready", else: "Waiting" %>
+                        <% end %>
                       <% end %>
                     <% end %>
                   </div>
+                </div>
+
+                <!-- Opponent card backs (when cards are hidden) -->
+                <div :if={opponent.hole_cards_hidden} class="flex gap-2 justify-center sm:justify-start mt-2 sm:mt-0">
+                  <div :for={_card <- 1..opponent.hole_card_count} class={"neo-card-back #{if opponent.is_folded, do: "neo-folded-card", else: ""}"}></div>
                 </div>
               </div>
               <!-- Chips - centered on mobile, right on desktop -->
@@ -288,8 +304,14 @@ defmodule PokerServerWeb.GameLive.Show do
           <div class="text-gray-900 font-semibold text-sm sm:text-base">
             <span class="text-cyan-600 font-bold">HAND</span> #<%= @player_view.hand_number || 0 %>
           </div>
-          <div class="neo-chips text-sm sm:text-base">
-            <span class="text-base sm:text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
+          <div class="flex items-center gap-2">
+            <div class="neo-chips text-sm sm:text-base">
+              <span class="text-base sm:text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
+            </div>
+            <!-- Current player position indicators -->
+            <div :for={indicator <- @player_view.current_player.position_indicators} class={"neo-position-indicator #{indicator.color}"}>
+              <%= indicator.label %>
+            </div>
           </div>
         </div>
 
@@ -319,12 +341,12 @@ defmodule PokerServerWeb.GameLive.Show do
               <span class="gradient-text">YOUR HAND</span>
             </h3>
             <div class="flex gap-3 sm:gap-4 justify-center">
-              <div 
-                :for={card <- @player_view.current_player.hole_cards} 
-                class={"neo-card transform hover:scale-110 transition-transform " <> 
+              <div
+                :for={card <- @player_view.current_player.hole_cards}
+                class={"neo-card transform hover:scale-110 transition-transform #{if @player_view.current_player.is_folded, do: "neo-folded-card", else: ""} " <>
                   case card.color do
                     "red-600" -> "pink-suit"
-                    "blue-600" -> "cyan-suit" 
+                    "blue-600" -> "cyan-suit"
                     "green-600" -> "green-suit"
                     "gray-900" -> "yellow-suit"
                     _ -> "yellow-suit"
@@ -566,6 +588,10 @@ defmodule PokerServerWeb.GameLive.Show do
                             <span class="font-bold text-gray-900 text-base sm:text-lg">
                               <%= if player.is_current_player, do: "YOU", else: String.upcase(player.id) %>
                             </span>
+                            <!-- Position indicators in showdown -->
+                            <div :for={indicator <- player.position_indicators} class={"neo-position-indicator #{indicator.color}"}>
+                              <%= indicator.label %>
+                            </div>
                           </div>
                           <!-- Cards centered on mobile -->
                           <div class="flex gap-2 justify-center sm:justify-start">
