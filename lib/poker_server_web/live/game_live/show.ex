@@ -347,37 +347,6 @@ defmodule PokerServerWeb.GameLive.Show do
           </div>
         </div>
 
-        <!-- Neo Wave Player Cards -->
-        <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-1 sm:mb-4">
-          <div class="glass-neo p-2 sm:p-4 text-center">
-            <!-- Player Info: Chips and Position -->
-            <div class="flex justify-center items-center gap-3 mb-1 sm:mb-3">
-              <div class="neo-chips text-sm sm:text-base">
-                <span class="text-base sm:text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
-              </div>
-              <!-- Current player position indicators -->
-              <div :for={indicator <- @player_view.current_player.position_indicators} class={"neo-position-indicator #{indicator.color}"}>
-                <%= indicator.label %>
-              </div>
-            </div>
-
-            <div class="flex gap-3 sm:gap-4 justify-center">
-              <div
-                :for={card <- @player_view.current_player.hole_cards}
-                class={"neo-card transform hover:scale-110 transition-transform #{if @player_view.current_player.is_folded, do: "neo-folded-card", else: ""} " <>
-                  case card.color do
-                    "red-600" -> "pink-suit"
-                    "blue-600" -> "cyan-suit"
-                    "green-600" -> "green-suit"
-                    "gray-900" -> "yellow-suit"
-                    _ -> "yellow-suit"
-                  end}>
-                <%= card.display %>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Neo Wave Action Interface -->
         <div class="text-center">
 
@@ -386,6 +355,44 @@ defmodule PokerServerWeb.GameLive.Show do
               <p class="mb-3 sm:mb-4 text-base sm:text-lg font-bold">
                 <span class="gradient-text">YOUR TURN</span>
               </p>
+
+              <!-- Player Info: Position and Chips -->
+              <div class="flex justify-between items-center -mt-2 sm:-mt-3">
+                <!-- Left: Avatar and position indicators -->
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full neo-avatar flex items-center justify-center text-white font-bold text-xs">
+                    Y
+                  </div>
+                  <span class="text-sm sm:text-base font-bold text-gray-900">YOU</span>
+                  <div class="flex gap-1">
+                    <div :for={indicator <- @player_view.current_player.position_indicators} class={"neo-position-indicator #{indicator.color}"}>
+                      <%= indicator.label %>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="neo-chips text-sm sm:text-base">
+                  <span class="text-base sm:text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
+                </div>
+              </div>
+
+              <!-- Player Cards -->
+              <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-3 sm:mb-4">
+                <div class="flex gap-3 sm:gap-4 justify-center">
+                  <div
+                    :for={card <- @player_view.current_player.hole_cards}
+                    class={"neo-card transform hover:scale-110 transition-transform #{if @player_view.current_player.is_folded, do: "neo-folded-card", else: ""} " <>
+                      case card.color do
+                        "red-600" -> "pink-suit"
+                        "blue-600" -> "cyan-suit"
+                        "green-600" -> "green-suit"
+                        "gray-900" -> "yellow-suit"
+                        _ -> "yellow-suit"
+                      end}>
+                    <%= card.display %>
+                  </div>
+                </div>
+              </div>
 
               <!-- Neo Wave action buttons - Prioritize safe actions -->
               <div class="space-y-2 mb-3 sm:mb-4">
@@ -676,6 +683,49 @@ defmodule PokerServerWeb.GameLive.Show do
                   class="neo-btn neo-btn-primary text-lg sm:text-xl py-3 sm:py-4 px-8 sm:px-10">
                   <span>PLAY AGAIN</span>
                 </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- When not acting - show player cards and info -->
+          <div :if={not @player_view.can_act and length(@player_view.current_player.hole_cards) > 0}>
+            <div class="glass-neo p-3 sm:p-4 mb-3 sm:mb-4">
+              <!-- Player Info: Position and Chips -->
+              <div class="flex justify-between items-center -mt-2 sm:-mt-3">
+                <!-- Left: Avatar and position indicators -->
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full neo-avatar flex items-center justify-center text-white font-bold text-xs">
+                    Y
+                  </div>
+                  <span class="text-sm sm:text-base font-bold text-gray-900">YOU</span>
+                  <div class="flex gap-1">
+                    <div :for={indicator <- @player_view.current_player.position_indicators} class={"neo-position-indicator #{indicator.color}"}>
+                      <%= indicator.label %>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="neo-chips text-sm sm:text-base">
+                  <span class="text-base sm:text-lg neo-bitcoin">₿</span> <%= @player_view.current_player.chips %>
+                </div>
+              </div>
+
+              <!-- Player Cards -->
+              <div class="mb-3 sm:mb-4">
+                <div class="flex gap-3 sm:gap-4 justify-center">
+                  <div
+                    :for={card <- @player_view.current_player.hole_cards}
+                    class={"neo-card transform hover:scale-110 transition-transform #{if @player_view.current_player.is_folded, do: "neo-folded-card", else: ""} " <>
+                      case card.color do
+                        "red-600" -> "pink-suit"
+                        "blue-600" -> "cyan-suit"
+                        "green-600" -> "green-suit"
+                        "gray-900" -> "yellow-suit"
+                        _ -> "yellow-suit"
+                      end}>
+                    <%= card.display %>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
