@@ -317,20 +317,25 @@ defmodule PokerServerWeb.GameLive.Show do
           </div>
 
           <!-- Community Cards -->
-          <div :if={length(@player_view.community_cards) > 0} class="mb-2 sm:mb-4">
+          <div :if={@player_view.phase not in [:preflop, :finished]} class="mb-2 sm:mb-4">
             <div class="flex gap-2 sm:gap-3 justify-center flex-wrap">
-              <div
-                :for={card <- @player_view.community_cards}
-                class={"neo-card " <>
+              <%= for {slot, index} <- Enum.with_index(0..4) do %>
+                <% card = Enum.at(@player_view.community_cards, index) %>
+                <div class={if card do
+                  "neo-card card-flip-reveal " <>
                   case card.color do
                     "red-600" -> "pink-suit"
                     "blue-600" -> "cyan-suit"
                     "green-600" -> "green-suit"
                     "gray-900" -> "yellow-suit"
                     _ -> "yellow-suit"
-                  end}>
-                <%= card.display %>
-              </div>
+                  end
+                else
+                  "neo-card-back"
+                end}>
+                  <%= if card, do: card.display %>
+                </div>
+              <% end %>
             </div>
           </div>
 
