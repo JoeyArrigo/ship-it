@@ -96,7 +96,9 @@ defmodule PokerServerWeb.GameLive.Show do
   def handle_event("player_action", %{"action" => "raise", "amount" => amount_str}, socket) do
     case Integer.parse(amount_str) do
       {amount, ""} when amount > 0 ->
-        make_player_action(socket, {:raise, amount})
+        socket = make_player_action(socket, {:raise, amount})
+        # Trigger celebration animation for raise
+        {:noreply, push_event(socket, "celebrate-raise", %{})}
 
       _ ->
         {:noreply, put_flash(socket, :error, "Invalid raise amount")}
@@ -180,6 +182,15 @@ defmodule PokerServerWeb.GameLive.Show do
   @impl true
   def handle_info({:game_updated, filtered_player_view}, socket) do
     # Receive pre-filtered player view from GameServer (no need to re-filter)
+    old_player_view = socket.assigns.player_view
+
+    # Check if current player just won
+    socket = if old_player_view && current_player_just_won?(old_player_view, filtered_player_view, socket.assigns.current_player) do
+      push_event(socket, "celebrate-win", %{})
+    else
+      socket
+    end
+
     {:noreply, assign(socket, :player_view, filtered_player_view)}
   end
 
@@ -213,6 +224,16 @@ defmodule PokerServerWeb.GameLive.Show do
   # Check if debug info should be shown based on environment variable
   defp show_debug?() do
     System.get_env("SHOW_DEBUG_PLAYER_VIEW", "false") == "true"
+  end
+
+  # Helper function to detect if current player just won
+  defp current_player_just_won?(old_view, new_view, current_player) do
+    # Check if we transitioned from no winners to having the current player as winner
+    old_winners = if old_view.showdown_results, do: old_view.showdown_results.winners, else: []
+    new_winners = if new_view.showdown_results, do: new_view.showdown_results.winners, else: []
+
+    # Current player wasn't a winner before but is now
+    current_player not in old_winners and current_player in new_winners
   end
 
   @impl true
@@ -754,6 +775,9 @@ defmodule PokerServerWeb.GameLive.Show do
           </div>
         </div>
       </div>
+
+      <!-- Celebration container for confetti animations -->
+      <div id="celebration-container" class="celebration-container" phx-hook="CelebrationAnimations"></div>
 
       <!-- Neo Wave Debug Info -->
       <div :if={@player_view != nil and show_debug?()} class="mt-6 glass-neo p-4">
