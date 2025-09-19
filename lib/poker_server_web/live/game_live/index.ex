@@ -91,6 +91,17 @@ defmodule PokerServerWeb.GameLive.Index do
   end
 
   @impl true
+  def terminate(_reason, socket) do
+    # Clean up player from queue when LiveView process terminates
+    # This handles cases like mobile browser suspension, network drops, etc.
+    if socket.assigns.current_player do
+      IO.puts("🧹 Cleaning up player #{socket.assigns.current_player} from queue on LiveView termination")
+      GameQueue.leave_queue(socket.assigns.current_player)
+    end
+    :ok
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="max-w-6xl mx-auto relative px-2 sm:px-4">
