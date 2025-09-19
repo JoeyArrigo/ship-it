@@ -230,7 +230,7 @@ defmodule PokerServerWeb.GameLive.Show do
           <div class="neo-particle" style="left: 80%; animation-delay: 8s;"></div>
           <div class="neo-particle" style="left: 90%; animation-delay: 1s;"></div>
         </div>
-        
+
         <!-- Neo Wave Opponent Display -->
         <%= if length(@player_view.players) == 2 do %>
           <% opponent = Enum.find(@player_view.players, &(not &1.is_current_player)) %>
@@ -303,19 +303,21 @@ defmodule PokerServerWeb.GameLive.Show do
 
         <!-- Neo Wave Community Cards with Pot -->
         <div class="neo-community mb-1 sm:mb-4">
-          <!-- Pot Display -->
-          <div class="text-center mb-2 sm:mb-4">
-            <div class="neo-pot-amount"><span class="neo-bitcoin">₿</span><%= @player_view.pot %></div>
-            <!-- Pot odds information for betting decisions -->
-            <div :if={@player_view.can_act and :call in @player_view.valid_actions} class="mt-1 text-xs text-gray-600">
-              <% call_amount = @player_view.betting_info.call_amount %>
-              <% pot_odds = if call_amount > 0, do: trunc(@player_view.pot / call_amount * 100), else: 0 %>
-              <span class="font-medium">Pot Odds: <%= pot_odds %>% • Call to Win <%= @player_view.pot + call_amount %></span>
+          <!-- Mobile Logo (hidden on desktop) -->
+          <div class="sm:hidden text-center pb-2">
+            <div class="flex items-center justify-center gap-2">
+              <div class="logo-glitch text-2xl font-bold gradient-text" data-text="SHIP•IT">SHIP•IT</div>
+              <div class="flex text-xl gap-1">
+                <span class="neo-club">♣</span>
+                <span class="neo-diamond">♦</span>
+                <span class="neo-heart">♥</span>
+                <span class="neo-spade">♠</span>
+              </div>
             </div>
           </div>
 
           <!-- Community Cards -->
-          <div :if={length(@player_view.community_cards) > 0}>
+          <div :if={length(@player_view.community_cards) > 0} class="mb-2 sm:mb-4">
             <div class="flex gap-2 sm:gap-3 justify-center flex-wrap">
               <div
                 :for={card <- @player_view.community_cards}
@@ -330,6 +332,18 @@ defmodule PokerServerWeb.GameLive.Show do
                 <%= card.display %>
               </div>
             </div>
+          </div>
+
+          <!-- Pot Display -->
+          <div class="text-center mb-2 sm:mb-4">
+            <div class="neo-pot-amount"><span class="neo-bitcoin">₿</span><%= @player_view.pot %></div>
+          </div>
+
+          <!-- Pot odds information for betting decisions -->
+          <div :if={@player_view.can_act and :call in @player_view.valid_actions} class="text-center text-xs text-gray-600">
+            <% call_amount = @player_view.betting_info.call_amount %>
+            <% pot_odds = if call_amount > 0, do: trunc(@player_view.pot / call_amount * 100), else: 0 %>
+            <span class="font-medium">Pot Odds: <%= pot_odds %>% • Call to Win <%= @player_view.pot + call_amount %></span>
           </div>
         </div>
 
