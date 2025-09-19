@@ -218,9 +218,9 @@ defmodule PokerServerWeb.GameLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-6xl mx-auto relative px-2 sm:px-4">
+    <div class="max-w-6xl mx-auto relative px-1 sm:px-4">
       <!-- Neo Wave Game Interface -->
-      <div :if={@player_view} class="mt-2 neo-table relative overflow-hidden">
+      <div :if={@player_view} class="mt-1 neo-table relative overflow-hidden">
         <!-- Floating particle effects -->
         <div class="neo-particles">
           <div class="neo-particle" style="left: 10%; animation-delay: 0s;"></div>
@@ -234,7 +234,7 @@ defmodule PokerServerWeb.GameLive.Show do
         <!-- Neo Wave Opponent Display -->
         <%= if length(@player_view.players) == 2 do %>
           <% opponent = Enum.find(@player_view.players, &(not &1.is_current_player)) %>
-          <div :if={opponent} class={"mb-4 sm:mb-8 neo-player-pos relative #{if opponent.is_folded, do: "neo-folded-player", else: ""}"}>
+          <div :if={opponent} class={"mb-2 sm:mb-4 neo-player-pos relative #{if opponent.is_folded, do: "neo-folded-player", else: ""}"}>
             <!-- Mobile: Stack layout, Desktop: Horizontal layout -->
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center">
               <!-- Player info section -->
@@ -300,7 +300,7 @@ defmodule PokerServerWeb.GameLive.Show do
         </div>
         
         <!-- Neo Wave Game Info -->
-        <div class="flex justify-between items-center mb-4 sm:mb-8 glass-neo p-3 sm:p-4">
+        <div class="flex justify-between items-center mb-2 sm:mb-4 glass-neo p-2 sm:p-3">
           <div class="text-gray-900 font-semibold text-sm sm:text-base">
             <span class="text-cyan-600 font-bold">HAND</span> #<%= @player_view.hand_number || 0 %>
           </div>
@@ -316,8 +316,8 @@ defmodule PokerServerWeb.GameLive.Show do
         </div>
 
         <!-- Neo Wave Community Cards -->
-        <div :if={length(@player_view.community_cards) > 0} class="neo-community mb-4 sm:mb-8">
-          <h3 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4 gradient-text">COMMUNITY BOARD</h3>
+        <div :if={length(@player_view.community_cards) > 0} class="neo-community mb-2 sm:mb-4">
+          <h3 class="text-base sm:text-lg font-bold mb-2 sm:mb-3 gradient-text">COMMUNITY BOARD</h3>
           <div class="flex gap-2 sm:gap-3 justify-center flex-wrap">
             <div 
               :for={card <- @player_view.community_cards} 
@@ -335,9 +335,9 @@ defmodule PokerServerWeb.GameLive.Show do
         </div>
 
         <!-- Neo Wave Player Cards -->
-        <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-4 sm:mb-8">
-          <div class="glass-neo p-4 sm:p-6 text-center">
-            <h3 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4">
+        <div :if={length(@player_view.current_player.hole_cards) > 0} class="mb-2 sm:mb-4">
+          <div class="glass-neo p-3 sm:p-4 text-center">
+            <h3 class="text-base sm:text-lg font-bold mb-2 sm:mb-3">
               <span class="gradient-text">YOUR HAND</span>
             </h3>
             <div class="flex gap-3 sm:gap-4 justify-center">
@@ -361,27 +361,27 @@ defmodule PokerServerWeb.GameLive.Show do
         <div class="text-center">
 
           <div :if={@player_view.can_act}>
-            <div class="glass-neo p-4 sm:p-6 mb-4 sm:mb-6">
-              <p class="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">
+            <div class="glass-neo p-3 sm:p-4 mb-3 sm:mb-4">
+              <p class="mb-3 sm:mb-4 text-base sm:text-lg font-bold">
                 <span class="gradient-text">YOUR TURN</span>
               </p>
-              
+
               <!-- Neo Wave action buttons - Prioritize safe actions -->
-              <div class="space-y-3 mb-4 sm:mb-6">
+              <div class="space-y-2 mb-3 sm:mb-4">
                 <!-- Primary safe actions - prominent and full width -->
                 <div class="space-y-2">
-                  <button 
+                  <button
                     :if={:check in @player_view.valid_actions}
-                    phx-click="player_action" 
-                    phx-value-action="check" 
-                    class="w-full neo-btn neo-btn-primary text-lg sm:text-xl py-4 sm:py-5 px-6">
+                    phx-click="player_action"
+                    phx-value-action="check"
+                    class="w-full neo-btn neo-btn-primary text-base sm:text-lg py-3 sm:py-4 px-4 sm:px-6">
                     <span>CHECK</span>
                   </button>
-                  <button 
+                  <button
                     :if={:call in @player_view.valid_actions}
-                    phx-click="player_action" 
-                    phx-value-action="call" 
-                    class="w-full neo-btn neo-btn-primary text-lg sm:text-xl py-4 sm:py-5 px-6">
+                    phx-click="player_action"
+                    phx-value-action="call"
+                    class="w-full neo-btn neo-btn-primary text-base sm:text-lg py-3 sm:py-4 px-4 sm:px-6">
                     <span>CALL <span class="neo-bitcoin">₿</span><%= @player_view.betting_info.call_amount %></span>
                   </button>
                 </div>
@@ -406,8 +406,8 @@ defmodule PokerServerWeb.GameLive.Show do
               </div>
 
               <!-- Neo Wave raise controls -->
-              <div :if={:raise in @player_view.valid_actions} class="glass-neo p-3 sm:p-4 mt-3 sm:mt-4">
-                <div class="space-y-4">
+              <div :if={:raise in @player_view.valid_actions} class="glass-neo p-2 sm:p-3 mt-2 sm:mt-3">
+                <div class="space-y-3">
                   <!-- Quick bet amount buttons -->
                   <div :if={
                     div(@player_view.pot, 2) >= @player_view.betting_info.min_raise or
@@ -416,15 +416,15 @@ defmodule PokerServerWeb.GameLive.Show do
                     div(@player_view.pot * 5, 4) >= @player_view.betting_info.min_raise or
                     div(@player_view.pot * 3, 2) >= @player_view.betting_info.min_raise or
                     @player_view.pot * 2 >= @player_view.betting_info.min_raise
-                  } class="mb-4">
-                    <p class="text-xs sm:text-sm text-gray-600 text-center font-medium mb-3 uppercase tracking-wider">Quick Bets</p>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  } class="mb-3">
+                    <p class="text-xs text-gray-600 text-center font-medium mb-2 uppercase tracking-wider">Quick Bets</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-2">
                       <button
                         :if={div(@player_view.pot, 2) >= @player_view.betting_info.min_raise}
                         phx-click="player_action"
                         phx-value-action="raise"
                         phx-value-amount={div(@player_view.pot, 2)}
-                        class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
+                        class="neo-btn neo-btn-secondary text-xs py-2 px-2 sm:px-3 relative group">
                         <span>½ POT</span>
                         <div class="text-xs opacity-75">₿<%= div(@player_view.pot, 2) %></div>
                       </button>
@@ -433,7 +433,7 @@ defmodule PokerServerWeb.GameLive.Show do
                         phx-click="player_action"
                         phx-value-action="raise"
                         phx-value-amount={div(@player_view.pot * 3, 4)}
-                        class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
+                        class="neo-btn neo-btn-secondary text-xs py-2 px-2 sm:px-3 relative group">
                         <span>¾ POT</span>
                         <div class="text-xs opacity-75">₿<%= div(@player_view.pot * 3, 4) %></div>
                       </button>
@@ -442,7 +442,7 @@ defmodule PokerServerWeb.GameLive.Show do
                         phx-click="player_action"
                         phx-value-action="raise"
                         phx-value-amount={@player_view.pot}
-                        class="neo-btn neo-btn-primary text-xs sm:text-sm py-2 px-3 relative group">
+                        class="neo-btn neo-btn-primary text-xs py-2 px-2 sm:px-3 relative group">
                         <span>POT</span>
                         <div class="text-xs opacity-75">₿<%= @player_view.pot %></div>
                       </button>
@@ -452,7 +452,7 @@ defmodule PokerServerWeb.GameLive.Show do
                         phx-click="player_action"
                         phx-value-action="raise"
                         phx-value-amount={div(@player_view.pot * 5, 4)}
-                        class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
+                        class="neo-btn neo-btn-secondary text-xs py-2 px-2 sm:px-3 relative group">
                         <span>1.25× POT</span>
                         <div class="text-xs opacity-75">₿<%= div(@player_view.pot * 5, 4) %></div>
                       </button>
@@ -462,7 +462,7 @@ defmodule PokerServerWeb.GameLive.Show do
                         phx-click="player_action"
                         phx-value-action="raise"
                         phx-value-amount={div(@player_view.pot * 3, 2)}
-                        class="neo-btn neo-btn-secondary text-xs sm:text-sm py-2 px-3 relative group">
+                        class="neo-btn neo-btn-secondary text-xs py-2 px-2 sm:px-3 relative group">
                         <span>1.5× POT</span>
                         <div class="text-xs opacity-75">₿<%= div(@player_view.pot * 3, 2) %></div>
                       </button>
@@ -471,7 +471,7 @@ defmodule PokerServerWeb.GameLive.Show do
                         phx-click="player_action"
                         phx-value-action="raise"
                         phx-value-amount={@player_view.pot * 2}
-                        class="neo-btn neo-btn-primary text-xs sm:text-sm py-2 px-3 relative group">
+                        class="neo-btn neo-btn-primary text-xs py-2 px-2 sm:px-3 relative group">
                         <span>2× POT</span>
                         <div class="text-xs opacity-75">₿<%= @player_view.pot * 2 %></div>
                       </button>
@@ -479,9 +479,9 @@ defmodule PokerServerWeb.GameLive.Show do
                   </div>
 
                   <!-- Custom raise form with slider -->
-                  <form phx-submit="player_action" class="space-y-4">
+                  <form phx-submit="player_action" class="space-y-3">
                     <!-- Bet size slider -->
-                    <div class="space-y-3">
+                    <div class="space-y-2">
                       <div class="flex justify-between items-center">
                         <label class="text-xs font-medium text-gray-600 uppercase tracking-wider">Bet Size</label>
                         <div class="flex items-center gap-2">
@@ -521,7 +521,7 @@ defmodule PokerServerWeb.GameLive.Show do
                     </div>
 
                     <!-- Raise button -->
-                    <button type="submit" class="w-full neo-btn neo-btn-secondary text-sm sm:text-lg py-3 px-6">
+                    <button type="submit" class="w-full neo-btn neo-btn-secondary text-sm py-2 sm:py-3 px-4 sm:px-6">
                       <span>RAISE</span>
                     </button>
                     
@@ -537,13 +537,13 @@ defmodule PokerServerWeb.GameLive.Show do
           </div>
 
           <!-- Neo Wave Showdown Results -->
-          <div :if={@player_view.showdown_results} class="mb-8">
-            <div class="glass-neo p-6 border-2 border-yellow-400/50">
-              <h3 class="text-2xl font-bold mb-6 text-center gradient-text">SHOWDOWN RESULTS</h3>
-              
+          <div :if={@player_view.showdown_results} class="mb-4">
+            <div class="glass-neo p-4 border-2 border-yellow-400/50">
+              <h3 class="text-xl font-bold mb-4 text-center gradient-text">SHOWDOWN RESULTS</h3>
+
               <!-- Neo Wave Winner Announcement -->
               <%= for winner_id <- @player_view.showdown_results.winners do %>
-                <div class="text-center mb-6">
+                <div class="text-center mb-4">
                   <div class="text-3xl font-bold mb-2">
                     <span class="gradient-text">
                       <%= if winner_id == @current_player, do: "YOU WIN!", else: "#{String.upcase(winner_id)} WINS!" %>
@@ -622,11 +622,11 @@ defmodule PokerServerWeb.GameLive.Show do
           </div>
 
           <div :if={@player_view.can_start_hand}>
-            <div class="glass-neo p-4 sm:p-6 text-center">
-              <p class="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">
+            <div class="glass-neo p-3 sm:p-4 text-center">
+              <p class="mb-3 sm:mb-4 text-base sm:text-lg font-bold">
                 <span class="gradient-text">HAND COMPLETE!</span>
               </p>
-              <p class="mb-4 sm:mb-6 text-gray-700 text-sm sm:text-base">Ready to deal the next hand?</p>
+              <p class="mb-3 sm:mb-4 text-gray-700 text-sm">Ready to deal the next hand?</p>
               <button 
                 phx-click="start_hand" 
                 class="neo-btn neo-btn-secondary text-sm sm:text-lg py-3 sm:py-4 px-6 sm:px-8">
@@ -637,19 +637,19 @@ defmodule PokerServerWeb.GameLive.Show do
 
           <!-- Neo Wave Game Complete Interface -->
           <div :if={@player_view.players && @player_view.phase == :hand_complete && length(Enum.filter(@player_view.players, &(&1.chips > 0))) == 1}>
-            <div class="glass-neo p-4 sm:p-8 text-center border-2 border-green-400/50 relative overflow-hidden">
+            <div class="glass-neo p-3 sm:p-6 text-center border-2 border-green-400/50 relative overflow-hidden">
               <div class="absolute inset-0 bg-gradient-to-br from-green-400/10 to-cyan-400/10"></div>
               <div class="relative z-10">
-                <h3 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">
+                <h3 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">
                   <span class="gradient-text">GAME COMPLETE!</span>
                 </h3>
-                <div class="flex justify-center mb-4 sm:mb-6 gap-1 sm:gap-2">
+                <div class="flex justify-center mb-3 sm:mb-4 gap-1 sm:gap-2">
                   <span class="neo-club text-2xl sm:text-4xl">♣</span>
                   <span class="neo-diamond text-2xl sm:text-4xl">♦</span>
                   <span class="neo-heart text-2xl sm:text-4xl">♥</span>
                   <span class="neo-spade text-2xl sm:text-4xl">♠</span>
                 </div>
-                <p class="mb-6 sm:mb-8 text-lg sm:text-xl text-gray-700">Ready for another round?</p>
+                <p class="mb-4 sm:mb-6 text-base sm:text-lg text-gray-700">Ready for another round?</p>
                 <button 
                   phx-click="play_again" 
                   class="neo-btn neo-btn-primary text-lg sm:text-xl py-3 sm:py-4 px-8 sm:px-10">
@@ -661,7 +661,7 @@ defmodule PokerServerWeb.GameLive.Show do
 
           <div :if={not @player_view.can_act and not @player_view.can_start_hand and not @player_view.is_waiting_for_players}>
             <% opponent = if length(@player_view.players) == 2, do: Enum.find(@player_view.players, &(not &1.is_current_player)) %>
-            <div class="glass-neo p-4 sm:p-6 text-center">
+            <div class="glass-neo p-3 sm:p-4 text-center">
               <div class="animate-pulse">
                 <div class="flex justify-center mb-3 sm:mb-4">
                   <div class="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full animate-spin"></div>
