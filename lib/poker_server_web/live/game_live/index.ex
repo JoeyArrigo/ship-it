@@ -133,9 +133,87 @@ defmodule PokerServerWeb.GameLive.Index do
         </div>
       </div>
 
-      <!-- Neo Wave Queue Status -->
-      <div class="mb-8 neo-table relative overflow-hidden">
+      <!-- Neo Wave Join Queue Form -->
+      <div :if={not @in_queue} class="mb-8 neo-table relative overflow-hidden">
         <div class="text-center">
+          <h2 class="text-xl sm:text-2xl font-bold mb-6 gradient-text">JOIN THE ACTION</h2>
+
+          <.simple_form phx-submit="join_queue" class="space-y-6">
+            <div class="space-y-4">
+              <label class="block text-sm font-bold text-gray-700 uppercase tracking-wider">
+                Player Name
+              </label>
+              <input
+                name="player_name"
+                type="text"
+                placeholder="Enter your name"
+                required
+                maxlength="40"
+                class="w-full text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div class="text-center">
+              <button
+                type="submit"
+                class="neo-btn neo-btn-primary text-lg sm:text-xl py-4 px-8 sm:px-12">
+                <span>JOIN QUEUE</span>
+              </button>
+            </div>
+          </.simple_form>
+        </div>
+      </div>
+
+      <!-- Neo Wave Waiting in Queue -->
+      <div :if={@in_queue} class="mb-8 neo-table relative overflow-hidden">
+        <div class="text-center">
+          <h2 class="text-xl sm:text-2xl font-bold mb-6 gradient-text">IN THE QUEUE</h2>
+
+          <!-- Player status -->
+          <div class="neo-avatar w-16 h-16 sm:w-20 sm:h-20 rounded-full mx-auto mb-4 text-2xl sm:text-3xl text-white font-bold flex items-center justify-center">
+            <%= String.first(@current_player) |> String.upcase() %>
+          </div>
+
+          <div class="mb-6">
+            <p class="text-lg sm:text-xl font-bold text-gray-900 mb-2">
+              Welcome, <span class="gradient-text"><%= String.upcase(@current_player) %></span>!
+            </p>
+            <div class="neo-status active inline-block">
+              Ready to Play
+            </div>
+          </div>
+
+          <!-- Waiting animation -->
+          <div class="mb-6">
+            <div class="flex justify-center mb-4">
+              <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full animate-spin"></div>
+            </div>
+            <p class="text-gray-700 text-base sm:text-lg font-medium">
+              Waiting for <%= 2 - length(@queue_status.waiting_players) %> more player(s)...
+            </p>
+          </div>
+
+          <!-- Progress indicator -->
+          <div class="mb-6">
+            <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div
+                class="h-full bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full transition-all duration-500"
+                style={"width: #{(length(@queue_status.waiting_players) / 2) * 100}%"}>
+              </div>
+            </div>
+          </div>
+
+          <button
+            phx-click="leave_queue"
+            class="neo-btn neo-btn-danger text-base sm:text-lg py-3 px-6 sm:px-8">
+            <span>LEAVE QUEUE</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Neo Wave Queue Status -->
+      <div class="mb-8">
+        <div class="glass-neo p-6 sm:p-8 text-center">
           <h2 class="text-2xl sm:text-3xl font-bold mb-6 gradient-text">GAME LOBBY</h2>
 
           <!-- Players waiting display -->
@@ -159,90 +237,6 @@ defmodule PokerServerWeb.GameLive.Index do
               <span class="neo-heart text-2xl">♥</span>
               <span class="neo-spade text-2xl">♠</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Neo Wave Join Queue Form -->
-      <div :if={not @in_queue} class="mb-8">
-        <div class="glass-neo p-6 sm:p-8 relative overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-cyan-500/5"></div>
-          <div class="relative z-10">
-            <h2 class="text-xl sm:text-2xl font-bold mb-6 text-center gradient-text">JOIN THE ACTION</h2>
-
-            <.simple_form phx-submit="join_queue" class="space-y-6">
-              <div class="space-y-4">
-                <label class="block text-sm font-bold text-gray-700 uppercase tracking-wider">
-                  Player Name
-                </label>
-                <input
-                  name="player_name"
-                  type="text"
-                  placeholder="Enter your name"
-                  required
-                  maxlength="40"
-                  class="w-full text-center bg-white/95 backdrop-blur border-2 border-cyan-400/50 rounded-2xl px-4 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-900 placeholder-gray-400 focus:border-pink-500 focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div class="text-center">
-                <button
-                  type="submit"
-                  class="neo-btn neo-btn-primary text-lg sm:text-xl py-4 px-8 sm:px-12">
-                  <span>JOIN QUEUE</span>
-                </button>
-              </div>
-            </.simple_form>
-          </div>
-        </div>
-      </div>
-
-      <!-- Neo Wave Waiting in Queue -->
-      <div :if={@in_queue} class="mb-8">
-        <div class="glass-neo p-6 sm:p-8 border-2 border-cyan-400/50 relative overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-green-500/10"></div>
-          <div class="relative z-10 text-center">
-            <h2 class="text-xl sm:text-2xl font-bold mb-6 gradient-text">IN THE QUEUE</h2>
-
-            <!-- Player status -->
-            <div class="neo-avatar w-16 h-16 sm:w-20 sm:h-20 rounded-full mx-auto mb-4 text-2xl sm:text-3xl text-white font-bold flex items-center justify-center">
-              <%= String.first(@current_player) |> String.upcase() %>
-            </div>
-
-            <div class="mb-6">
-              <p class="text-lg sm:text-xl font-bold text-gray-900 mb-2">
-                Welcome, <span class="gradient-text"><%= String.upcase(@current_player) %></span>!
-              </p>
-              <div class="neo-status active inline-block">
-                Ready to Play
-              </div>
-            </div>
-
-            <!-- Waiting animation -->
-            <div class="mb-6">
-              <div class="flex justify-center mb-4">
-                <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full animate-spin"></div>
-              </div>
-              <p class="text-gray-700 text-base sm:text-lg font-medium">
-                Waiting for <%= 2 - length(@queue_status.waiting_players) %> more player(s)...
-              </p>
-            </div>
-
-            <!-- Progress indicator -->
-            <div class="mb-6">
-              <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                <div
-                  class="h-full bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full transition-all duration-500"
-                  style={"width: #{(length(@queue_status.waiting_players) / 2) * 100}%"}>
-                </div>
-              </div>
-            </div>
-
-            <button
-              phx-click="leave_queue"
-              class="neo-btn neo-btn-danger text-base sm:text-lg py-3 px-6 sm:px-8">
-              <span>LEAVE QUEUE</span>
-            </button>
           </div>
         </div>
       </div>

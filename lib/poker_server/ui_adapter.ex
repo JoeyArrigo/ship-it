@@ -163,12 +163,23 @@ defmodule PokerServer.UIAdapter do
           player.id == player_id or
             (is_hand_complete and not is_fold_win and player.id not in folded_players)
 
+        # Calculate position indicators
+        position_indicators = get_position_indicators(game_state, player.position)
+
+        # Check if player is folded
+        folded_players = get_folded_players(game_server_state)
+        is_folded = player.id in folded_players
+
         %{
           id: player.id,
           chips: get_effective_chips(game_server_state, player),
           position: player.position,
           hole_cards: if(can_see_cards, do: format_cards(player.hole_cards), else: []),
-          is_current_player: player.id == player_id
+          hole_cards_hidden: not can_see_cards and length(player.hole_cards) > 0,
+          hole_card_count: length(player.hole_cards),
+          is_current_player: player.id == player_id,
+          position_indicators: position_indicators,
+          is_folded: is_folded
         }
       end)
 
@@ -370,6 +381,52 @@ defmodule PokerServer.UIAdapter do
       :one_pair -> "One Pair"
       :high_card -> "High Card"
     end
+  end
+
+  # Calculate position indicators for a player (dealer button, blinds)
+  defp get_position_indicators(game_state, player_position) do
+    player_count = length(game_state.players)
+    indicators = []
+
+    # Dealer button
+    indicators = if player_position == game_state.button_position do
+      [%{type: "dealer", label: "D", color: "yellow"} | indicators]
+    else
+      indicators
+    end
+
+    # Calculate blind positions based on player count
+    {small_blind_position, big_blind_position} =
+      if player_count == 2 do
+        # Heads-up: button is small blind, other player is big blind
+        big_blind_position = rem(game_state.button_position + 1, player_count)
+        {game_state.button_position, big_blind_position}
+      else
+        # Multi-player: small blind is button + 1, big blind is button + 2
+        small_blind_position = rem(game_state.button_position + 1, player_count)
+        big_blind_position = rem(game_state.button_position + 2, player_count)
+        {small_blind_position, big_blind_position}
+      end
+
+    # Small blind indicator
+    indicators = if player_position == small_blind_position and
+                    game_state.small_blind != nil and
+                    game_state.small_blind > 0 do
+      [%{type: "small_blind", label: "SB", color: "cyan"} | indicators]
+    else
+      indicators
+    end
+
+    # Big blind indicator
+    indicators = if player_position == big_blind_position and
+                    game_state.big_blind != nil and
+                    game_state.big_blind > 0 do
+      [%{type: "big_blind", label: "BB", color: "pink"} | indicators]
+    else
+      indicators
+    end
+
+    indicators
   end
 
 end

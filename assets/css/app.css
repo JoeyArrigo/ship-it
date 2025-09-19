@@ -461,12 +461,23 @@ body::before {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(235, 255, 242, 0.95));
 }
 
-/* Card back design */
+/* Enhanced Neo Wave Card Back Design */
 .neo-card-back {
-  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan), var(--neo-yellow), var(--neo-green));
+  width: 64px;
+  height: 90px;
   border-radius: 16px;
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-cyan), var(--neo-yellow), var(--neo-green));
+  margin: 3px;
   position: relative;
   overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border: 3px solid transparent;
 }
 
 .neo-card-back::before {
@@ -477,16 +488,82 @@ body::before {
   background: repeating-linear-gradient(
     45deg,
     transparent,
-    transparent 10px,
-    rgba(255, 255, 255, 0.1) 10px,
-    rgba(255, 255, 255, 0.1) 20px
+    transparent 8px,
+    rgba(255, 255, 255, 0.15) 8px,
+    rgba(255, 255, 255, 0.15) 16px
   );
-  animation: card-slide 10s linear infinite;
+  animation: card-slide 8s linear infinite;
+  z-index: 1;
+}
+
+.neo-card-back::after {
+  content: '?';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 32px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+  font-family: var(--font-neo);
+}
+
+.neo-card-back:hover {
+  transform: translateY(-5px) scale(1.05);
+  filter: brightness(1.1) saturate(1.2);
 }
 
 @keyframes card-slide {
-  0% { transform: translate(-50%, -50%); }
-  100% { transform: translate(0, 0); }
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(50%, 50%) rotate(360deg); }
+}
+
+/* Card flip animation for community card reveals */
+.card-flip-reveal {
+  animation: card-flip 0.6s ease-in-out;
+  transform-style: preserve-3d;
+}
+
+@keyframes card-flip {
+  0% {
+    transform: rotateY(180deg) scale(1);
+  }
+  50% {
+    transform: rotateY(90deg) scale(1.1);
+  }
+  100% {
+    transform: rotateY(0deg) scale(1);
+  }
+}
+
+/* Mobile card back adjustments */
+@media (max-width: 768px) {
+  .neo-card-back {
+    width: 52px;
+    height: 74px;
+    border-width: 2px;
+    margin: 2px;
+  }
+
+  .neo-card-back::after {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .neo-card-back {
+    width: 42px;
+    height: 60px;
+    border-radius: 10px;
+  }
+
+  .neo-card-back::after {
+    font-size: 24px;
+  }
 }
 
 /* Neo poker table */
@@ -867,188 +944,291 @@ body::before {
   }
 }
 
-/* Mobile Responsive Design */
+/* Enhanced Mobile Responsive Design */
 @media (max-width: 768px) {
-  
-  /* Mobile poker table adjustments */
+
+  /* Mobile poker table - optimized spacing */
   .neo-table {
-    padding: 16px;
-    margin: 8px;
-    border-radius: 24px;
+    padding: 1px;
+    margin: 0;
+    border-radius: 16px;
+    min-height: calc(100vh - 2px);
+    position: relative;
   }
-  
-  /* Mobile pot display */
+
+  /* Priority 1: Pot display - most important info */
   .neo-pot {
-    padding: 16px;
-    margin: 16px 0;
+    padding: 6px;
+    margin: 4px 0;
+    order: -1; /* Ensure pot appears first */
   }
-  
+
   .neo-pot-amount {
     font-size: 2.5rem;
-    letter-spacing: -1px;
+    letter-spacing: -1.5px;
+    line-height: 1;
   }
-  
-  .neo-pot-label {
-    font-size: 0.65rem;
-    letter-spacing: 2px;
-  }
-  
-  /* Mobile player position adjustments */
-  .neo-player-pos {
-    padding: 12px;
-    margin-bottom: 16px;
-  }
-  
-  /* Mobile avatar sizing */
-  .neo-avatar {
-    width: 2.5rem;
-    height: 2.5rem;
-    font-size: 0.875rem;
-  }
-  
-  /* Mobile card sizing and spacing */
-  .neo-card {
-    width: 52px;
-    height: 74px;
-    font-size: 24px;
-    font-weight: 900;
-    margin: 2px;
-    border-width: 2px;
-  }
-  
-  /* Mobile community cards */
-  .neo-community {
-    padding: 16px;
-    margin: 16px 0;
-  }
-  
-  .neo-community h3 {
-    font-size: 1.125rem;
-    margin-bottom: 12px;
-  }
-  
-  /* Mobile action buttons */
-  .neo-btn {
-    padding: 12px 20px;
-    font-size: 14px;
-    letter-spacing: 1px;
-    min-height: 44px; /* iOS touch target size */
-    touch-action: manipulation; /* Prevent double-tap zoom */
-  }
-  
-  /* Mobile glass panels */
-  .glass-neo {
-    padding: 16px;
-    border-radius: 16px;
-  }
-  
-  /* Mobile chip display */
-  .neo-chips {
-    padding: 6px 12px;
-    font-size: 14px;
-    gap: 4px;
-  }
-  
-  /* Mobile status badges */
-  .neo-status {
-    padding: 4px 8px;
-    font-size: 0.625rem;
-  }
-  
-  /* Mobile particles - reduce count */
-  .neo-particle {
-    width: 3px;
-    height: 3px;
-  }
-  
-  .neo-particle:nth-child(n+4) {
-    display: none;
-  }
-  
-  /* Mobile player layout enhancements */
-  .neo-player-pos {
-    text-align: center;
-  }
-  
-  /* Mobile showdown layout improvements */
-  .neo-showdown-player {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-  
-  /* Enhanced mobile card layout */
-  .neo-card {
-    width: 42px;
-    height: 60px;
-    font-size: 22px;
-    font-weight: 900;
-    border-radius: 10px;
-    border-width: 2px;
-  }
-  
-  /* Mobile stacked layout improvements */
-  .mobile-player-stack {
-    gap: 8px;
-  }
-  
-  .mobile-centered {
-    justify-content: center;
-    text-align: center;
-  }
-  
-  /* Mobile avatar spacing */
-  .neo-avatar {
-    margin-bottom: 8px;
-  }
-}
 
-@media (max-width: 480px) {
-  
-  /* Extra small mobile adjustments */
-  .neo-table {
-    padding: 12px;
-    margin: 4px;
+  .neo-pot-label {
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    margin-top: 2px;
   }
-  
-  .neo-pot-amount {
-    font-size: 2rem;
+
+  /* Priority 2: Player positions - compact but clear */
+  .neo-player-pos {
+    padding: 3px;
+    margin-bottom: 0;
+    border-radius: 14px;
+    width: 100%;
   }
-  
-  .neo-card {
-    width: 64px;
-    height: 52px;
-    font-size: 28px;
-    font-weight: 900;
-    border-width: 2px;
-  }
-  
+
+  /* Mobile avatar - smaller but still prominent */
   .neo-avatar {
     width: 2rem;
     height: 2rem;
     font-size: 0.75rem;
   }
-  
-  /* Smaller action buttons for small screens */
+
+  /* Priority 3: Cards - larger and more readable */
+  .neo-card {
+    width: 56px;
+    height: 78px;
+    font-size: 26px;
+    font-weight: 900;
+    margin: 3px;
+    border-width: 2.5px;
+    border-radius: 12px;
+  }
+
+  /* Community cards - prominent display */
+  .neo-community {
+    padding: 6px;
+    margin: 4px 0;
+    border-radius: 16px;
+  }
+
+  .neo-community h3 {
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+  }
+
+  /* Priority 4: Action buttons - larger touch targets */
   .neo-btn {
-    padding: 10px 16px;
-    font-size: 12px;
-    min-height: 40px; /* Maintain touch target */
+    padding: 14px 22px;
+    font-size: 15px;
+    letter-spacing: 1.2px;
+    min-height: 48px; /* Improved touch target */
+    touch-action: manipulation;
+    border-radius: 24px;
   }
-  
-  /* Tighter spacing for very small screens */
+
+  /* Glass panels - tighter spacing */
   .glass-neo {
-    padding: 12px;
+    padding: 6px;
+    border-radius: 16px;
   }
-  
+
+  /* Chip display - slightly larger for readability */
+  .neo-chips {
+    padding: 7px 14px;
+    font-size: 15px;
+    gap: 5px;
+    border-radius: 20px;
+  }
+
+  /* Status badges - better contrast */
+  .neo-status {
+    padding: 5px 10px;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+  }
+
+  /* Reduced particle effects for performance */
+  .neo-particle {
+    width: 2px;
+    height: 2px;
+  }
+
+  .neo-particle:nth-child(n+4) {
+    display: none;
+  }
+
+  /* Mobile layout hierarchy improvements */
+  .neo-player-pos {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Improved mobile action layout */
+  .mobile-action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .mobile-action-primary {
+    grid-column: span 2;
+  }
+
+  /* Enhanced card backs for mobile */
+  .neo-card-back {
+    width: 56px;
+    height: 78px;
+    border-width: 2.5px;
+    margin: 3px;
+    border-radius: 12px;
+  }
+
+  .neo-card-back::after {
+    font-size: 30px;
+  }
+
+  /* Mobile game info - compact but clear */
+  .mobile-game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Mobile player cards - centered layout */
+  .mobile-player-cards {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Enhanced position indicators for mobile */
+  .neo-position-indicator {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+    margin-left: 5px;
+  }
+}
+
+@media (max-width: 480px) {
+
+  /* Extra small mobile - maximum space efficiency */
+  .neo-table {
+    padding: 10px;
+    margin: 2px;
+    border-radius: 16px;
+  }
+
+  /* Pot - most critical info, keep large */
+  .neo-pot-amount {
+    font-size: 2.25rem;
+    letter-spacing: -1px;
+  }
+
+  .neo-pot {
+    padding: 12px;
+    margin: 10px 0;
+  }
+
+  /* Cards - optimized for tiny screens but still readable */
+  .neo-card {
+    width: 50px;
+    height: 70px;
+    font-size: 24px;
+    font-weight: 900;
+    border-width: 2px;
+    border-radius: 10px;
+    margin: 2px;
+  }
+
+  /* Card backs - match card sizing */
+  .neo-card-back {
+    width: 50px;
+    height: 70px;
+    border-width: 2px;
+    border-radius: 10px;
+    margin: 2px;
+  }
+
+  .neo-card-back::after {
+    font-size: 26px;
+  }
+
+  /* Avatar - compact but visible */
+  .neo-avatar {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.65rem;
+  }
+
+  /* Action buttons - maintain usability */
+  .neo-btn {
+    padding: 12px 18px;
+    font-size: 13px;
+    min-height: 44px; /* iOS minimum */
+    letter-spacing: 1px;
+  }
+
+  /* Compact panels */
+  .glass-neo {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
   .neo-player-pos {
     padding: 8px;
+    margin-bottom: 10px;
   }
-  
+
+  /* Chips display - compact */
+  .neo-chips {
+    padding: 5px 10px;
+    font-size: 13px;
+    gap: 3px;
+  }
+
+  /* Position indicators - smaller */
+  .neo-position-indicator {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+    margin-left: 3px;
+  }
+
+  /* Community cards - tighter layout */
+  .neo-community {
+    padding: 10px;
+    margin: 10px 0;
+  }
+
+  .neo-community h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+
+  /* Mobile action layout - stack vertically */
+  .mobile-action-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
   /* Prevent zoom on input focus */
   input[type="number"] {
     font-size: 16px;
+  }
+
+  /* Status badges - minimal but clear */
+  .neo-status {
+    padding: 4px 8px;
+    font-size: 0.65rem;
+  }
+
+  /* Game info - stack on very small screens */
+  .mobile-game-info {
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
   }
 }
 
@@ -1107,17 +1287,211 @@ body::before {
   .neo-table {
     padding: 8px;
   }
-  
+
   .neo-pot {
     padding: 12px;
     margin: 12px 0;
   }
-  
+
   .neo-pot-amount {
     font-size: 2rem;
   }
-  
+
   .glass-neo {
     padding: 12px;
+  }
+}
+
+/* Neo Wave Position Indicators */
+.neo-position-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 6px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.neo-position-indicator::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: indicator-glow 3s ease-in-out infinite;
+}
+
+/* Dealer button styling */
+.neo-position-indicator.dealer {
+  background: linear-gradient(135deg, var(--neo-yellow), #FFE885);
+  color: var(--neo-dark);
+  border: 2px solid var(--neo-yellow);
+}
+
+.neo-position-indicator.dealer::before {
+  background: linear-gradient(135deg, var(--neo-yellow), var(--neo-green));
+}
+
+/* Small blind styling */
+.neo-position-indicator.small-blind {
+  background: linear-gradient(135deg, var(--neo-cyan), #66E5FF);
+  color: white;
+  border: 2px solid var(--neo-cyan);
+}
+
+.neo-position-indicator.small-blind::before {
+  background: linear-gradient(135deg, var(--neo-cyan), var(--neo-pink));
+}
+
+/* Big blind styling */
+.neo-position-indicator.big-blind {
+  background: linear-gradient(135deg, var(--neo-pink), #FFB3F5);
+  color: white;
+  border: 2px solid var(--neo-pink);
+}
+
+.neo-position-indicator.big-blind::before {
+  background: linear-gradient(135deg, var(--neo-pink), var(--neo-yellow));
+}
+
+.neo-position-indicator:hover {
+  transform: scale(1.1) rotate(5deg);
+  filter: brightness(1.2);
+}
+
+@keyframes indicator-glow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(180deg);
+  }
+}
+
+/* Mobile position indicator adjustments */
+@media (max-width: 768px) {
+  .neo-position-indicator {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+    margin-left: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .neo-position-indicator {
+    width: 20px;
+    height: 20px;
+    font-size: 9px;
+    margin-left: 3px;
+  }
+}
+
+/* Neo Wave Fold Animation */
+.neo-folded-player {
+  opacity: 0.4;
+  filter: grayscale(60%) blur(1px);
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: scale(0.95);
+}
+
+.neo-folded-player .neo-avatar {
+  background: linear-gradient(135deg, #6B7280, #9CA3AF);
+  animation: none;
+}
+
+.neo-folded-player .neo-avatar::before {
+  animation: none;
+  opacity: 0.3;
+}
+
+.neo-folded-card {
+  animation: fold-card 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes fold-card {
+  0% {
+    transform: translateY(0) rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+  30% {
+    transform: translateY(-20px) rotateY(90deg) scale(1.1);
+    opacity: 0.8;
+  }
+  60% {
+    transform: translateY(10px) rotateY(180deg) scale(0.9);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(0) rotateY(180deg) scale(0.8);
+    opacity: 0.3;
+    filter: grayscale(80%) blur(2px);
+  }
+}
+
+.neo-folded-status {
+  background: linear-gradient(135deg, #6B7280, #9CA3AF);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.neo-folded-status::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: folded-shimmer 2s ease-in-out infinite;
+}
+
+@keyframes folded-shimmer {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: -100%; }
+}
+
+/* Folded card interaction states */
+.neo-folded-card:hover {
+  transform: translateY(0) rotateY(180deg) scale(0.85);
+  filter: grayscale(60%) blur(1px);
+}
+
+/* Mobile fold adjustments */
+@media (max-width: 768px) {
+  .neo-folded-player {
+    transform: scale(0.98);
+  }
+
+  @keyframes fold-card {
+    0% {
+      transform: translateY(0) rotateY(0deg) scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: translateY(-15px) rotateY(90deg) scale(1.05);
+      opacity: 0.6;
+    }
+    100% {
+      transform: translateY(0) rotateY(180deg) scale(0.85);
+      opacity: 0.4;
+      filter: grayscale(70%) blur(1px);
+    }
   }
 }
