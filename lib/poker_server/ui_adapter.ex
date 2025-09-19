@@ -409,14 +409,18 @@ defmodule PokerServer.UIAdapter do
       end
 
     # Small blind indicator
-    indicators = if player_position == small_blind_position and game_state.small_blind do
+    indicators = if player_position == small_blind_position and
+                    game_state.small_blind != nil and
+                    game_state.small_blind > 0 do
       [%{type: "small_blind", label: "SB", color: "cyan"} | indicators]
     else
       indicators
     end
 
     # Big blind indicator
-    indicators = if player_position == big_blind_position and game_state.big_blind do
+    indicators = if player_position == big_blind_position and
+                    game_state.big_blind != nil and
+                    game_state.big_blind > 0 do
       [%{type: "big_blind", label: "BB", color: "pink"} | indicators]
     else
       indicators
