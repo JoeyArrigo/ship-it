@@ -133,36 +133,6 @@ defmodule PokerServerWeb.GameLive.Index do
         </div>
       </div>
 
-      <!-- Neo Wave Queue Status -->
-      <div class="mb-8 neo-table relative overflow-hidden">
-        <div class="text-center">
-          <h2 class="text-2xl sm:text-3xl font-bold mb-6 gradient-text">GAME LOBBY</h2>
-
-          <!-- Players waiting display -->
-          <div class="neo-pot mb-6">
-            <div class="neo-pot-amount text-4xl sm:text-5xl">
-              <%= length(@queue_status.waiting_players) %><span class="text-2xl sm:text-3xl">/2</span>
-            </div>
-            <div class="neo-pot-label">Players Ready</div>
-          </div>
-
-          <div class="glass-neo p-4 sm:p-6">
-            <p class="text-gray-700 text-base sm:text-lg font-medium mb-2">
-              Games launch automatically when 2 players join the queue
-            </p>
-            <p class="text-sm text-gray-600 font-medium">
-              <strong>Short Deck:</strong> 36 cards (6-A), Ace still wraps (A-6-7-8-9 is low straight), Flush beats Full House
-            </p>
-            <div class="flex justify-center mt-4 gap-2">
-              <span class="neo-club text-2xl">♣</span>
-              <span class="neo-diamond text-2xl">♦</span>
-              <span class="neo-heart text-2xl">♥</span>
-              <span class="neo-spade text-2xl">♠</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Neo Wave Join Queue Form -->
       <div :if={not @in_queue} class="mb-8">
         <div class="glass-neo p-6 sm:p-8 relative overflow-hidden">
@@ -193,6 +163,36 @@ defmodule PokerServerWeb.GameLive.Index do
                 </button>
               </div>
             </.simple_form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Neo Wave Queue Status -->
+      <div class="mb-8 neo-table relative overflow-hidden">
+        <div class="text-center">
+          <h2 class="text-2xl sm:text-3xl font-bold mb-6 gradient-text">GAME LOBBY</h2>
+
+          <!-- Players waiting display -->
+          <div class="neo-pot mb-6">
+            <div class="neo-pot-amount text-4xl sm:text-5xl">
+              <%= length(@queue_status.waiting_players) %><span class="text-2xl sm:text-3xl">/2</span>
+            </div>
+            <div class="neo-pot-label">Players Ready</div>
+          </div>
+
+          <div class="glass-neo p-4 sm:p-6">
+            <p class="text-gray-700 text-base sm:text-lg font-medium mb-2">
+              Games launch automatically when 2 players join the queue
+            </p>
+            <p class="text-sm text-gray-600 font-medium">
+              <strong>Short Deck:</strong> 36 cards (6-A), Ace still wraps (A-6-7-8-9 is low straight), Flush beats Full House
+            </p>
+            <div class="flex justify-center mt-4 gap-2">
+              <span class="neo-club text-2xl">♣</span>
+              <span class="neo-diamond text-2xl">♦</span>
+              <span class="neo-heart text-2xl">♥</span>
+              <span class="neo-spade text-2xl">♠</span>
+            </div>
           </div>
         </div>
       </div>
