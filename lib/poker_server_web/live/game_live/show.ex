@@ -220,7 +220,7 @@ defmodule PokerServerWeb.GameLive.Show do
     ~H"""
     <div class="max-w-none mx-0 relative px-0 sm:max-w-6xl sm:mx-auto sm:px-4">
       <!-- Neo Wave Game Interface -->
-      <div :if={@player_view} class="mt-0 neo-table relative overflow-hidden">
+      <div :if={@player_view} class="mt-0 neo-table game-table relative overflow-hidden">
         <!-- Floating particle effects -->
         <div class="neo-particles">
           <div class="neo-particle" style="left: 10%; animation-delay: 0s;"></div>
