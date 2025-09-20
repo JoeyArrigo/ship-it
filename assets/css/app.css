@@ -952,8 +952,17 @@ body::before {
     padding: 1px;
     margin: 0;
     border-radius: 16px;
-    min-height: calc(100vh - 2px);
     position: relative;
+  }
+
+  /* Full height only for game tables, not form sections */
+  .neo-table.game-table {
+    min-height: calc(100vh - 2px);
+  }
+
+  /* Form sections should have reasonable padding */
+  .neo-table:not(.game-table) {
+    padding: 20px;
   }
 
   /* Priority 1: Pot display - most important info */
