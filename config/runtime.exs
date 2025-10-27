@@ -45,7 +45,12 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base,
-    server: true
+    server: true,
+    check_origin: [
+      "https://ship-it-poker.com",
+      "https://www.ship-it-poker.com",
+      "https://ship-it-winter-rain-2687.fly.dev"
+    ]
 
   # ## SSL Support
   #
