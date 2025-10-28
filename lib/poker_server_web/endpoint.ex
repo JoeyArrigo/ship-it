@@ -19,7 +19,7 @@ defmodule PokerServerWeb.Endpoint do
   plug(Plug.Static,
     at: "/",
     from: :poker_server,
-    gzip: false,
+    gzip: true,
     only: PokerServerWeb.static_paths()
   )
 
@@ -53,6 +53,4 @@ defmodule PokerServerWeb.Endpoint do
   plug(Plug.Head)
   plug(Plug.Session, @session_options)
   plug(PokerServerWeb.Router)
-
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
 end
