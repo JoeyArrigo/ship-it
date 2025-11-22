@@ -20,7 +20,7 @@ defmodule PokerServerWeb.Endpoint do
     at: "/",
     from: :poker_server,
     gzip: true,
-    only_matching: ~w(assets fonts images favicon apple-touch-icon android-chrome site robots.txt)
+    only: PokerServerWeb.static_paths()
   )
 
   if Code.ensure_loaded?(Tidewave) do

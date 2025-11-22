@@ -1,10 +1,13 @@
 {
   "name": "Ship-it Poker",
   "short_name": "Ship-it",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#0A0E27",
+  "background_color": "#0A0E27",
   "icons": [
     {"src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png"},
     {"src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png"}
-  ],
-  "background_color": "#0A0E27",
-  "display": "standalone"
+  ]
 }

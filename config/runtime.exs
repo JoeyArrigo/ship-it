@@ -46,6 +46,8 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base,
     server: true,
+    # Allow WebSocket connections from custom domain and Fly.io deployment URL
+    # This is required for LiveView to work properly on the custom domain
     check_origin: [
       "https://ship-it-poker.com",
       "https://www.ship-it-poker.com",
