@@ -17,7 +17,12 @@ defmodule PokerServerWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  def static_paths do
+    ~w(assets fonts images robots.txt) ++
+      ~w(favicon.ico favicon-16x16.png favicon-32x32.png) ++
+      ~w(apple-touch-icon.png android-chrome-192x192.png android-chrome-512x512.png) ++
+      ~w(site.webmanifest)
+  end
 
   def router do
     quote do

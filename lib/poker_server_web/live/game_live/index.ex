@@ -29,7 +29,7 @@ defmodule PokerServerWeb.GameLive.Index do
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Poker Server")
+    |> assign(:page_title, "Ship-it Poker")
   end
 
   @impl true
